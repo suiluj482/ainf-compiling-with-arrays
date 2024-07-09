@@ -1,10 +1,22 @@
-# Artifact Submission
 
-*Please answer the following questions concisely, either with bullet lists or short paragraphs.*
 
-Title of the submitted paper: Compiling with Arrays
+                 _   _ ______ 
+         /\     | \ | |  ____|
+        /  \   _|  \| | |__   
+       / /\ \ (_) . ` |  __|  
+      / ____ \ _| |\  | |     
+     /_/    \_\ |_| \_|_|     
+              |_|
 
-ECOOP submission number for the paper: 141
+
+# Compiling with Arrays
+
+(This is the code corresponding to the paper 'Compiling with Arrays', to be published at ECOOP 2024.)
+
+This artifact contains the Polara language and AINF intermediate representation implemented as a DSL in Lean4.
+
+Arxiv: https://arxiv.org/abs/2405.18242
+DOI: ...
 
 ## Overview: What does the artifact comprise?
 
