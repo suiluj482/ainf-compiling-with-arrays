@@ -16,6 +16,7 @@
 This artifact contains the Polara language and AINF intermediate representation implemented as a DSL in Lean4.
 
 Arxiv: https://arxiv.org/abs/2405.18242
+
 DOI: ...
 
 ## Overview: What does the artifact comprise?
