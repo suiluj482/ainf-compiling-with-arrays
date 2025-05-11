@@ -1,4 +1,5 @@
 
+# This is a fork of the original aiming at ainf code generation to python and cpp (this readme isn't updated yet)
 
                  _   _ ______ 
          /\     | \ | |  ____|

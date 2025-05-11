@@ -1,5 +1,6 @@
-import Polara.Examples
+import Polara.Examples.Definitions
 import Lean
+import Polara.Codegeneration.Lean.Runtime
 
 def evalStr (e : String) : IO String := do
   Lean.initSearchPath (← Lean.findSysroot)
@@ -7,7 +8,7 @@ def evalStr (e : String) : IO String := do
   let s := IO.FS.Stream.ofBuffer r
   let s' : IO.FS.Stream ← IO.setStdout s
   let prog := s!"
-import Polara.Codegen
+import Polara.Codegeneration.Lean.Runtime
 #eval do
   IO.println ({e})
   IO.println \"§\" "
@@ -60,7 +61,7 @@ def assertEq (name: String) (a: String) (b: String) := do
 
 infixl:65 " @@@ " => AINF.app'
 
---#eval cseTest1 (Γ:=_).toAINF
+-- #eval cseTest1 (Γ:=_).toAINF
 
 -- Test suite
 namespace Test
@@ -74,7 +75,7 @@ namespace Test
   let fun i0:Nat, if i0==0, (x6 : Nat := x5 + i0)
   let fun i0:Nat, if i0==0, (x7 : Nat := x4 + x6)
   let fun i0:Nat, (x8 : Nat := if i0 != 0 then x3 else x7)
-  let (x9 : (Nat → Nat) := fun i0:Nat, x8)
+  let (x9 : (Nat ~> Nat) := fun i0:Nat, x8)
 x9"
     assert "cseTest1: converted correctly" (out == cseTest1 (Γ:=_).toAINF.toString)
 

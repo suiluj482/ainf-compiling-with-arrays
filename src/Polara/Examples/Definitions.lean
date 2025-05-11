@@ -1,21 +1,9 @@
 import Polara.CSE
 import Polara.NbE
-import Polara.Codegen
+import Polara.Codegeneration.Lean.Codegeneration
+import Polara.Codegeneration.Python.Codegeneration
 
 open Tm Ty Const0 Const1 Const2
-
-def AINF.toString : AINF α → String | e => e.pretty id
-instance : ToString (AINF α) where toString x := x.toString
-
-instance : Add (Tm Γ flt) where add e f := cst2 .addf e f
-instance : Sub (Tm Γ flt) where sub e f := cst2 .subf e f
-instance : Mul (Tm Γ flt) where mul e f := cst2 .mulf e f
-instance : Div (Tm Γ flt) where div e f := cst2 .divf e f
-
-def log  : Tm Γ flt → Tm Γ flt := fun x => cst1 .log x
-def exp  : Tm Γ flt → Tm Γ flt := fun x => cst1 .exp x
-def sqrt : Tm Γ flt → Tm Γ flt := fun x => cst1 .sqrt x
-def normCdf : Tm Γ flt → Tm Γ flt := fun x => cst1 .normCdf x
 
 ------------------------------------------------------------------------------------------
 -- Black scholes
@@ -126,12 +114,30 @@ def cseTest1 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
       (cst2 addn (cst0 (litn 42)) (cst2 addn (cst0 (litn 1)) (var x)))
       (cst2 addn (cst0 (litn 24)) (cst2 addn (cst0 (litn 1)) (var x)))
 
+-- def cseTest1' {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
+--   fun' x => -- 1+x should be shared across the branches
+--     if' (var x)
+--       then tlitn 42 + (tlitn 1 + var x)
+--       else tlitn 24 + (tlitn 1 + var x)
+
+#eval cseTest1.toAINF
+#eval cseTest1.toAINF.cse [] [] |>.codegen id |>.toFormat
+
 def cseTest2 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
   abs fun x => -- 1+x should be shared across the beginning and the branch
     bnd (cst2 addn (cst0 (litn 1)) (var x)) fun _l0 =>
     ite (var x)
       (var x)
       (cst2 addn (cst0 (litn 1)) (var x))
+
+-- def cseTest2' {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
+--   fun' x => -- 1+x should be shared across the beginning and the branch
+--     let' _l0 := tlitn 1 + var x;
+--     if' var x
+--       then var x
+--       else tlitn 1 + var x
+
+#eval cseTest2.pp (0, 0)
 
 def cseTest3 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
   abs fun x => -- 1+x should be shared across the branch and the end
@@ -142,8 +148,7 @@ def cseTest3 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
     ) fun _l0 =>
     (cst2 addn (cst0 (litn 1)) (var x))
 
-#eval cseTest1.toAINF.cse [] []
-
+#eval cseTest3.pp (0,0)
 ------------------------------------------------------------------------------------------
 -- PE & CSE test
 ------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import Polara.Examples
+import Polara.Examples.Definitions
 --import Polara.Embedding
 
 open Tm Ty Const0 Const1 Const2
