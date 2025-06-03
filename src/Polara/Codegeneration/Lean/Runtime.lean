@@ -1,9 +1,8 @@
 -- hilfsmethoden für generierten lean code
 def Array.ebuild (n: Nat) (f: Fin n → Except String α): Except String (Array α) :=
-  have tmp: (mkArray n 0).size = n := by simp [mkArray, Array.size]
-  ((mkArray n 0).mapIdx fun i _x => f (tmp▸i)).mapM fun i => i
+  Array.ofFn f |>.mapM id
 
-#check (mkArray 10 0)
+#check (Array.replicate 10 0)
 #eval (10: Fin 10)
 
 class Monoid (α: Type) where
@@ -19,14 +18,14 @@ instance : Monoid Float where
   combine := (. + .)
 
 def Array.esum [Inhabited α] [Monoid α]: Nat → (Array α) → α
-| n, f => ((mkArray n 0).mapIdx fun i _x => f.get! i).foldl Monoid.combine Monoid.default
+| n, f => ((Array.replicate n 0).mapIdx fun i _x => f[i]!).foldl Monoid.combine Monoid.default
 
 -- kein clock überlauf
 def Fin.add' : Fin n → Fin m → Fin (n+m-1)
 | ⟨x, hx⟩, ⟨y, hy⟩ => ⟨x+y,
   let ⟨ x', hx' ⟩ := Nat.le.dest hx;
   let ⟨ y', hy' ⟩ := Nat.le.dest hy;
-  Nat.le.intro (k := x' + y') (by simp_arith! [←hx', ←hy']) ⟩
+  Nat.le.intro (k := x' + y') (by simp! +arith [←hx', ←hy']) ⟩
 
 -- https://github.com/tpn/cuda-samples/blob/master/v9.0/4_Finance/BlackScholes/BlackScholes_gold.cpp
 def Float.normCdf (d: Float): Float :=
