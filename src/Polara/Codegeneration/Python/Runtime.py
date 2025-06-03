@@ -17,3 +17,6 @@ def normCdf (d: float):
 
 def idx2int(a: int): 
     return a
+
+def let(x, y):
+    return y

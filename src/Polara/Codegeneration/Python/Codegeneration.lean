@@ -1,5 +1,5 @@
-import Polara.NbE
-import Polara.CSE
+import Polara.Optimizations.NbE
+import Polara.Optimizations.CSE
 import Polara.Syntax.Index
 -- import Polara.Examples.Definitions
 
@@ -35,7 +35,7 @@ def Env.withargsPy (s: String): Env → String -- Env wo wir sind mit wo wir var
 
 -- in gemeinsame util?
 def Var.tmgenPy (Γ: Env) (x: Var α): Orig String := do
-  match lookupEnv x (<- read) with -- <- Zugriff aufs Orignal
+  match x.lookupEnv (<- read) with -- <- Zugriff aufs Orignal
   | some Δ => return Δ.withargsPy x.pretty -- variable übergeben
   | none   => return "(" ++ x.pretty ++ " ???)"
 def VPar.tmgenPy (Γ: Env) (x: VPar α): Orig String :=
@@ -47,8 +47,12 @@ def Env.wrapPy (s: String): Env → Orig String -- neue variable in env definier
 | .nil            => return s
 | .func Γ _ i     => wrapPy  s!"(lambda {i.pretty}: {s})" Γ
 | .forc Γ n i     => wrapPy  s!"[{s} for {i.pretty} in range(0,{n})]" Γ
-| .itec Γ i true  => do wrapPy  s!"({s} if {<- i.tmgenPy Γ} != 0 else None)" Γ
-| .itec Γ i false => do wrapPy  s!"({s} if {<- i.tmgenPy Γ} == 0 else None)" Γ
+| .itec Γ cond true  => do
+    let cond' <- cond.tmgenPy Γ
+    wrapPy  s!"({s} if {cond'} != 0 else None)" Γ
+| .itec Γ cond false => do
+    let cond' <- cond.tmgenPy Γ
+    wrapPy  s!"({s} if {cond'} == 0 else None)" Γ
 
 def Const0.tmgenPy: Const0 α → String := Const0.pretty
 
@@ -65,11 +69,13 @@ def Const1.tmgenPy (a: String): Const1 α₁ α → String
 
 def Const2.tmgenPy (a: String) (b: String): Const2 α₁ α₂ α → String
   | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
-  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}" | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}" | maxf => s!"max({a}, {b})"
+  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}"
+  | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}"
+  | maxf => s!"max({a}, {b})"
   | addi => s!"{a} + {b}"
   | tup  => s!"({a}, {b})"
   | app  => s!"{a}({b})"
-  | get  => s!"{a}[{b}]!"
+  | get  => s!"{a}[{b}]"
 
 def Prim.tmgenPy (Γ: Env): Prim α → Orig String
 | err => return "ERROR"
@@ -77,13 +83,21 @@ def Prim.tmgenPy (Γ: Env): Prim α → Orig String
 | cst1 k a => return k.tmgenPy (<- a.tmgenPy Γ)
 | cst2 k a b => return k.tmgenPy (<- a.tmgenPy Γ) (<- b.tmgenPy Γ)
 | var i => return i.pretty
-| abs (α:=γ) i e => return s!"(lambda {i.pretty}: {<- e.tmgenPy (.func Γ _ i)})"
-| bld (n:=n) i e => return  s!"[{<- e.tmgenPy (.forc Γ n i)} for {i.pretty} in range(0,{n})]"
-| .ite a b c => return s!"({<- b.tmgenPy (.itec Γ a true )} if {<- a.tmgenPy Γ} != 0 else {<- c.tmgenPy (.itec Γ a false)})"
+| abs (α:=_γ) i e => do
+  let e' <- e.tmgenPy (.func Γ _ i)
+  return s!"(lambda {i.pretty}: {e'})"
+| bld (n:=n) i v => do
+    let v' <- v.tmgenPy (.forc Γ n i)
+    return s!"[{v'} for {i.pretty} in range(0,{n})]"
+| .ite cond a b => do
+    let cond' <- cond.tmgenPy Γ
+    let a' <- a.tmgenPy (.itec Γ cond true)
+    let b' <- b.tmgenPy (.itec Γ cond false)
+    return s!"({a'} if {cond'} != 0 else {b'})"
 
 def codegenRecPy (k: String → String): AINF α → Orig String
 | .ret x => return k x.pretty
-| .bnd (α:=β) Γ xᵢ prim rest => return (
+| .bnd (α:=_β) Γ xᵢ prim rest => return (
   s!"{xᵢ.pretty} = {<- Γ.wrapPy  (<- prim.tmgenPy Γ)}\n"
   ++ (<- codegenRecPy k rest)
 )
@@ -92,7 +106,7 @@ def AINF.codegenPy (k: String → String) (a: AINF α): String :=
   codegenRecPy k a a -- kontinuation z.B. return x für letzte zeile oder zusammenfügen mehrerer
 
 
----------Tests---------------------------
+-- ---------Tests---------------------------
 -- open Tm Ty Const0 Const1 Const2
 -- def cseTest1 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
 --   fun' x => -- 1+x should be shared across the branches
@@ -100,7 +114,7 @@ def AINF.codegenPy (k: String → String) (a: AINF α): String :=
 --       then tlitn 42 + (tlitn 1 + var x)
 --       else tlitn 24 + (tlitn 1 + var x)
 -- def cseTest1AINF := cseTest1.toAINF
--- def cseTest1CSE := cseTest1.toAINF.cse [] []
+-- def cseTest1CSE := cseTest1.toAINF.cse
 
 -- -- def test: Term nat := (tlitn 1) - (tlitn 20)
 
@@ -112,7 +126,7 @@ def AINF.codegenPy (k: String → String) (a: AINF α): String :=
 
 -- def testPolara: Tm Γ (Ty.nat) := Tm.cst0 (Const0.litn 1)
 -- #eval testPolara.pp (0, 0)
--- def testAINF := testPolara.toAINF.cse [] []
+-- def testAINF := testPolara.toAINF.cse
 -- #eval testAINF.pretty id
 -- def testPy := testAINF.codegenPy (s!"print({·})")
 -- #eval testPy

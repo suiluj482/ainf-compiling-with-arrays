@@ -13,5 +13,5 @@ lean_exe «polara» where
   root := `Main
 
 lean_exe «test» where
-  root := `Polara.Test
+  root := `Polara.Tests.Test
   supportInterpreter := true

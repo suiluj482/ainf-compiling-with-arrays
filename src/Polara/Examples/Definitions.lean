@@ -1,7 +1,7 @@
-import Polara.CSE
-import Polara.NbE
-import Polara.Codegeneration.Lean.Codegeneration
-import Polara.Codegeneration.Python.Codegeneration
+import Polara.Optimizations.CSE
+import Polara.Optimizations.NbE
+import Polara.Optimizations.ToTm
+import Polara.Codegeneration.Index
 
 open Tm Ty Const0 Const1 Const2
 
@@ -36,7 +36,7 @@ def mainBlackScholes : Tm Γ (array n flt ~> array n (flt ×× flt)) :=
   bld fun i => cst2 tup (cst2 get (var Calls) (var i)) (cst2 get (var Puts) (var i))
 
 -- #eval (Tm.norm (mainBlackScholes (Γ:=.) (n:=1))).toAINF
--- #eval (Tm.norm (mainBlackScholes (Γ:=.) (n:=10))).toAINF.cse [] []
+-- #eval (Tm.norm (mainBlackScholes (Γ:=.) (n:=10))).toAINF.cse
 
 ------------------------------------------------------------------------------------------
 -- dense example
@@ -62,7 +62,7 @@ def dense {Γ : Ty → Type} n m : Tm Γ (
   -- for i. sum j. x[j] * y[i+j]
 
 def conv {Γ : Ty → Type} n m : Tm Γ (
-  array n flt ~> array (n+m-1) flt ~> array m flt
+  array n flt ~> array (n+m) flt ~> array m flt
 ) :=
   abs fun x => abs fun y =>
   bld fun i =>
@@ -84,6 +84,9 @@ def loop1 {Γ : Ty → Type} n : Tm Γ ((array n nat) ×× (array n nat)) :=
     cst2 muln (var t) (cst0 (litn 2))
   ) fun l1 =>
   (cst2 tup (var l0) (var l1))
+
+-- #eval doAll "loop1" (loop1 5) []
+-- #eval loop1 3 |>.toAINF
 
 def incr (t : Tm Γ nat) : Tm Γ nat :=
   cst2 addn t (cst0 (litn 1))
@@ -114,14 +117,18 @@ def cseTest1 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
       (cst2 addn (cst0 (litn 42)) (cst2 addn (cst0 (litn 1)) (var x)))
       (cst2 addn (cst0 (litn 24)) (cst2 addn (cst0 (litn 1)) (var x)))
 
+-- #eval cseTest1.toAINF.valid
+-- #eval IO.println <| cseTest1.toAINF.toTm.toString
+-- #eval IO.println <| cseTest1.toAINF.cse.codegenJax id
+-- #eval IO.println <| cseTest1.toAINF.cse.toTm.codegenJax
+
 -- def cseTest1' {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
 --   fun' x => -- 1+x should be shared across the branches
 --     if' (var x)
 --       then tlitn 42 + (tlitn 1 + var x)
 --       else tlitn 24 + (tlitn 1 + var x)
 
-#eval cseTest1.toAINF
-#eval cseTest1.toAINF.cse [] [] |>.codegen id |>.toFormat
+-- #eval doAll "cseTest1" cseTest1 ["0"]
 
 def cseTest2 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
   abs fun x => -- 1+x should be shared across the beginning and the branch
@@ -130,6 +137,8 @@ def cseTest2 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
       (var x)
       (cst2 addn (cst0 (litn 1)) (var x))
 
+-- #eval cseTest2.toAINF
+
 -- def cseTest2' {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
 --   fun' x => -- 1+x should be shared across the beginning and the branch
 --     let' _l0 := tlitn 1 + var x;
@@ -137,7 +146,7 @@ def cseTest2 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
 --       then var x
 --       else tlitn 1 + var x
 
-#eval cseTest2.pp (0, 0)
+-- #eval cseTest2.pp (0, 0)
 
 def cseTest3 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
   abs fun x => -- 1+x should be shared across the branch and the end
@@ -148,7 +157,8 @@ def cseTest3 {Γ : Ty → Type} : Tm Γ (Ty.nat ~> Ty.nat) :=
     ) fun _l0 =>
     (cst2 addn (cst0 (litn 1)) (var x))
 
-#eval cseTest3.pp (0,0)
+-- #eval cseTest3.toAINF
+
 ------------------------------------------------------------------------------------------
 -- PE & CSE test
 ------------------------------------------------------------------------------------------

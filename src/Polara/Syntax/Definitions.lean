@@ -1,3 +1,5 @@
+import Polara.Util
+
 -- Type
 inductive Ty
   | nat : Ty                  -- natural number
@@ -27,14 +29,19 @@ inductive Const1 : Ty → Ty → Type
   | normCdf : Const1 flt flt      -- normal cumulative distribution function
   | fst : Const1 (α ×× β) α       -- first of tupple
   | snd : Const1 (α ×× β) β       -- second of tupple
-  | sum : Const1 (array n α) α    -- sum of array
+  | sum : Const1 (array n α) α    -- sum of array Monoide fordern
+  -- | mul
   | i2n  : Const1 (idx n) nat     -- indices -> nat
   | n2f  : Const1 nat flt         -- nat -> float
   deriving BEq
   open Const1
 
+-- class Addable (α: Ty)(β: Ty) where
+--   res: Ty
+
 -- binary functions
 inductive Const2 : Ty → Ty → Ty → Type
+  -- | add [a: Addable α β]: Const2 α β a.res
   | addn : Const2 nat nat nat
   | muln : Const2 nat nat nat
   | addf : Const2 flt flt flt
@@ -42,7 +49,7 @@ inductive Const2 : Ty → Ty → Ty → Type
   | mulf : Const2 flt flt flt
   | divf : Const2 flt flt flt
   | maxf : Const2 flt flt flt
-  | addi : Const2 (idx n) (idx m) (idx (n+m-1))
+  | addi : Const2 (idx n) (idx m) (idx (n+m))
   | get : Const2 (array n a) (idx n) a          -- array access
   | tup : Const2 α β (α ×× β)                   -- tupple constructor
   | app : Const2 (α~>β) α β                     -- function application
@@ -95,11 +102,13 @@ def Term: Ty → Type := Tm VPar
 ------------------------------------------------------------------------------------------
 
 -- Environemnt, Context: list of control flow to apply to primitive
+--   reverse order so Env.func (Env.forc ...) ... => forc ..., func ...
 inductive Env : Type
   | nil  : Env                                --
   | func : Env → (α:Ty) → Par α → Env         -- function control flow
   | forc : Env → (n:Nat) → Par (idx n) → Env  -- for
   | itec : Env → VPar nat → Bool → Env        -- if then else
+  deriving DecidableEq, Inhabited
 
 -- primitive operations (could maybe be unified with Tm)
 inductive Prim : Ty → Type
@@ -113,32 +122,7 @@ inductive Prim : Ty → Type
   | bld : Par (idx n) → VPar α → Prim (array n α)
 
 -- non empty list of variable definitions with primitives in an environment
-inductive AINF : Ty → Type
+inductive AINF : Ty → Type -- Var übergeben
   | ret : VPar α → AINF α   -- VPar to be returned
   | bnd : Env → Var α → Prim α → AINF β → AINF β  -- Environemnt xᵢ := Prim; ...
-
-
-------------------------------------------------------------------------------------------
--- Util
-------------------------------------------------------------------------------------------
-
-def AINF.size : AINF α → Nat
-  | .ret _ => 0
-  | .bnd _ _ _ p => p.size + 1
-
--- List of key, value pairs, which types depend on an index PolaraType
-def ListMap (Key Value: Ty → Type) := List ((index : Ty) × Key index × Value index)
-def ListMap.lookup [∀ x:Ty, BEq (K x)] : ListMap K V → K α → Option (V α)
-  | [],          _ => none
-  | ⟨β,k,v⟩::ys, i => if h: β=α then if h▸ k == i then some (h▸v)
-                      else lookup ys i else lookup ys i
-
--- ReaderMonad for access to original AiNF
-@[reducible] def Orig α := ∀ {β}, ReaderM (AINF β) α
-
--- lookup enviroment in binding of variable
-def lookupEnv (x: Var α) : AINF β → Option Env
-  | .ret _y => none
-  | .bnd (α:=β) env (y: Var β) _prim rest =>
-    if h: β=α then if h▸ y==x then env
-    else lookupEnv x rest else lookupEnv x rest
+    -- Beweis fordern, das Var definiert

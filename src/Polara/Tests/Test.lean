@@ -1,22 +1,11 @@
+-- not upddated yet
+
 import Polara.Examples.Definitions
 import Lean
 import Polara.Codegeneration.Lean.Runtime
+import Polara.Codegeneration.Index
 
-def evalStr (e : String) : IO String := do
-  Lean.initSearchPath (← Lean.findSysroot)
-  let r ← IO.mkRef {}
-  let s := IO.FS.Stream.ofBuffer r
-  let s' : IO.FS.Stream ← IO.setStdout s
-  let prog := s!"
-import Polara.Codegeneration.Lean.Runtime
-#eval do
-  IO.println ({e})
-  IO.println \"§\" "
-  let _ ← Lean.Elab.runFrontend prog {} "" .anonymous
-  let _ ← IO.setStdout s'
-  return ((String.join <| (← r.get).data.toList.map
-    (String.singleton ∘ Char.ofNat ∘ Fin.val ∘ UInt8.val)).splitOn ("§\n")).head!.dropRight 2
-
+def evalStr (e : String) : IO String := runLean e
 -- Utility for testing
 initialize success : IO.Ref (Array String) ← IO.mkRef #[]
 initialize failure : IO.Ref (Array String) ← IO.mkRef #[]
@@ -84,7 +73,7 @@ x9"
     for cseTest in #[cseTest1 (Γ:=VPar), cseTest2 (Γ:=VPar), cseTest3 (Γ:=VPar)] do
       i := i+1
       let pre1  := cseTest.toAINF
-      let post1 := cseTest.toAINF.cse [] []
+      let post1 := cseTest.toAINF.cse
       assert s!"cseTest{i}: size reduced" (post1.size < pre1.size)
 
       let argS  := " 0"
@@ -98,7 +87,7 @@ x9"
       assertEq s!"cseTest{i}: equivalent" post2 pre2
 
     let pre1  := (Tm.norm (mainBlackScholes (Γ:=.) (n:=1))).toAINF
-    let post1 := (Tm.norm (mainBlackScholes (Γ:=.) (n:=1))).toAINF.cse [] []
+    let post1 := (Tm.norm (mainBlackScholes (Γ:=.) (n:=1))).toAINF.cse
     IO.println (pre1.size, post1.size)
     let argS  := " #[2.5]"
     let pre2  <- evalStr <| pre1.codegen  fun x => x ++ argS
@@ -107,7 +96,7 @@ x9"
     assertEq s!"normalized BlackScholes: equivalent" post2 pre2
 
     let pre1  := ((mainBlackScholes (Γ:=_) (n:=1))).toAINF
-    let post1 := ((mainBlackScholes (Γ:=_) (n:=1))).toAINF.cse [] []
+    let post1 := ((mainBlackScholes (Γ:=_) (n:=1))).toAINF.cse
     IO.println (pre1.size, post1.size)
     let argS  := " #[2.5]"
     let pre2  <- evalStr <| pre1.codegen  fun x => x ++ argS
@@ -119,11 +108,14 @@ x9"
     let base := 7
     let expo := 13
 
-    let e1 := (Tm.norm (fun _ => Tm.cst2 Const2.app (egypt base) (.cst0 (.litn expo)))).toAINF.cse [] [] |>.codegen id
-    let e2 := (Tm.norm (fun _ => (egypt base))).toAINF.cse [] [] |>.codegen fun x => x ++ s!" {expo}"
+    let e1 := (Tm.norm (fun _ => Tm.cst2 Const2.app (egypt base) (.cst0 (.litn expo)))).toAINF.cse |>.codegen id
+    let e2 := (Tm.norm (fun _ => (egypt base))).toAINF.cse |>.codegen fun x => x ++ s!" {expo}"
     let actual1 ← evalStr e1
     let actual2 ← evalStr e2
     let expected := egyptLean expo base
+    IO.println <| "asdf:" ++ e1
+    IO.println <| "asdf:" ++ actual2
+    IO.println <| "asdf:" ++ s!"{expected}"
     assertEq "egypt: generated code evaluates correctly" actual1.trim s!"{expected}"
     assertEq "egypt: generated code evaluates correctly" actual2.trim s!"ok: {expected}"
 

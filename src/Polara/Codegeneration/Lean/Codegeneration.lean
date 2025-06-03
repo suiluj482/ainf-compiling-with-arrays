@@ -1,4 +1,4 @@
-import Polara.NbE
+import Polara.Optimizations.NbE
 import Polara.Syntax.Index
 
 open Prim
@@ -41,7 +41,7 @@ def Env.withargs (s: String): Env → String -- Env wo wir sind mit wo wir varia
 #eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.withargs "."
 
 def Var.tmgen (Γ: Env) (x: Var α): Orig String := do
-  match lookupEnv x (<- read) with -- <- Zugriff aufs Orignal
+  match x.lookupEnv (<- read) with -- <- Zugriff aufs Orignal
   | some Δ => return Δ.withargs x.pretty -- variable übergeben
   | none   => return "(" ++ x.pretty ++ " ???)"
 def VPar.tmgen (Γ: Env) (x: VPar α): Orig String :=
@@ -58,12 +58,12 @@ def Const1.tmgen: Const1 α₁ α → String
   | snd => "Prod.snd"
   | i2n => "Fin.val"
   | n2f => "Float.ofNat"
-  | sum => "Array.esum"
+  | sum (n:=n) => s!"Array.esum {n}"
 
 def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
   | addf => s!"{a} + {b}" | subf => s!"{a} - {b}" | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}" | maxf => s!"max {a} {b}"
-  | addi => s!"{a} + {b}"
+  | addi => s!"{a}.add' {b}"
   | tup  => s!"({a}, {b})"
   | app  => s!"<- {a} {b}"
   | get  => s!"{a}[{b}]!"
@@ -71,7 +71,7 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
 def Env.wrap (s: String): Env → Orig String -- neue variable in env definieren gegenteil withargs
 | .nil            => return s
 | .func Γ α i     => wrap s!"(fun {i.pretty}:{α.gen} => return {s})" Γ
-| .forc Γ n i     => wrap s!"(<- Array.ebuild {n} fun {i.pretty} => return {s})" Γ
+| .forc Γ n i     => wrap s!"(<- Array.ebuild {n} (fun {i.pretty} => return {s}))" Γ
 | .itec Γ i true  => do wrap s!"(<- if {<- i.tmgen Γ} != 0
       then return Except.ok ({s})
       else return Except.error \"conditional\")" Γ
@@ -91,10 +91,10 @@ def Prim.tmgen (Γ: Env): Prim α → Orig String
     then return {<- b.tmgen (.itec Γ a true )}
     else return {<- c.tmgen (.itec Γ a false)})"
 
-def codegenRec (k: String → String): AINF α → Orig String
-| .ret x => return k x.pretty
+def codegenRec (k: String → String): AINF α → Orig String -- todo
+| .ret x => return s!"(return {(k x.pretty)}: Except String ({α.gen}))"
 | .bnd (α:=β) Γ x v e => return (
-  s!"  let {x.pretty}: {Γ.tygen (β.gen)} :=\n    {<- Γ.wrap (<- v.tmgen Γ)}\n" ++
+  s!"let {x.pretty}: {Γ.tygen (β.gen)} :=\n  {<- Γ.wrap (<- v.tmgen Γ)}\n" ++
   (<- codegenRec k e))
 
-def AINF.codegen (k: String → String) (a: AINF α): String := codegenRec k a a -- kontinuation return x für letzte zeile
+def AINF.codegen (k: String → String) (a: AINF α): String := s!"do \n{(codegenRec k a a)}" -- kontinuation return x für letzte zeile

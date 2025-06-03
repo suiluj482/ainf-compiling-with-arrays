@@ -1,10 +1,18 @@
 -- hilfsmethoden für generierten lean code
-def Array.ebuild: Nat → (Nat → Except String α) → Except String (Array α)
-| n, f => ((mkArray n 0).mapIdx fun i _x => f i).mapM fun i => i
+def Array.ebuild (n: Nat) (f: Fin n → Except String α): Except String (Array α) :=
+  have tmp: (mkArray n 0).size = n := by simp [mkArray, Array.size]
+  ((mkArray n 0).mapIdx fun i _x => f (tmp▸i)).mapM fun i => i
+
+#check (mkArray 10 0)
+#eval (10: Fin 10)
 
 class Monoid (α: Type) where
   default : α
   combine : α → α → α
+
+instance : Monoid Nat where
+  default := 0
+  combine := (. + .)
 
 instance : Monoid Float where
   default := 0

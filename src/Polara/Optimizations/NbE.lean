@@ -1,10 +1,12 @@
-import Polara.Syntax
+import Polara.Syntax.Index
+import Polara.Codegeneration.Lean.Runtime -- Float.normCdf needed
 open Ty Tm Const0 Const1 Const2
 
 ------------------------------------------------------------------------------------------
--- normalisation (Polara)
+-- normalisation (Polara) by evaluation
 ------------------------------------------------------------------------------------------
 
+-- denotation - corresponding host-anguage value
 @[reducible] def Ty.de (Γ : Ty → Type): Ty → Type
   | nat => Tm Γ nat
   | flt => Tm Γ flt
@@ -14,34 +16,27 @@ open Ty Tm Const0 Const1 Const2
   | array n t => Tm Γ (idx n) → t.de Γ
 
 mutual
+  -- denotation to term
   def quote {Γ} : {α : Ty} → Ty.de Γ α → Tm Γ α
-    | α ~> β, e => abs fun x => quote (e (splice (var x)))
-    | α ×× β, e => cst2 tup (quote e.1) (quote e.2)
-    | nat, e => e
-    | flt, e => e
+    | nat   , e => e
+    | flt   , e => e
     | idx _i, e => e
+    | α ~> β   , e => abs fun x => quote (e (splice (var x)))
+    | α ×× β   , e => cst2 tup (quote e.1) (quote e.2)
     | array n α, e => bld fun x => quote (e (var x))
+  -- term to denotation
   def splice {Γ} : {α : Ty} → Tm Γ α → Ty.de Γ α
-    | α ~> β, e => fun x => splice (cst2 app e (quote x))
-    | α ×× β, e => (splice (cst1 fst e), splice (cst1 snd e))
-    | nat, e => e
-    | flt, e => e
+    | nat   , e => e
+    | flt   , e => e
     | idx _i, e => e
+    | α ~> β   , e => fun x => splice (cst2 app e (quote x))
+    | α ×× β   , e => (splice (cst1 fst e), splice (cst1 snd e))
     | array n α, e => fun x => splice (cst2 get e x)
 end
 
--- https://github.com/tpn/cuda-samples/blob/master/v9.0/4_Finance/BlackScholes/BlackScholes_gold.cpp
-def Float.normCdf (d: Float): Float :=
-  let       A1 :=  0.31938153
-  let       A2 := -0.356563782
-  let       A3 :=  1.781477937
-  let       A4 := -1.821255978
-  let       A5 :=  1.330274429
-  let RSQRT2PI :=  0.39894228040143267793994605993438
-  let K := 1.0 / (1.0 + 0.2316419 * d.abs)
-  let cnd := RSQRT2PI * Float.exp (- 0.5 * d * d) *
-    (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))))
-  if d > 0 then 1.0 - cnd else cnd
+-- #eval quote (splice (Tm.var (α:= Ty.nat ×× Ty.nat) (VPar.v (Var.mk 42)))) |>.pp (0, 0)
+-- #reduce quote (splice (Tm.var (α:= Ty.nat ×× Ty.nat) (VPar.v (Var.mk 42))))
+-- #reduce splice (Tm.var (α:= Ty.nat ×× Ty.nat) (VPar.v (Var.mk 42)))
 
 def Const0.de : Const0 α → Ty.de Γ α
   | litn n => cst0 (litn n)
@@ -49,9 +44,10 @@ def Const0.de : Const0 α → Ty.de Γ α
   | liti i => cst0 (liti i)
 
 def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
-  | fst => fun (a, _b) => a
-  | snd => fun (_a, b) => b
+  | fst => fun (a , _b) => a
+  | snd => fun (_a,  b) => b
   | normCdf => fun
+    -- partial evaluation if argument known
     | cst0 (litf a) => cst0 (litf (Float.normCdf a))
     | a             => cst1 normCdf a
   | sqrt => fun
@@ -67,8 +63,8 @@ def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
   | i2n => fun a => splice (cst1 i2n (quote a))
   | n2f => fun a => splice (cst1 n2f (quote a))
 
-def Tm.isZero : Tm Γ α → Bool | cst0 (litf f) => f == 0 | _ => false
-def Tm.isOne  : Tm Γ α → Bool | cst0 (litf f) => f == 1 | _ => false
+def Tm.isZeroF : Tm Γ α → Bool | cst0 (litf f) => f == 0 | _ => false
+def Tm.isOneF  : Tm Γ α → Bool | cst0 (litf f) => f == 1 | _ => false
 
 def Const2.de : Const2 γ β α → Ty.de Γ γ → Ty.de Γ β → Ty.de Γ α
   | app => fun f e => f e
@@ -89,22 +85,22 @@ def Const2.de : Const2 γ β α → Ty.de Γ γ → Ty.de Γ β → Ty.de Γ α
     | _, err => err
     | cst0 (litf a), cst0 (litf b) => cst0 (litf (a + b))
     | a, b =>
-      if a.isZero then b else if b.isZero then a else
+      if a.isZeroF then b else if b.isZeroF then a else
       cst2 addf a b
   | subf => fun
     | err, _ => err
     | _, err => err
     | cst0 (litf a), cst0 (litf b) => cst0 (litf (a - b))
     | a, b =>
-      if b.isZero then a else
+      if b.isZeroF then a else
       cst2 subf a b
   | mulf => fun
     | err, _ => err
     | _, err => err
     | cst0 (litf a), cst0 (litf b) => cst0 (litf (a * b))
     | a, b =>
-      if      a.isZero || b.isZero then cst0 (litf 0)
-      else if a.isOne then b else if b.isOne then a
+      if      a.isZeroF || b.isZeroF then cst0 (litf 0)
+      else if a.isOneF then b else if b.isOneF then a
       else cst2 mulf a b
   | divf => fun
     | err, _ => err
@@ -118,6 +114,7 @@ def Const2.de : Const2 γ β α → Ty.de Γ γ → Ty.de Γ β → Ty.de Γ α
     | a, b                         => cst2 maxf a b
   | addi => cst2 addi
 
+-- term in dessen env sich bereich denotierte terme befinden, im prinzip interpreter
 def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
   | var i => i
   | err => splice err

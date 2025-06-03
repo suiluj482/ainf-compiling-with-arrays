@@ -300,8 +300,8 @@ the interested reviewer may try following one or more of the following usage sce
      let expo := 5
 
      let e1 := (Tm.norm (fun _ => Tm.cst2 Const2.app
-       (egypt2 base) (.cst0 (.litn expo)))).toAINF.cse [] [] |>.codegen id
-     let e2 := (Tm.norm (fun _ => (egypt2 base))).toAINF.cse [] [] |>.codegen
+       (egypt2 base) (.cst0 (.litn expo)))).toAINF.cse |>.codegen id
+     let e2 := (Tm.norm (fun _ => (egypt2 base))).toAINF.cse |>.codegen
        fun x => x ++ s!" {expo}"
      let actual1 ← evalStr e1
      let actual2 ← evalStr e2

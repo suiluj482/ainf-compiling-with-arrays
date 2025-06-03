@@ -87,6 +87,8 @@ def Env.patmat : String → Env → String
   | s, .itec Γ i false  => Γ.patmat s!"if {i.pretty}==0, {s}"
 
 def Env.pretty: Env → String := Env.patmat ""
+def Env.toString (Γ: Env): String := Γ.pretty
+instance: ToString Env := ⟨Env.toString⟩
 
 def Prim.pretty: Prim α → String
   | .err => "ERROR"
