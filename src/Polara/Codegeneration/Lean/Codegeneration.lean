@@ -1,9 +1,5 @@
-import Polara.Optimizations.NbE
-import Polara.Syntax.Index
+import Polara.Codegeneration.Utils
 
-open Prim
-
--- namespace LeanCodegen
 
 def Ty.gen: Ty → String
   | flt  => "Float"
@@ -12,42 +8,6 @@ def Ty.gen: Ty → String
   | a~>b => s!"({a.gen} → Except String {b.gen})"
   | a××b => s!"({a.gen} × {b.gen})"
   | array _n b => s!"(Array {b.gen})"
-
--- #eval Ty.nat              |> Ty.gen
--- #eval Ty.flt ~> Ty.nat    |> Ty.gen
--- #eval (Ty.nat ×× Ty.nat)  |> Ty.gen
--- #eval (Ty.array 2 Ty.nat) |> Ty.gen
-
-def Env.tygen: String → Env → String
-  | s, .nil        => s
-  | s, .func Γ α _i => Γ.tygen s!"({α.gen} → Except String {s})"
-  | s, .forc Γ _n _i => Γ.tygen s!"(Array {s})"
-  | s, .itec Γ _i _m => Γ.tygen s!"(Except String {s})"
-
--- #eval Env.nil.tygen ""
--- #eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.tygen ""
--- #eval Env.forc (Env.nil) 2 (Par.mk 0) |>.tygen ""
--- #eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.tygen ""
-
-def Env.withargs (s: String): Env → String -- Env wo wir sind mit wo wir variable benutzen wollen vergleichen
-  | nil       => s
-  | func Γ _α i => s!"(<- {Γ.withargs s} {i.pretty})"
-  | forc Γ _n i => s!"({Γ.withargs s})[{i.pretty}]!"
-  | itec Γ _i _b => s!"(<- {Γ.withargs s})"
-
--- #eval Env.nil.withargs "."
--- #eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.withargs "."
--- #eval Env.forc (Env.nil) 2 (Par.mk 0) |>.withargs "."
--- #eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.withargs "."
-
-def Var.tmgen (_Γ: Env) (x: Var α): Orig String := do
-  match x.lookupEnv (<- read) with -- <- Zugriff aufs Orignal
-  | some Δ => return Δ.withargs x.pretty -- variable übergeben
-  | none   => return "(" ++ x.pretty ++ " ???)"
-def VPar.tmgen (Γ: Env) (x: VPar α): Orig String :=
-  match x with
-  | .v x => x.tmgen Γ
-  | .p x => return x.pretty
 
 def Const1.tmgen: Const1 α₁ α → String
   | normCdf => "Float.normCdf"
@@ -68,33 +28,27 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | app  => s!"<- {a} {b}"
   | get  => s!"{a}[{b}]!"
 
-def Env.wrap (s: String): Env → Orig String -- neue variable in env definieren gegenteil withargs
-| .nil            => return s
-| .func Γ α i     => wrap s!"(fun {i.pretty}:{α.gen} => return {s})" Γ
-| .forc Γ n i     => wrap s!"(<- Array.ebuild {n} (fun {i.pretty} => return {s}))" Γ
-| .itec Γ i true  => do wrap s!"(<- if {<- i.tmgen Γ} != 0
-      then return Except.ok ({s})
-      else return Except.error \"conditional\")" Γ
-| .itec Γ i false => do wrap s!"(<- if {<- i.tmgen Γ} == 0
-      then return Except.ok ({s})
-      else return Except.error \"conditional\")" Γ
+def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
+  | err => return "Except.error"
+  | var i => return i.pretty
+  | cst0 k => return k.pretty
+  | cst1 k a => return s!"{k.tmgen} {(← a.codegen')}"
+  | cst2 k a b => return k.tmgen (<- a.codegen') (<- b.codegen')
+  | abs (α:=γ) f => do
+    let (i,j) <- read
+    let v := VPar.p (.mk j)
+    return s!"(fun {v.pretty}:{γ.gen} => return {(f v).codegen' (i,j+1)})"
+  | bld (n:=n) f => do
+    let (i,j) <- read
+    let v := VPar.p (.mk j)
+    return  s!"(<- Array.ebuild {n} fun {v.pretty} => return {(f v).codegen' (i, j+1)})"
+  | bnd (α:=β) e f => do
+    let (i,j) <- read
+    let x := VPar.v (.mk i)
+    return s!"let {x.pretty}: {β.gen} := {e.codegen' (i,j)}, \n{(f x).codegen' (i+1,j)})"
+  | ite cond a b =>
+    return s!"(← if {← cond.codegen'} != 0 then return {<- a.codegen'} else return {<- b.codegen'}))"
 
-def Prim.tmgen (Γ: Env): Prim α → Orig String
-| err => return "ERROR"
-| cst0 k => return k.pretty
-| cst1 k a => return k.tmgen ++ " " ++ (<- a.tmgen Γ) ++ ""
-| cst2 k a b => return k.tmgen (<- a.tmgen Γ) (<- b.tmgen Γ)
-| var i => return i.pretty
-| abs (α:=γ) i e => return s!"(fun {i.pretty}:{γ.gen} => return {<- e.tmgen (.func Γ _ i)})"
-| bld (n:=n) i e => return  s!"(<- Array.ebuild {n} fun {i.pretty} => return {<- e.tmgen (.forc Γ n i)})"
-| .ite a b c => return s!"(<- if {<- a.tmgen Γ} != 0
-    then return {<- b.tmgen (.itec Γ a true )}
-    else return {<- c.tmgen (.itec Γ a false)})"
+def Tm.codegen (t: Tm VPar α): String := Tm.codegen' t (0,0)
 
-def codegenRec (k: String → String): AINF α → Orig String -- todo
-| .ret x => return s!"(return {(k x.pretty)}: Except String ({α.gen}))"
-| .bnd (α:=β) Γ x v e => return (
-  s!"let {x.pretty}: {Γ.tygen (β.gen)} :=\n  {<- Γ.wrap (<- v.tmgen Γ)}\n" ++
-  (<- codegenRec k e))
-
-def AINF.codegen (k: String → String) (a: AINF α): String := s!"do \n{(codegenRec k a a)}" -- kontinuation return x für letzte zeile
+-- todo think about Except

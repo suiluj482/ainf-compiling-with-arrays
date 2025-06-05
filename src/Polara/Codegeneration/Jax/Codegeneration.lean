@@ -1,46 +1,4 @@
-import Polara.Optimizations.NbE
-import Polara.Optimizations.CSE
-import Polara.Syntax.Index
-
-open Prim
-
--- Env wo wir sind mit wo wir variable benutzen wollen vergleichen
-def Env.withargsJax (s: String): Env → String
-  | .nil       => s
-  | .func Γ _α i => s!"{Γ.withargsJax s}({i.pretty})"
-  | .forc Γ _n i => s!"({Γ.withargsJax s})[{i.pretty}]"
-  | .itec Γ _i _b => s!"{Γ.withargsJax s}"
-
--- in gemeinsame util?
-def Var.tmgenJax (_env: Env) (x: Var α): Orig String := do
-  let originalAINF <- read
-  match x.lookupEnv originalAINF with -- <- Zugriff aufs Orignal
-  | some env => return env.withargsJax x.pretty -- variable übergeben
-  | none   => return "(" ++ x.pretty ++ " ???)"
-def VPar.tmgenJax (Γ: Env) (x: VPar α): Orig String :=
-  match x with
-  | .v x => x.tmgenJax Γ
-  | .p x => return x.pretty
-
--- zusätzliche Funktion passende "leere" instance
-
-def Env.wrapJax (s: String): Env → Orig String -- neue variable in env definieren gegenteil withargs
-| .nil            => return s
-| .func Γ _ i     => wrapJax  s!"(lambda {i.pretty}: {s})" Γ
-| .forc Γ n i     => wrapJax  s!"jax.vmap(lambda {i.pretty}: {s})(jnp.arange({n}))" Γ
--- tothink no None in jax, NaN only with float abandon ints?
-| .itec Γ cond true  => do
-    let cond' <- cond.tmgenJax Γ
-    wrapJax  s!"({s} if {cond'} != 0 else None)" Γ
-| .itec Γ cond false => do
-    let cond' <- cond.tmgenJax Γ
-    wrapJax  s!"({s} if {cond'} == 0 else None)" Γ
--- | .itec Γ cond true  => do
---     let cond' <- cond.tmgenJax Γ
---     wrapJax  s!"({s} if {cond'} != 0 else None)" Γ
--- | .itec Γ cond false => do
---     let cond' <- cond.tmgenJax Γ
---     wrapJax  s!"({s} if {cond'} == 0 else None)" Γ
+import Polara.Codegeneration.Utils
 
 def Const0.tmgenJax (const0: Const0 α): String := s!"jnp.array({const0.pretty})"
 
@@ -65,33 +23,55 @@ def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
   | app  => s!"{a}({b})"
   | get  => s!"{a}[{b}]"
 
-def Prim.tmgenJax (Γ: Env): Prim α → Orig String
-| err => return "None"
-| cst0 k => return k.tmgenJax
-| cst1 k a => return k.tmgenJax (<- a.tmgenJax Γ)
-| cst2 k a b => return k.tmgenJax (<- a.tmgenJax Γ) (<- b.tmgenJax Γ)
-| var i => return i.pretty
-| abs (α:=_γ) i e => do
-  let e' <- e.tmgenJax (.func Γ _ i)
-  return s!"(lambda {i.pretty}: {e'})"
-| bld (n:=n) i v => do
-    let v' <- v.tmgenJax (.forc Γ n i)
-    return s!"(jax.vmap(lambda {i.pretty}: {v'})(jnp.arange({n})))"
-| .ite cond a b => do
-    let cond' <- cond.tmgenJax Γ
-    let a' <- a.tmgenJax (.itec Γ cond true)
-    let b' <- b.tmgenJax (.itec Γ cond false)
-    return s!"({a'} if {cond'} != 0 else {b'})"
-    -- return s!"(lax.cond({cond'} != 0, lambda: {a'}, lambda: {b'}))"
+partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
+  -- | err => return "None"
+  | err => (Tm.inst α).codegenJax' -- guranteed termination because inst has no error but how to prove this?
+  | var i => return i.pretty
+  | cst0 k => return k.tmgenJax
+  | cst1 k a => return k.tmgenJax s!"({(← a.codegenJax')})"
+  | cst2 k a b => return k.tmgenJax s!"({← a.codegenJax'})" s!"({← b.codegenJax'})"
+  | abs f => do
+    let (i,j) <- read
+    let v := VPar.p (.mk j)
+    return s!"(lambda {v.pretty}: {(f v).codegenJax' (i,j+1)})"
+  | bld (n:=n) f => do
+    let (i,j) <- read
+    let v := VPar.p (.mk j)
+    return s!"(jax.vmap(lambda {v.pretty}: {(f v).codegenJax' (i, j+1)})(jnp.arange({n})))"
+  | bnd e f => do
+    let (i,j) <- read
+    let x := VPar.v (.mk i)
+    return s!"let({x.pretty} := {e.codegenJax' (i,j)}, \n{(f x).codegenJax' (i+1,j)})"
+  | ite cond a b =>
+    return s!"(lax.cond({← cond.codegenJax'} != 0, lambda: {<- a.codegenJax'}, lambda: {<- b.codegenJax'}))"
 
-def codegenRecJax (k: String → String): AINF α → Orig String
-| .ret x => return k x.pretty
-| .bnd (α:=_β) Γ v prim rest => return (
-  s!"{v.pretty} = {<- Γ.wrapJax  (<- prim.tmgenJax Γ)}\n"
-  ++ (<- codegenRecJax k rest)
-)
+-- generates a python expression
+def Tm.codegenJax (t: Tm VPar α): String := Tm.codegenJax' t (0,0)
 
--- k - kontinuation z.B. return x für letzte zeile oder zusammenfügen mehrerer
--- use k for jit?
-def AINF.codegenJax (k: String → String) (a: AINF α): String :=
-  codegenRecJax k a a
+------------------------------------------------------
+-- todo when to use jit
+-- jit doesn't work with stacked functions
+-- -> compress into function with multiple arguments, max be more efficient in general
+
+-- test joining functions together
+def Tm.codegenJaxJit (t: Tm VPar α): String :=
+  let rec tmp: Ty → Nat := λ
+    | .arrow _ β => tmp β + 1
+    | _ => 0
+  let numArgs := tmp α
+  let args :=
+    List.range numArgs |>.foldl (· ++ s!", j{·}") "" |>.drop 2
+  let calls: String :=
+    List.range numArgs |>.foldl (· ++ s!"(j{·})") ""
+
+  let t := t.codegenJax
+  s!"jit(lambda {args}:{t}{calls})"
+
+
+-- def test: Tm VPar (Ty.nat ~> Ty.nat ~> Ty.nat) :=
+--   fun' x => fun' y => Tm.var x + Tm.var y
+
+-- def test': Tm VPar Ty.nat :=
+--   tlitn 42
+
+-- #eval test'.codegenJaxJit
