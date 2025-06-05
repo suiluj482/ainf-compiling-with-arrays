@@ -221,7 +221,7 @@ namespace AinfTestCases
   ]
 
   def runners: List (String × (Term α → IO String)) := [
-    -- ("Lean", runWithRuntime "Lean"   ∘ Tm.codegen),
+    ("Lean", runLean ∘ Tm.codegen),
     ("Py",   runWithRuntime "Python" ∘ (s!"print({·})") ∘ Tm.codegenPy),
     ("Jax",  runWithRuntime "Jax"    ∘ (s!"print({·})") ∘ Tm.codegenJax),
   ]

@@ -1,9 +1,8 @@
--- hilfsmethoden für generierten lean code
-def Array.ebuild (n: Nat) (f: Fin n → Except String α): Except String (Array α) :=
-  Array.ofFn f |>.mapM id
+def Vector.ebuild (n: Nat) (f: Fin n → Except String α): Except String (Vector α n) :=
+  Vector.ofFn f |>.mapM id
 
-#check (Array.replicate 10 0)
-#eval (10: Fin 10)
+instance [ToString α]: ToString (Vector α n) where
+  toString v := v.toList.toString
 
 class Monoid (α: Type) where
   default : α
@@ -17,8 +16,8 @@ instance : Monoid Float where
   default := 0
   combine := (. + .)
 
-def Array.esum [Inhabited α] [Monoid α]: Nat → (Array α) → α
-| n, f => ((Array.replicate n 0).mapIdx fun i _x => f[i]!).foldl Monoid.combine Monoid.default
+def Vector.esum [Inhabited α] [Monoid α] (v: Vector α n): α :=
+  v.foldl Monoid.combine Monoid.default
 
 -- kein clock überlauf
 def Fin.add' : Fin n → Fin m → Fin (n+m-1)
