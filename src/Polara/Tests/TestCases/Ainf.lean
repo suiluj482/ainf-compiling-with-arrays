@@ -1,31 +1,21 @@
 import Polara.Codegeneration.Index
+import Polara.Tests.Utils
 
-namespace TestCases
+namespace AinfTestCases
+
   open Notations Ty Const0 Const1 Const2 Prim AINF EnvPart
 
-  structure TestCase where
-    name: String
-    α: Ty
-    ainf: AINF α
-
-  def allValid (testCases: List TestCase): Bool :=
-    testCases.foldl (λ acc x => acc && x.ainf.valid) true
-  def firstInvalid (testCases: List TestCase): Option String :=
-    testCases.foldr (λ x acc => if x.ainf.valid then acc else some x.name) none
-  def lookupTestCase (testCases: List TestCase) (name: String): Option TestCase :=
-    testCases.find? (λ x => x.name == name)
-
-  def testCases : List TestCase := [
+  def ainfSimpleTestCases : List (TestCase (Some AINF)) := [
     -- cst0
-    ⟨"litn", nat,
+    ⟨"litn", Ty.nat,
         let'' [] in x0 := plitn 42;
         .ret (.v x0)
     ⟩,
-    ⟨"litf", flt,
+    ⟨"litf", Ty.flt,
         let'' [] in x0 := plitf 4.2;
         .ret (.v x0)
     ⟩,
-    ⟨"liti", idx 5, -- questionable usecase
+    ⟨"liti", idx 5,
         let'' [] in (x0: Var (idx 5)) := Prim.cst0 (liti (2: Fin 6));
         .ret (.v x0)
     ⟩,
@@ -64,7 +54,7 @@ namespace TestCases
     ⟨"snd", nat,
         let'' [] in x0 := plitf 4.2;
         let'' [] in x1 := plitn 42;
-        let'' [] in x2 := cst2 tup (.v (x0: Var flt)) (.v (x1: Var nat));
+        let'' [] in x2 := cst2 tup (.v (@x0 flt)) (.v (@x1 nat));
         let'' [] in x3 := cst1 snd (.v (x2: Var (flt ×× nat)));
         .ret (.v x3)
     ⟩,
@@ -74,7 +64,7 @@ namespace TestCases
         let'' [] in x2 := cst1 sum (.v (x1: Var (array 10 nat)));
         .ret (.v x2)
     ⟩,
-    ⟨"i2n", nat, -- questionable usecase
+    ⟨"i2n", nat,
         let'' [] in (x0: Var (idx 5)) := Prim.cst0 (liti (2: Fin 6));
         let'' [] in x1 := cst1 i2n (.v (x0: Var (idx 5)));
         .ret (.v x1)
@@ -127,7 +117,7 @@ namespace TestCases
         let'' [] in x2 := cst2 maxf (.v (x0: Var flt)) (.v (x1: Var flt));
         .ret (.v x2)
     ⟩,
-    ⟨"addi", idx 10, -- questionable usecase
+    ⟨"addi", idx 10,
         let'' [] in (x0: Var (idx 5)) := Prim.cst0 (liti (2: Fin 6));
         let'' [] in (x1: Var (idx 5)) := Prim.cst0 (liti (2: Fin 6));
         let'' [] in x2 := cst2 addi (.v (x0: Var (idx 5))) (.v (x1: Var (idx 5)));
@@ -191,18 +181,10 @@ namespace TestCases
     ⟩,
   ]
 
-  -- #eval allValid testCases
-  -- #eval firstInvalid testCases
-
-  -- #eval IO.println <| match (lookupTestCase testCases "vectorRange") with
-  --   | none => "not found"
-  --   | some x => x.ainf.codegen id
-
-
   ------------------------------------------------------------------------------------------
   -- Invalid AINF
   ------------------------------------------------------------------------------------------
-  def exampleInvalidTestCases: List TestCase := [
+  def ainfInvalidTestCases: List (TestCase (Some AINF)) := [
     ⟨"nonExistingVar", nat,
       .ret (.v x0)
     ⟩,
@@ -237,7 +219,35 @@ namespace TestCases
     ⟩,
     -- ...
   ]
-  -- check if all invalid
-  #eval exampleInvalidTestCases.foldl (λ acc x => acc || x.ainf.valid) false
 
-end TestCases
+  def runners: List (String × (Term α → IO String)) := [
+    -- ("Lean", runWithRuntime "Lean"   ∘ Tm.codegen),
+    ("Py",   runWithRuntime "Python" ∘ (s!"print({·})") ∘ Tm.codegenPy),
+    ("Jax",  runWithRuntime "Jax"    ∘ (s!"print({·})") ∘ Tm.codegenJax),
+  ]
+
+  def runner: Runner (Some AINF) := λ ⟨α, a⟩ => do
+    let tm: Term α := a.toTm
+    let results ← runners.mapM (λ (n, run) => do
+      let res ← run tm
+      return (n, res)
+    )
+    return (
+      "\n" ++ (results.map (λ (n, res) => s!"{n}: {res}") |>.foldl (λ acc x => s!"{acc}  | {x}") "" |>.dropRight 1),
+      true -- todo compare res
+    )
+
+
+  def testCaseTree: TestCaseTree := Tree.node "ainf testcases"
+    [
+      Tree.leaf ("ainfSimpleTestCases",
+        ⟨_, ainfSimpleTestCases, runner⟩
+      ),
+      Tree.leaf ("ainfInvalidTestCases",
+        ⟨_, ainfInvalidTestCases, (λ ⟨_, a⟩ => pure ("", a.valid.not))⟩
+      ),
+    ]
+
+--   #eval testCaseTree.print
+
+end AinfTestCases

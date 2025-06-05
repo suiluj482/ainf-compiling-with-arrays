@@ -21,17 +21,17 @@ mutual
     | nat   , e => e
     | flt   , e => e
     | idx _i, e => e
-    | α ~> β   , e => abs fun x => quote (e (splice (var x)))
-    | α ×× β   , e => cst2 tup (quote e.1) (quote e.2)
-    | array n α, e => bld fun x => quote (e (var x))
+    | _α ~> _β   , e => abs fun x => quote (e (splice (var x)))
+    | _α ×× _β   , e => cst2 tup (quote e.1) (quote e.2)
+    | array _n _α, e => bld fun x => quote (e (var x))
   -- term to denotation
   def splice {Γ} : {α : Ty} → Tm Γ α → Ty.de Γ α
     | nat   , e => e
     | flt   , e => e
     | idx _i, e => e
-    | α ~> β   , e => fun x => splice (cst2 app e (quote x))
-    | α ×× β   , e => (splice (cst1 fst e), splice (cst1 snd e))
-    | array n α, e => fun x => splice (cst2 get e x)
+    | _α ~> _β   , e => fun x => splice (cst2 app e (quote x))
+    | _α ×× _β   , e => (splice (cst1 fst e), splice (cst1 snd e))
+    | array _n _α, e => fun x => splice (cst2 get e x)
 end
 
 -- #eval quote (splice (Tm.var (α:= Ty.nat ×× Ty.nat) (VPar.v (Var.mk 42)))) |>.pp (0, 0)

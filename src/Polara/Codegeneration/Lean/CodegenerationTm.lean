@@ -34,7 +34,7 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | err => return "Except.error"
   | var i => return i.pretty
   | cst0 k => return k.pretty
-  | cst1 k a => return s!"k.tmgen {(← a.codegen')}"
+  | cst1 k a => return s!"{k.tmgen} {(← a.codegen')}"
   | cst2 k a b => return k.tmgen (<- a.codegen') (<- b.codegen')
   | abs (α:=γ) f => do
     let (i,j) <- read

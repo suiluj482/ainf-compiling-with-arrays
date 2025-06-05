@@ -13,10 +13,10 @@ def Ty.gen: Ty → String
   | a××b => s!"({a.gen} × {b.gen})"
   | array _n b => s!"(Array {b.gen})"
 
-#eval Ty.nat              |> Ty.gen
-#eval Ty.flt ~> Ty.nat    |> Ty.gen
-#eval (Ty.nat ×× Ty.nat)  |> Ty.gen
-#eval (Ty.array 2 Ty.nat) |> Ty.gen
+-- #eval Ty.nat              |> Ty.gen
+-- #eval Ty.flt ~> Ty.nat    |> Ty.gen
+-- #eval (Ty.nat ×× Ty.nat)  |> Ty.gen
+-- #eval (Ty.array 2 Ty.nat) |> Ty.gen
 
 def Env.tygen: String → Env → String
   | s, .nil        => s
@@ -24,10 +24,10 @@ def Env.tygen: String → Env → String
   | s, .forc Γ _n _i => Γ.tygen s!"(Array {s})"
   | s, .itec Γ _i _m => Γ.tygen s!"(Except String {s})"
 
-#eval Env.nil.tygen ""
-#eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.tygen ""
-#eval Env.forc (Env.nil) 2 (Par.mk 0) |>.tygen ""
-#eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.tygen ""
+-- #eval Env.nil.tygen ""
+-- #eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.tygen ""
+-- #eval Env.forc (Env.nil) 2 (Par.mk 0) |>.tygen ""
+-- #eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.tygen ""
 
 def Env.withargs (s: String): Env → String -- Env wo wir sind mit wo wir variable benutzen wollen vergleichen
   | nil       => s
@@ -35,12 +35,12 @@ def Env.withargs (s: String): Env → String -- Env wo wir sind mit wo wir varia
   | forc Γ _n i => s!"({Γ.withargs s})[{i.pretty}]!"
   | itec Γ _i _b => s!"(<- {Γ.withargs s})"
 
-#eval Env.nil.withargs "."
-#eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.withargs "."
-#eval Env.forc (Env.nil) 2 (Par.mk 0) |>.withargs "."
-#eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.withargs "."
+-- #eval Env.nil.withargs "."
+-- #eval Env.func (Env.nil) Ty.nat (Par.mk 0) |>.withargs "."
+-- #eval Env.forc (Env.nil) 2 (Par.mk 0) |>.withargs "."
+-- #eval Env.itec (Env.nil) (VPar.v (Var.mk 0)) true |>.withargs "."
 
-def Var.tmgen (Γ: Env) (x: Var α): Orig String := do
+def Var.tmgen (_Γ: Env) (x: Var α): Orig String := do
   match x.lookupEnv (<- read) with -- <- Zugriff aufs Orignal
   | some Δ => return Δ.withargs x.pretty -- variable übergeben
   | none   => return "(" ++ x.pretty ++ " ???)"

@@ -4,7 +4,7 @@ from jax import jit
 from jax import lax
 
 def normCdf(d):
-    jax.scipy.stats.norm.cdf(d)
+    return jax.scipy.stats.norm.cdf(d)
 
 def idx2int(a): 
     return a

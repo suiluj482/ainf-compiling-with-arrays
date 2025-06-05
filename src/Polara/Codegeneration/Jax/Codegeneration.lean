@@ -12,7 +12,7 @@ def Env.withargsJax (s: String): Env → String
   | .itec Γ _i _b => s!"{Γ.withargsJax s}"
 
 -- in gemeinsame util?
-def Var.tmgenJax (env: Env) (x: Var α): Orig String := do
+def Var.tmgenJax (_env: Env) (x: Var α): Orig String := do
   let originalAINF <- read
   match x.lookupEnv originalAINF with -- <- Zugriff aufs Orignal
   | some env => return env.withargsJax x.pretty -- variable übergeben

@@ -34,7 +34,7 @@ def Env.withargsPy (s: String): Env → String -- Env wo wir sind mit wo wir var
   | .itec Γ _i _b => s!"{Γ.withargsPy s}"
 
 -- in gemeinsame util?
-def Var.tmgenPy (Γ: Env) (x: Var α): Orig String := do
+def Var.tmgenPy (_Γ: Env) (x: Var α): Orig String := do
   match x.lookupEnv (<- read) with -- <- Zugriff aufs Orignal
   | some Δ => return Δ.withargsPy x.pretty -- variable übergeben
   | none   => return "(" ++ x.pretty ++ " ???)"

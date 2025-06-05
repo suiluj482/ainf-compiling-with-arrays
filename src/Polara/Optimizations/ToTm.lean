@@ -42,7 +42,7 @@ def RenTm.apply (ren: RenTm Γ) (x: VPar α): Tm Γ α :=
     | none           => Tm.err
   | .p p => ren.par.apply p
 
-def Prim.toTm (env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
+def Prim.toTm (_env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
 | err           => Tm.err
 | var v         => ren.apply v
 | cst0 c        => Tm.cst0 c

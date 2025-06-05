@@ -1,4 +1,4 @@
-import Polara.Util
+import Polara.Utils.Index
 
 -- Type
 inductive Ty
@@ -126,3 +126,24 @@ inductive AINF : Ty → Type -- Var übergeben
   | ret : VPar α → AINF α   -- VPar to be returned
   | bnd : Env → Var α → Prim α → AINF β → AINF β  -- Environemnt xᵢ := Prim; ...
     -- Beweis fordern, das Var definiert
+
+----------
+inductive EnvPart : Type                    --
+  | func : (α:Ty) → Par α → EnvPart         -- function control flow
+  | forc : (n:Nat) → Par (idx n) → EnvPart  -- for
+  | itec : VPar nat → Bool → EnvPart        -- if then else
+  deriving DecidableEq
+
+def Env.fromList (e: List EnvPart): Env :=
+  e.foldl (λ acc x => match x with
+    | .func α p => Env.func acc α p
+    | .forc n p => Env.forc acc n p
+    | .itec cond ref => Env.itec acc cond ref
+    ) Env.nil
+def Env.toList: Env → List EnvPart :=
+  let rec aux := (λ
+  | .nil => []
+  | .func acc α p => EnvPart.func α p :: aux acc
+  | .forc acc n p => EnvPart.forc n p :: aux acc
+  | .itec acc cond ref => EnvPart.itec cond ref :: aux acc)
+  List.reverse ∘ aux

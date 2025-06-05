@@ -6,11 +6,6 @@ import Polara.Syntax.Definitions
 -- - reinkopierne vs importieren
 -- - save (tmp) file?
 
-def tuple (f: α → β → γ): (α × β) → γ :=
-  (fun (a, b) => f a b)
-def detuple (f: (α × β) → γ): α → β → γ :=
-  (fun a b => f (a, b))
-
 --------------------------------------------------------------
 -- Basics
 --------------------------------------------------------------
@@ -82,7 +77,7 @@ import Polara.Codegeneration.Lean.Runtime
   let _ ← Lean.Elab.runFrontend prog {} "" .anonymous
   let _ ← IO.setStdout s'
   return ((String.join <| (← r.get).data.toList.map
-    (String.singleton ∘ Char.ofNat ∘ Fin.val ∘ UInt8.val)).splitOn ("§\n")).head!.dropRight 2
+    (String.singleton ∘ Char.ofNat ∘ Fin.val ∘ UInt8.toFin)).splitOn ("§\n")).head!.dropRight 2
 instance : RunScript "Lean" := ⟨runLean⟩
 
 def runPythonScript (script: String) : IO String := do -- IO (Except String String)

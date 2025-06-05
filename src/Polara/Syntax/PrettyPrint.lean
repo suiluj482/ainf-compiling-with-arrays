@@ -4,9 +4,6 @@ import Polara.Syntax.Definitions
 -- Tm ToString
 ------------------------------------------------------------------------------------------
 
-def String.indent (s: String): String := "\n  " ++ s.replace "\n" "\n  "
-def String.parens (s: String): String := s!"({s})"
-
 def Ty.pretty : Ty → String
   | flt  => "Float"
   | nat  => "Nat"
@@ -109,3 +106,13 @@ def AINF.pretty (k: String → String): AINF α → String
 
 def AINF.toString : AINF α → String | e => e.pretty id
 instance : ToString (AINF α) where toString x := x.toString
+
+-------------
+
+def EnvPart.toString: EnvPart → String
+  | .func α i      => s!"fun {i.pretty}:{α.pretty}"
+  | .forc i (n:=n) => s!"for {i.pretty}:{n}"
+  | .itec i true   => s!"if {i.pretty}!=0"
+  | .itec i false  => s!"if {i.pretty}==0"
+instance : ToString EnvPart where
+  toString := EnvPart.toString
