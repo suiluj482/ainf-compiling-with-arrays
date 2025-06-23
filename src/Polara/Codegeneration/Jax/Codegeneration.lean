@@ -11,12 +11,15 @@ def Const1.tmgenJax (a: String): Const1 α₁ α → String
   | snd => s!"{a}[1]"
   | i2n => "idx2int"            ++ s!"({a})"
   | n2f => s!"{a}.astype(float)"
-  | sum => "jnp.sum"            ++ s!"({a})"
+  | sumf => "jnp.sum"            ++ s!"({a})"
 
 def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
-  | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
-  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}"
-  | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}"
+  | arithOp op =>
+    match op with
+    | .add => s!"{a} + {b}"
+    | .sub => s!"{a} - {b}"
+    | .mul => s!"{a} * {b}"
+    | .div => s!"{a} / {b}"
   | maxf => s!"max({a}, {b})"
   | addi => s!"{a} + {b}"
   | tup  => s!"({a}, {b})"

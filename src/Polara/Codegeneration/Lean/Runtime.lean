@@ -38,3 +38,26 @@ def Float.normCdf (d: Float): Float :=
   let cnd := RSQRT2PI * Float.exp (- 0.5 * d * d) *
     (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))))
   if d > 0 then 1.0 - cnd else cnd
+
+instance [HAdd α β γ]: HAdd (Vector α n) (Vector β n) (Vector γ n) where
+  hAdd := Vector.zipWith HAdd.hAdd
+instance [HAdd α β γ]: HAdd (Vector α n) β (Vector γ n) where
+  hAdd := λ as b => as.map (λ a => a + b)
+instance [HAdd α β γ]: HAdd α (Vector β n) (Vector γ n) where
+  hAdd := λ a bs => bs.map (λ b => a + b)
+instance [HMul α β γ]: HMul (Vector α n) (Vector β n) (Vector γ n) where
+  hMul := Vector.zipWith HMul.hMul
+instance [HMul α β γ]: HMul (Vector α n) β (Vector γ n) where
+  hMul := λ as b => as.map (λ a => a * b)
+instance [HMul α β γ]: HMul α (Vector β n) (Vector γ n) where
+  hMul := λ a bs => bs.map (λ b => a * b)
+instance [HSub α β γ]: HSub (Vector α n) (Vector β n) (Vector γ n) where
+  hSub := Vector.zipWith HSub.hSub
+instance [HSub α β γ]: HSub (Vector α n) β (Vector γ n) where
+  hSub := λ as b => as.map (λ a => a - b)
+instance [HSub α β γ]: HSub α (Vector β n) (Vector γ n) where
+  hSub := λ a bs => bs.map (λ b => a - b)
+instance [HDiv α β γ]: HDiv (Vector α n) (Vector β n) (Vector γ n) where
+  hDiv := Vector.zipWith HDiv.hDiv
+instance [HDiv α β γ]: HDiv (Vector α n) β (Vector γ n) where
+  hDiv := λ as b => as.map (λ a => a / b)

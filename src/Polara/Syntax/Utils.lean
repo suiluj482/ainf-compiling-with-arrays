@@ -1,5 +1,39 @@
 import Polara.Syntax.Definitions
 
+private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
+  : Tm γ α → ReaderM ((ListMap γ Γ) × Nat × (Nat → (β: Ty) → γ β)) (Tm Γ α)
+  | .err => return Tm.err
+  | .cst0 c => return Tm.cst0 c
+  | .cst1 c v => return Tm.cst1 c (←v.generalize')
+  | .cst2 c v1 v2 => return Tm.cst2 c (←v1.generalize') (←v2.generalize')
+  | .abs f => do
+      let (ren, n, vars) ← read
+      let v := vars n _
+      return Tm.abs (λ x => (f v).generalize' (⟨_, v, x⟩ :: ren, n+1, vars))
+  | .bld f => do
+      let (ren, n, vars) ← read
+      let v := vars n _
+      return Tm.bld (λ idx => (f v).generalize' (⟨_, v, idx⟩ :: ren, n+1, vars))
+  | .ite cond a b => return Tm.ite (←cond.generalize') (←a.generalize') (←b.generalize')
+  | .var v => do
+      let (ren, _, _) ← read
+      return match ren.lookup v with
+      | some x => Tm.var x
+      | none   => Tm.err
+  | .bnd t f => do
+      let (ren, n, vars) ← read
+      let v := vars n _
+      return Tm.bnd
+        (←t.generalize')
+        (λ x => (f v).generalize' (⟨_, v, x⟩ :: ren, n+1, vars))
+
+def Tm.generalize [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
+  (vars: Nat → (β: Ty) → γ β): Tm γ α → Tm Γ α :=
+  (Tm.generalize' · ([], 0, vars))
+
+def Tm.generalizeVPar : Tm VPar α → Tm VPar α :=
+  Tm.generalize (λ n _ => VPar.v (.mk n))
+
 def AINF.size : AINF α → Nat
   | .ret _ => 0
   | .bnd _ _ _ p => p.size + 1

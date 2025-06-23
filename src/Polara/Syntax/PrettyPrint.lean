@@ -24,14 +24,21 @@ def Const1.pretty : Const1 α₁ α → String
   | normCdf => "normCdf"
   | fst => "fst"
   | snd => "snd"
-  | sum => "sum"
+  | sumf => "sum"
   | i2n => "val"
   | n2f => "ofNat"
 
+def ArithOp.pretty : ArithOp → String
+  | add => "+"
+  | sub => "-"
+  | mul => "*"
+  | div => "/"
+
 def Const2.pretty (a: String) (b: String): Const2 α₁ α₂ α → String
-  | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
-  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}" | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}" | maxf => s!"max {a} {b}"
+  | arithOp op => s!"{a} {op.pretty} {b}"
+
   | addi => s!"{a} + {b}"
+  | maxf => s!"max {a} {b}"
   | tup  => s!"({a}, {b})"
   | app  => s!"{a} {b}"
   | get  => s!"{a}[{b}]"

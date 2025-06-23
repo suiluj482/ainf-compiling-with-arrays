@@ -3,7 +3,7 @@ import Polara.Tests.Utils
 
 namespace AinfTestCases
 
-  open Notations Ty Const0 Const1 Const2 Prim AINF EnvPart
+  open Notations Ty Const0 Const1 ArithOp Const2 Prim AINF EnvPart
 
   def ainfSimpleTestCases : List (TestCase (Some AINF)) := [
     -- cst0
@@ -58,10 +58,10 @@ namespace AinfTestCases
         let'' [] in x3 := cst1 snd (.v (x2: Var (flt ×× nat)));
         .ret (.v x3)
     ⟩,
-    ⟨"sum", nat, -- todo only nat or flt
-        let'' [] in x0 := plitn 42;
-        let'' [] in x1 := for'' i0:10, (.v (x0: Var nat));
-        let'' [] in x2 := cst1 sum (.v (x1: Var (array 10 nat)));
+    ⟨"sum", flt,
+        let'' [] in x0 := plitf 42;
+        let'' [] in x1 := for'' i0:10, (.v (x0: Var flt));
+        let'' [] in x2 := cst1 sumf (.v (x1: Var (array 10 flt)));
         .ret (.v x2)
     ⟩,
     ⟨"i2n", nat,
@@ -76,45 +76,63 @@ namespace AinfTestCases
     ⟩,
     -- cst2
     ⟨"addn", nat,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitn 42;
         let'' [] in x1 := plitn 2;
-        let'' [] in x2 := cst2 addn (.v (x0: Var nat)) (.v (x1: Var nat));
+        let'' [] in x2 := cst2 (arithOp add) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"muln", nat,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitn 42;
         let'' [] in x1 := plitn 2;
-        let'' [] in x2 := cst2 muln (.v (x0: Var nat)) (.v (x1: Var nat));
+        let'' [] in x2 := cst2 (arithOp mul) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"addf", flt,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitf 42.0;
         let'' [] in x1 := plitf 2.0;
-        let'' [] in x2 := cst2 addf (.v (x0: Var flt)) (.v (x1: Var flt));
+        let'' [] in x2 := cst2 (arithOp add) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"subf", flt,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitf 42.0;
         let'' [] in x1 := plitf 2.0;
-        let'' [] in x2 := cst2 subf (.v (x0: Var flt)) (.v (x1: Var flt));
+        let'' [] in x2 := cst2 (arithOp sub) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"mulf", flt,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitf 42.0;
         let'' [] in x1 := plitf 2.0;
-        let'' [] in x2 := cst2 mulf (.v (x0: Var flt)) (.v (x1: Var flt));
+        let'' [] in x2 := cst2 (arithOp mul) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"divf", flt,
+        let x0: Var _ := (Var.mk 0)
+        let x1: Var _ := x1
+        let x2: Var _ := x2
         let'' [] in x0 := plitf 42.0;
         let'' [] in x1 := plitf 2.0;
-        let'' [] in x2 := cst2 divf (.v (x0: Var flt)) (.v (x1: Var flt));
+        let'' [] in (x2: Var flt) := cst2 (arithOp div) (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"maxf", flt,
         let'' [] in x0 := plitf 42.0;
         let'' [] in x1 := plitf 2.0;
-        let'' [] in x2 := cst2 maxf (.v (x0: Var flt)) (.v (x1: Var flt));
+        let'' [] in x2 := cst2 maxf (.v x0) (.v x1);
         .ret (.v x2)
     ⟩,
     ⟨"addi", idx 10,

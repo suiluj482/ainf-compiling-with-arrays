@@ -49,11 +49,11 @@ def Prim.toTm (_env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
 | cst1 c v      => Tm.cst1 c (ren.apply v)
 | cst2 c v1 v2  => Tm.cst2 c (ren.apply v1) (ren.apply v2)
 | ite cond a b  => Tm.ite (ren.apply cond) (ren.apply a) (ren.apply b)
-| abs par v => fun' x => (
+| abs par v => fun'v x => (
     let ren := ren.addPar par x
     ren.apply v
   )
-| bld idx v => for' x => (
+| bld idx v => for'v x => (
     let ren := ren.addPar idx x
     ren.apply v
   )
@@ -63,12 +63,12 @@ def Env.wrapTm (ren: RenTm Γ)(k: RenTm Γ → Tm Γ α)(env: Env): (Tm Γ (env.
   match env with
   | .nil => k ren
   | .func env _ i =>
-      env.wrapTm ren (λ ren => fun' i' =>
+      env.wrapTm ren (λ ren => fun'v i' =>
         let ren' := ren.addPar i i'
         k ren'
       )
   | .forc env _ i =>
-      env.wrapTm ren (λ ren => for' i' =>
+      env.wrapTm ren (λ ren => for'v i' =>
         let ren' := ren.addPar i i'
         k ren'
       )
@@ -92,7 +92,7 @@ def AINF.toTm'(a: AINF α)(ren: RenTm Γ): Tm Γ α :=
       | _               => Tm.err
     | .p p => ren.par.apply p
   | .bnd env v prim rest =>
-    let' v' := env.wrapTm ren (λ ren' => prim.toTm env ren');
+    let'v v' := env.wrapTm ren (λ ren' => prim.toTm env ren');
     rest.toTm' (ren.addVar v ⟨env, v'⟩)
 
 def AINF.toTm (a: AINF α): Tm Γ α := a.toTm' ⟨[], []⟩

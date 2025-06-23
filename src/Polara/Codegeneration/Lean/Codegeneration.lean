@@ -21,12 +21,15 @@ def Const1.tmgen: Const1 α₁ α → String
   | snd => "Prod.snd"
   | i2n => "Fin.val"
   | n2f => "Float.ofNat"
-  | sum => "Vector.esum"
+  | sumf => "Vector.esum"
 
 def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
-  | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
-  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}"
-  | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}"
+  | arithOp op =>
+    match op with
+    | .add => s!"{a} + {b}"
+    | .sub => s!"{a} - {b}"
+    | .mul => s!"{a} * {b}"
+    | .div => s!"{a} / {b}"
   | maxf => s!"max {a} {b}"
   | addi => s!"{a}.add' {b}"
   | tup  => s!"({a}, {b})"

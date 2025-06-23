@@ -11,12 +11,15 @@ def Const1.tmgenPy (a: String): Const1 α₁ α → String
   | snd => s!"{a}[1]"
   | i2n => "idx2int"            ++ s!"({a})"
   | n2f => "float"              ++ s!"({a})"
-  | sum => "sum"                ++ s!"({a})"
+  | sumf => "sum"                ++ s!"({a})"
 
 def Const2.tmgenPy (a: String) (b: String): Const2 α₁ α₂ α → String
-  | addn => s!"{a} + {b}" | muln => s!"{a} * {b}"
-  | addf => s!"{a} + {b}" | subf => s!"{a} - {b}"
-  | mulf => s!"{a} * {b}" | divf => s!"{a} / {b}"
+  | arithOp op =>
+    match op with
+    | .add => s!"{a} + {b}"
+    | .sub => s!"{a} - {b}"
+    | .mul => s!"{a} * {b}"
+    | .div => s!"{a} / {b}"
   | maxf => s!"max({a}, {b})"
   | addi => s!"{a} + {b}"
   | tup  => s!"({a}, {b})"
@@ -37,7 +40,7 @@ def Tm.codegenPy' : Tm VPar α → ReaderM (Nat × Nat) String
     let (i,j) <- read
     let v := VPar.p (.mk j)
     return s!"[{(f v).codegenPy' (i,j+1)} for {v.pretty} in range(0,{n})]"
-  | bnd e f => do -- todo can't be in expr in python
+  | bnd e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)
     return s!"let({x.pretty} := {e.codegenPy' (i,j)}, {(f x).codegenPy' (i+1,j)})"

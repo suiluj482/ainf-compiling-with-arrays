@@ -29,32 +29,49 @@ inductive Const1 : Ty → Ty → Type
   | normCdf : Const1 flt flt      -- normal cumulative distribution function
   | fst : Const1 (α ×× β) α       -- first of tupple
   | snd : Const1 (α ×× β) β       -- second of tupple
-  | sum : Const1 (array n α) α    -- sum of array Monoide fordern
+  | sumf : Const1 (array n flt) flt    -- sum of array Monoide fordern
   -- | mul
   | i2n  : Const1 (idx n) nat     -- indices -> nat
   | n2f  : Const1 nat flt         -- nat -> float
   deriving BEq
   open Const1
 
--- class Addable (α: Ty)(β: Ty) where
---   res: Ty
+-- broadcastArrayL (boradcastArrayR) should be forbidden
+inductive TypesArithOp: Ty → Ty → Ty → Type
+| nats: TypesArithOp nat nat nat
+| flts: TypesArithOp flt flt flt
+| elementsArray (n: Nat): TypesArithOp α β γ → TypesArithOp (array n α) (array n β) (array n γ)
+deriving BEq, Repr
+class TypeArithOp (α β: Ty)(γ: outParam Ty) where
+  type: TypesArithOp α β γ
+deriving BEq, Repr
+
+instance : TypeArithOp nat nat nat := ⟨TypesArithOp.nats⟩
+instance : TypeArithOp flt flt flt := ⟨TypesArithOp.flts⟩
+instance {n: Nat} {α β γ: Ty} [arithOp: TypeArithOp α β γ]: TypeArithOp (array n α) (array n β) (array n γ) :=
+  ⟨TypesArithOp.elementsArray n arithOp.type⟩
+
+inductive ArithOp: Type
+| add: ArithOp
+| sub: ArithOp
+| mul: ArithOp
+| div: ArithOp
+deriving BEq, Repr
 
 -- binary functions
 inductive Const2 : Ty → Ty → Ty → Type
-  -- | add [a: Addable α β]: Const2 α β a.res
-  | addn : Const2 nat nat nat
-  | muln : Const2 nat nat nat
-  | addf : Const2 flt flt flt
-  | subf : Const2 flt flt flt
-  | mulf : Const2 flt flt flt
-  | divf : Const2 flt flt flt
+  | arithOp [type: TypeArithOp α β γ] (op: ArithOp): Const2 α β γ
+
+  | addi: Const2 (idx n) (idx m) (idx (n+m))
   | maxf : Const2 flt flt flt
-  | addi : Const2 (idx n) (idx m) (idx (n+m))
   | get : Const2 (array n a) (idx n) a          -- array access
   | tup : Const2 α β (α ×× β)                   -- tupple constructor
   | app : Const2 (α~>β) α β                     -- function application
+-- kinda missing: zip, reduce?
   deriving BEq
   open Const2
+
+-- #eval ((Const2.arithOp ArithOp.add): Const2 (Ty.array 5 Ty.nat) (Ty.array 5 <| Ty.array 10 Ty.nat) (Ty.array 5 <| Ty.array 10 Ty.nat))
 
 -- Variable symbols: α is Polara Type of Variable
 inductive Var : Ty → Type
