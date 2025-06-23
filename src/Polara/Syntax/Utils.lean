@@ -31,7 +31,7 @@ def Tm.generalize [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
   (vars: Nat → (β: Ty) → γ β): Tm γ α → Tm Γ α :=
   (Tm.generalize' · ([], 0, vars))
 
-def Tm.generalizeVPar : Tm VPar α → Tm VPar α :=
+def Tm.generalizeVPar : Tm VPar α → Tm Γ α :=
   Tm.generalize (λ n _ => VPar.v (.mk n))
 
 def AINF.size : AINF α → Nat

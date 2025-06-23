@@ -148,5 +148,8 @@ def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
 def Tm.norm {α} : (∀ Γ, Tm Γ α) → Tm Γ α
   | e => quote (de (e _))
 
-#eval ((norm (fun Γ => ((fun' i0 => i0): Tm Γ (Ty.nat ~> Ty.nat)))) : Tm VPar (Ty.nat ~> Ty.nat))
-#eval (fun x => x) 0
+def Tm.normVPar (t: Tm VPar α): Tm VPar α :=
+  Tm.norm (λ _ => t.generalizeVPar)
+
+-- #eval ((norm (fun Γ => ((fun' i0 => i0): Tm Γ (Ty.nat ~> Ty.nat)))) : Tm VPar (Ty.nat ~> Ty.nat))
+-- #eval (fun x => x) 0

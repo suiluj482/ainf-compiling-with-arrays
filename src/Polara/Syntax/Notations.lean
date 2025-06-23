@@ -5,7 +5,9 @@ open Tm Ty Const0 Const1 ArithOp Const2
 
 -- Tm
 notation:max "let' "x" := "term";"res => Tm.bnd term (λ x => let x := Tm.var x; res)
+notation:max "let' "x":"α" := "term";"res => @Tm.bnd _ α _ term (λ x => let x := Tm.var x; res)
 notation:max "fun' "i" => "term => Tm.abs (λ i => let i := Tm.var i; term)
+notation:max "fun' "i":"α" => "term => @Tm.abs _ α _ (λ i => let i := Tm.var i; term)
 notation:max "for' "i" => "term => Tm.bld (λ i => let i := Tm.var i; term)
 notation:max "for' "i":"n" => "term => @Tm.bld _ n (λ i => let i := Tm.var i; term)
 notation:max "if' "cond" then "a" else "b => Tm.ite cond a b
