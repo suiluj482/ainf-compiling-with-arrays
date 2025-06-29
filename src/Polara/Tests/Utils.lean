@@ -39,7 +39,7 @@ def TestCaseTree.pretty (tree: TestCaseTree): IO String := do return (
     (λ (name, score) => s!"{name} {score.pretty}")
     (λ (name, res, score) =>
       let res' := res.map
-        (λ ((s, ok): String × Bool) => s!"{ok} | {s}")
+        (λ ((s, ok): String × Bool) => s!"{if ok then "pass" else "fail"} | {s}")
         |>.foldr (s!"{·}\n{·}") ""
       s!"{name} {score.pretty}: ({res'.indent.dropRight 2})")
   |>.pretty

@@ -1,7 +1,7 @@
 import Polara.Syntax.Definitions
 import Polara.Syntax.PrettyPrint
 
-open Tm Ty Const0 Const1 ArithOp Const2
+open Tm Ty Const0 Const1 ArithOp AddOp MulOp Const2
 
 -- Tm
 notation:max "let' "x" := "term";"res => Tm.bnd term (λ x => let x := Tm.var x; res)
@@ -9,17 +9,18 @@ notation:max "let' "x":"α" := "term";"res => @Tm.bnd _ α _ term (λ x => let x
 notation:max "fun' "i" => "term => Tm.abs (λ i => let i := Tm.var i; term)
 notation:max "fun' "i":"α" => "term => @Tm.abs _ α _ (λ i => let i := Tm.var i; term)
 notation:max "for' "i" => "term => Tm.bld (λ i => let i := Tm.var i; term)
-notation:max "for' "i":"n" => "term => @Tm.bld _ n (λ i => let i := Tm.var i; term)
+notation:max "for' "i":"n" => "term => @Tm.bld _ n _ (λ i => let i := Tm.var i; term)
 notation:max "if' "cond" then "a" else "b => Tm.ite cond a b
 
 notation:max "let'v "x" := "term";"res => Tm.bnd term (λ x => res)
 notation:max "fun'v "i" => "term => Tm.abs (λ i => term)
 notation:max "for'v "i" => "term => Tm.bld (λ i => term)
-notation:max "for'v "i":"n" => "term => @Tm.bld _ n (λ i => term)
+notation:max "for'v "i":"n" => "term => @Tm.bld _ n _ (λ i => term)
 
 -- cst0
 def tlitn: Nat → Tm Γ nat := Tm.cst0 ∘ Const0.litn
 def tlitf: Float → Tm Γ flt := Tm.cst0 ∘ Const0.litf
+def tlitl: Float → Tm Γ lin := Tm.cst0 ∘ Const0.litl
 def tliti: (Fin (n+1)) → Tm Γ (Ty.idx (n)) := Tm.cst0 ∘ Const0.liti
 
 -- cst1
@@ -31,6 +32,7 @@ namespace Tm
   def fst     : Tm Γ (α ×× β) → Tm Γ α := Tm.cst1 Const1.fst
   def snd     : Tm Γ (α ×× β) → Tm Γ β := Tm.cst1 Const1.snd
   def sumf    : Tm Γ (array n flt) → Tm Γ flt := Tm.cst1 Const1.sumf
+  def suml    : Tm Γ (array n lin) → Tm Γ lin := Tm.cst1 Const1.suml
   def i2n     : Tm Γ (idx n) → Tm Γ nat := Tm.cst1 Const1.i2n
   def n2f     : Tm Γ nat → Tm Γ flt := Tm.cst1 Const1.n2f
 end Tm
@@ -41,16 +43,27 @@ notation:max array"[["index"]]" => Tm.cst2 Const2.get array index
 
 def tupple': Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
 
-@[default_instance]
-instance [TypeArithOp α β γ]: HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩
-@[default_instance]
-instance [TypeArithOp α β γ]: HSub (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp sub)⟩
-@[default_instance]
-instance [TypeArithOp α β γ]: HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp mul)⟩
-@[default_instance]
-instance [TypeArithOp α β γ]: HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp div)⟩
-@[default_instance]
-instance : Max (Tm Γ flt) := ⟨Tm.cst2 Const2.maxf⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HSub (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp sub)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp mul)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp div)⟩
+
+@[default_instance] instance [BiArraysC BiLin α β γ]:
+  HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linOp add)⟩
+@[default_instance] instance [BiArraysC BiLin α β γ]:
+  HSub (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linOp sub)⟩
+
+@[default_instance] instance [BiArrayC BiLF α β γ]:
+  HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linScale mul)⟩
+@[default_instance] instance [BiArrayC BiLF α β γ]:
+  HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linScale div)⟩
+
+@[default_instance] instance : Max (Tm Γ flt) :=
+  ⟨Tm.cst2 Const2.maxf⟩
 
 ------------------------------------------------------------------------------------------
 -- AINF

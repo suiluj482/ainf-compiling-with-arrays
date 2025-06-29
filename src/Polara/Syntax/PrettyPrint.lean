@@ -7,6 +7,7 @@ import Polara.Syntax.Definitions
 def Ty.pretty : Ty → String
   | flt  => "Float"
   | nat  => "Nat"
+  | lin => "Lin"
   | idx i => s!"Idx {i}"
   | a~>b => s!"({a.pretty} ~> {b.pretty})"
   | a××b => s!"({a.pretty} ×× {b.pretty})"
@@ -16,6 +17,7 @@ def Const0.pretty : Const0 α → String
   | litn n => ToString.toString n
   | litf f => ToString.toString f
   | liti i => ToString.toString i.val
+  | litl l => ToString.toString l
 
 def Const1.pretty : Const1 α₁ α → String
   | exp => "exp"
@@ -25,6 +27,7 @@ def Const1.pretty : Const1 α₁ α → String
   | fst => "fst"
   | snd => "snd"
   | sumf => "sum"
+  | suml => "sum"
   | i2n => "val"
   | n2f => "ofNat"
 
@@ -34,9 +37,18 @@ def ArithOp.pretty : ArithOp → String
   | mul => "*"
   | div => "/"
 
+def AddOp.pretty : AddOp → String
+| add => "+"
+| sub => "-"
+
+def MulOp.pretty : MulOp → String
+| mul => "*"
+| div => "/"
+
 def Const2.pretty (a: String) (b: String): Const2 α₁ α₂ α → String
   | arithOp op => s!"{a} {op.pretty} {b}"
-
+  | linOp op => s!"{a} {op.pretty} {b}"
+  | linScale op => s!"{a} {op.pretty} {b}"
   | addi => s!"{a} + {b}"
   | maxf => s!"max {a} {b}"
   | tup  => s!"({a}, {b})"

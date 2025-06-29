@@ -15,6 +15,7 @@ def Some (F: α → Type u) := (γ: α) × F γ
 instance TrivialInhabited (a: α): Inhabited α := ⟨a⟩
 
 ---
+def Prod.mapM [Monad M] (p: (M α × M β)): M (α × β) := do return (← p.fst,←p.snd)
 def Prod.mapBoth (p: (α × α))(f: α → β): β × β := (f p.1, f p.2)
 def Prod.map3 (p: (α × α × α))(f: α → β): β × β × β := (f p.1, f p.2.1, f p.2.2)
 def Prod.all3 (p: (α × α × α))(f: α → Bool): Bool := (f p.1 && f p.2.1 && f p.2.2)

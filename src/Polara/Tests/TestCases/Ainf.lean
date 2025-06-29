@@ -238,28 +238,10 @@ namespace AinfTestCases
     -- ...
   ]
 
-  def runners: List (String × (Term α → IO String)) := [
-    ("Lean", runLean ∘ Tm.codegen),
-    ("Py",   runWithRuntime "Python" ∘ (s!"print({·})") ∘ Tm.codegenPy),
-    ("Jax",  runWithRuntime "Jax"    ∘ (s!"print({·})") ∘ Tm.codegenJax),
-  ]
-
-  def runner: Runner (Some AINF) := λ ⟨α, a⟩ => do
-    let tm: Term α := a.toTm
-    let results ← runners.mapM (λ (n, run) => do
-      let res ← run tm
-      return (n, res)
-    )
-    return (
-      "\n" ++ (results.map (λ (n, res) => s!"{n}: {res}") |>.foldl (λ acc x => s!"{acc}  | {x}") "" |>.dropRight 1),
-      true -- todo compare res
-    )
-
-
   def testCaseTree: TestCaseTree := Tree.node "ainf testcases"
     [
       Tree.leaf ("ainfSimpleTestCases",
-        ⟨_, ainfSimpleTestCases, runner⟩
+        ⟨_, ainfSimpleTestCases, runner ∘ (λ ⟨α, a⟩ => ⟨α, a.toTm⟩)⟩
       ),
       Tree.leaf ("ainfInvalidTestCases",
         ⟨_, ainfInvalidTestCases, (λ ⟨_, a⟩ => pure ("", a.valid.not))⟩

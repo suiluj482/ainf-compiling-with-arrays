@@ -4,6 +4,7 @@ import Polara.Codegeneration.Utils
 def Ty.gen': Ty → String
   | flt  => "Float"
   | nat  => "Nat"
+  | lin => "Float"
   | Ty.idx i => s!"(Fin ({i}+1))"
   -- necessary because lazy
   | a~>b => s!"({a.gen'} → Except String {b.gen'})"
@@ -21,15 +22,14 @@ def Const1.tmgen: Const1 α₁ α → String
   | snd => "Prod.snd"
   | i2n => "Fin.val"
   | n2f => "Float.ofNat"
-  | sumf => "Vector.esum"
+  | sumf
+  | suml => "Vector.esum"
 
 def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op =>
-    match op with
-    | .add => s!"{a} + {b}"
-    | .sub => s!"{a} - {b}"
-    | .mul => s!"{a} * {b}"
-    | .div => s!"{a} / {b}"
+  | arithOp op => s!"{a} {op.pretty} {b}"
+  | linOp op => s!"{a} {op.pretty} {b}"
+  | linScale op => s!"{a} {op.pretty} {b}"
+
   | maxf => s!"max {a} {b}"
   | addi => s!"{a}.add' {b}"
   | tup  => s!"({a}, {b})"

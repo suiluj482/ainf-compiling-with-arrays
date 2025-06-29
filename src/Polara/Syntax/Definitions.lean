@@ -5,6 +5,7 @@ inductive Ty
   | nat : Ty                  -- natural number
   | idx : Nat → Ty            -- index
   | flt : Ty                  -- float
+  | lin : Ty                  -- linear (aD)
   | arrow : Ty → Ty → Ty      -- function
   | product : Ty → Ty → Ty    -- tupple
   | array : Nat → Ty → Ty     -- array
@@ -17,6 +18,7 @@ inductive Ty
 inductive Const0 : Ty → Type
   | litn : Nat → Const0 nat           -- natural number
   | litf : Float → Const0 flt         -- float
+  | litl : Float → Const0 lin         -- float| litf : Float → Const0 flt         -- float
   | liti : Fin (n+1) → Const0 (idx n) -- index
   deriving BEq
   open Const0
@@ -30,26 +32,66 @@ inductive Const1 : Ty → Ty → Type
   | fst : Const1 (α ×× β) α       -- first of tupple
   | snd : Const1 (α ×× β) β       -- second of tupple
   | sumf : Const1 (array n flt) flt    -- sum of array Monoide fordern
+  | suml : Const1 (array n lin) lin
   -- | mul
   | i2n  : Const1 (idx n) nat     -- indices -> nat
   | n2f  : Const1 nat flt         -- nat -> float
   deriving BEq
   open Const1
 
--- broadcastArrayL (boradcastArrayR) should be forbidden
-inductive TypesArithOp: Ty → Ty → Ty → Type
-| nats: TypesArithOp nat nat nat
-| flts: TypesArithOp flt flt flt
-| elementsArray (n: Nat): TypesArithOp α β γ → TypesArithOp (array n α) (array n β) (array n γ)
-deriving BEq, Repr
-class TypeArithOp (α β: Ty)(γ: outParam Ty) where
-  type: TypesArithOp α β γ
-deriving BEq, Repr
+def BiOpT := Ty → Ty → Ty → Type
 
-instance : TypeArithOp nat nat nat := ⟨TypesArithOp.nats⟩
-instance : TypeArithOp flt flt flt := ⟨TypesArithOp.flts⟩
-instance {n: Nat} {α β γ: Ty} [arithOp: TypeArithOp α β γ]: TypeArithOp (array n α) (array n β) (array n γ) :=
-  ⟨TypesArithOp.elementsArray n arithOp.type⟩
+inductive BiArith: BiOpT where
+| nats: BiArith nat nat nat
+| flts: BiArith flt flt flt
+deriving BEq, Repr
+class BiArithC (α β: Ty)(γ: outParam Ty) where
+  t: BiArith α β γ
+deriving BEq, Repr
+@[default_instance] instance: BiArithC nat nat nat := ⟨BiArith.nats⟩
+@[default_instance] instance: BiArithC flt flt flt := ⟨.flts⟩
+
+inductive BiLin: BiOpT where
+| lins: BiLin lin lin lin
+deriving BEq, Repr
+class BiLinC (α β: Ty)(γ: outParam Ty) where
+  t: BiLin α β γ
+deriving BEq, Repr
+@[default_instance] instance: BiLinC lin lin lin := ⟨.lins⟩
+
+inductive BiLF: BiOpT where
+| lf: BiLF lin flt lin
+deriving BEq, Repr
+class BiLFC (α β: Ty)(γ: outParam Ty) where
+  t: BiLF α β γ
+deriving BEq, Repr
+@[default_instance] instance: BiLFC lin flt lin := ⟨.lf⟩
+
+class abbrev BEqRepr (α: Type u) := BEq α, Repr α
+macro "∀3BR" t:term : term => `(∀ α' β' γ', BEqRepr ($t α' β' γ'))
+
+inductive BiArrays (T: BiOpT)[∀3BR T]: BiOpT
+| base: T α β γ → BiArrays T α β γ
+| array (n: Nat): BiArrays T α β γ → BiArrays T (array n α) (array n β) (array n γ)
+deriving BEq, Repr
+class BiArraysC (T: BiOpT)[∀3BR T](α β: Ty)(γ: outParam Ty) where
+  t: BiArrays T α β γ
+deriving BEq, Repr
+@[default_instance] instance [∀3BR T][b: BiArraysC T α β γ]:
+  BiArraysC T (array n α) (array n β) (array n γ) := ⟨BiArrays.array n b.t⟩
+@[default_instance] instance [b: BiArithC α β γ]: BiArraysC BiArith α β γ := ⟨.base b.t⟩
+@[default_instance] instance [b: BiLinC α β γ]: BiArraysC BiLin α β γ := ⟨.base b.t⟩
+
+inductive BiArray (T: BiOpT)[∀3BR T]: BiOpT
+| base: T α β γ → BiArray T α β γ
+| array (n: Nat): T α β γ → BiArray T (array n α) (array n β) (array n γ)
+deriving BEq, Repr
+class BiArrayC (T: BiOpT)[∀3BR T](α β: Ty)(γ: outParam Ty) where
+  t: BiArray T α β γ
+deriving BEq, Repr
+@[default_instance] instance [b: BiLFC α β γ]: BiArrayC BiLF α β γ := ⟨.base b.t⟩
+@[default_instance] instance [b: BiLFC α β γ]:
+  BiArrayC BiLF (array n α) (array n β) (array n γ) := ⟨.array n b.t⟩
 
 inductive ArithOp: Type
 | add: ArithOp
@@ -58,9 +100,21 @@ inductive ArithOp: Type
 | div: ArithOp
 deriving BEq, Repr
 
+inductive AddOp: Type
+| add: AddOp
+| sub: AddOp
+deriving BEq, Repr
+
+inductive MulOp: Type
+| mul: MulOp
+| div: MulOp
+deriving BEq, Repr
+
 -- binary functions
 inductive Const2 : Ty → Ty → Ty → Type
-  | arithOp [type: TypeArithOp α β γ] (op: ArithOp): Const2 α β γ
+  | arithOp [type: BiArraysC BiArith α β γ] (op: ArithOp): Const2 α β γ
+  | linOp [type: BiArraysC BiLin α β γ] (op: AddOp): Const2 α β γ
+  | linScale [type: BiArrayC BiLF α β γ] (op: MulOp): Const2 α β γ
 
   | addi: Const2 (idx n) (idx m) (idx (n+m))
   | maxf : Const2 flt flt flt
@@ -70,8 +124,6 @@ inductive Const2 : Ty → Ty → Ty → Type
 -- kinda missing: zip, reduce?
   deriving BEq
   open Const2
-
--- #eval ((Const2.arithOp ArithOp.add): Const2 (Ty.array 5 Ty.nat) (Ty.array 5 <| Ty.array 10 Ty.nat) (Ty.array 5 <| Ty.array 10 Ty.nat))
 
 -- Variable symbols: α is Polara Type of Variable
 inductive Var : Ty → Type

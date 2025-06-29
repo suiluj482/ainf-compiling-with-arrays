@@ -11,3 +11,10 @@ def idx2int(a):
 
 def let(x, y):
     return y
+
+def to_py(x):
+    if isinstance(x, jnp.ndarray):
+        return x.tolist()
+    if isinstance(x, tuple):
+        return tuple(to_py(i) for i in x)
+    return x
