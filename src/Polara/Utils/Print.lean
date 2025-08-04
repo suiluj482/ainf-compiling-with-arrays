@@ -1,6 +1,11 @@
 def String.indent (s: String): String := "\n  " ++ s.replace "\n" "\n  "
 def String.parens (s: String): String := s!"({s})"
 
+def List.toStringSep [ToString α](sep: String): List α → String
+  | [] => ""
+  | [x] => toString x
+  | x::xs => toString x ++ sep ++ xs.toStringSep sep
+
 namespace Print
 
   def indentString (n: Nat): String :=

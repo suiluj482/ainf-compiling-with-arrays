@@ -26,10 +26,11 @@ def Const1.tmgen: Const1 α₁ α → String
   | suml => "Vector.esum"
 
 def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op => s!"{a} {op.pretty} {b}"
-  | linOp op => s!"{a} {op.pretty} {b}"
-  | linScale op => s!"{a} {op.pretty} {b}"
+  | arithOp op => s!"{a} {op} {b}"
+  | linOp op => s!"{a} {op} {b}"
+  | linScale op => s!"{a} {op} {b}"
 
+  | lt => s!"{a} < {b}"
   | maxf => s!"max {a} {b}"
   | addi => s!"{a}.add' {b}"
   | tup  => s!"({a}, {b})"
@@ -39,23 +40,23 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
 def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | err => return "Except.error"
   | var i => return match i with
-    | .v v => v.pretty
-    | .p p => s!"(return {p.pretty})"
-  | cst0 k => return s!"return {k.pretty}"
+    | .v v => v.toString
+    | .p p => s!"(return {p})"
+  | cst0 k => return s!"return {k}"
   | cst1 k a => return s!"return {k.tmgen} (←{(← a.codegen')})"
   | cst2 k a b => return "return " ++ k.tmgen s!"(←{<- a.codegen'})" s!"(←{<- b.codegen'})"
   | abs (α:=γ) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(return fun {v.pretty}:{γ.gen'} => {(f v).codegen' (i,j+1)})"
+    return s!"(return fun {v}:{γ.gen'} => {(f v).codegen' (i,j+1)})"
   | bld (n:=n) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return  s!"(Vector.ebuild {n} fun {v.pretty} => {(f v).codegen' (i, j+1)})"
+    return  s!"(Vector.ebuild {n} fun {v} => {(f v).codegen' (i, j+1)})"
   | bnd (α:=β) e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)
-    return s!"let {x.pretty}: {β.gen} := {e.codegen' (i,j)}; \n{(f x).codegen' (i+1,j)}"
+    return s!"let {x}: {β.gen} := {e.codegen' (i,j)}; \n{(f x).codegen' (i+1,j)}"
   | ite cond a b =>
     return s!"(if (←{← cond.codegen'}) != 0 then {<- a.codegen'} else {<- b.codegen'})"
 

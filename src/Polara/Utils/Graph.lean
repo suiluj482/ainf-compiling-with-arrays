@@ -1,10 +1,12 @@
+import Std
+import Polara.Utils.Utils
 
 structure Graph (α: Type u) where
   s: Nat -- number of nodes
   nonEmpty: s > 0
   vals: Vector α s
-  preds: Vector (List (Fin s)) s -- predecessors
-  succs: Vector (List (Fin s)) s -- successors
+  pred: Vector (List (Fin s)) s -- predecessors
+  succ: Vector (List (Fin s)) s -- successors
   startI: Fin s -- start index
   endI: Fin s -- end index
 
@@ -16,9 +18,9 @@ def Graph.node (g: Graph α)(i: Fin g.s): Node g :=
   ⟨i, g.vals[i]⟩
 
 def Node.pred (n: Node g): List (Node g) :=
-  g.preds[n.idx].map g.node
+  g.pred[n.idx].map g.node
 def Node.succ (n: Node g): List (Node g) :=
-  g.succs[n.idx].map g.node
+  g.succ[n.idx].map g.node
 
 def Graph.start (g: Graph α): Node g :=
   g.node g.startI
@@ -39,13 +41,13 @@ def Graph.addNode (g: Graph α)(val: α)(pred succ: List (Node g)): Graph α :=
     g.s + 1,
     by simp [g.nonEmpty],
     g.vals.push val,
-    g.preds.mapFinIdx (λ i preds fin =>
-      let preds := preds.map (Fin.lift lt)
-      if succI.contains ⟨i, fin⟩ then j :: preds else preds
+    g.pred.mapFinIdx (λ i pred fin =>
+      let pred := pred.map (Fin.lift lt)
+      if succI.contains ⟨i, fin⟩ then j :: pred else pred
     ) |>.push (predI.map (Fin.lift lt)),
-    g.succs.mapFinIdx (λ i succs fin =>
-      let succs := succs.map (Fin.lift lt)
-      if predI.contains ⟨i, fin⟩ then j :: succs else succs
+    g.succ.mapFinIdx (λ i succ fin =>
+      let succ := succ.map (Fin.lift lt)
+      if predI.contains ⟨i, fin⟩ then j :: succ else succ
     ) |>.push (succI.map (Fin.lift lt)),
     g.startI.lift lt,
     g.endI.lift lt,
@@ -54,4 +56,15 @@ def Graph.addNode (g: Graph α)(val: α)(pred succ: List (Node g)): Graph α :=
 def Node.lift {g g': Graph α}(ok: g.s<g'.s)(n: Node g): Node g' :=
   {n with idx := n.idx.lift ok}
 
-def Graph.topologicalSort (g: Graph α): Graph α := sorry
+private partial def Std.DHashMap.topologicalSort' [BEq α] [Hashable α]
+(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F)(done: List (Some F)): List (Some F) :=
+  let (startNodes, m') := m.partition
+    (λ key val => pred key val |>.filter m.contains |>.isEmpty)
+  match startNodes.isEmpty, m'.isEmpty with
+  | true, true => done
+  | true, false => panic! "error"
+  | _, _ => topologicalSort' pred m' (done ++ startNodes.toList)
+
+def Std.DHashMap.topologicalSort [BEq α] [Hashable α]
+(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F): List (Some F) :=
+  Std.DHashMap.topologicalSort' pred m []

@@ -1,52 +1,11 @@
 import Polara.Syntax.Index
+import Polara.Optimizations.ToAinf
 
 open Ty Tm Const0 Const1 Const2
 
 ------------------------------------------------------------------------------------------
 -- fission & common subexpression elimination (AINF)
 ------------------------------------------------------------------------------------------
-
--- toAINF
-@[reducible] def Counter := ReaderM Nat
-
--- no new variable for .var
--- Counter monade for vars numbers begining with 0
-def AINF.smart_bnd : Env → Prim α → (VPar α → Counter (AINF β)) → Counter (AINF β)
-  | _, .var x, k => fun i => k x i
-  | Γ, p     , k => fun i =>
-    let x := Var.mk i
-    bnd Γ x p (k (.v x) (i+1)) -- +1 counter
-
-def Tm.toAINF (e : Tm VPar α) : AINF α :=
-  (go 0 .nil e fun v _i => .ret v) 0
-  where go {α β} (j : Nat) (Γ : Env) (e : Tm VPar α)
-           (reti : VPar α → Counter (AINF β)): Counter (AINF β) := match e with
-  | err => .smart_bnd Γ .err reti
-  | var x => .smart_bnd Γ (.var x) reti
-  | cst0 c => .smart_bnd Γ (.cst0 c) reti
-  | cst1 c e₁ =>
-    go j Γ e₁ fun v₁ =>
-    .smart_bnd Γ (.cst1 c v₁) reti
-  | cst2 c e₁ e₂ =>
-    go j Γ e₁ fun v₁ =>
-    go j Γ e₂ fun v₂ =>
-    .smart_bnd Γ (.cst2 c v₁ v₂) reti
-  | abs e =>
-    let xx := Par.mk j
-    go (j+1) (.func Γ _ xx) (e (.p xx)) fun v =>
-    .smart_bnd Γ (.abs xx v) reti
-  | bld (n:=n) e =>
-    let xx : Par (idx n) := Par.mk j
-    go (j+1) (.forc Γ n xx) (e (.p xx)) fun v =>
-    .smart_bnd Γ (.bld xx v) reti
-  | ite e₁ e₂ e₃ =>
-    go j Γ e₁ fun v₁ =>
-    go j (.itec Γ v₁ true ) e₂ fun v₂ =>
-    go j (.itec Γ v₁ false) e₃ fun v₃ =>
-    .smart_bnd Γ (.ite v₁ v₂ v₃) reti
-  | bnd e f =>
-    go j Γ e fun v =>
-    go j Γ (f v) reti
 
 -- boolean equality ----------------------------
 def Prim.beq : Prim α → Prim α → Bool
@@ -68,9 +27,9 @@ def Prim.beq : Prim α → Prim α → Bool
       else false
   | _, _ => false
 def AINF.beq : AINF α → AINF α → Bool
-  | .ret i, .ret j => i==j
-  | .bnd (α:=β) _Γ _i v f, .bnd (α:=γ) _Δ _j w e =>
-    if h:β=γ then v.beq (h▸w) && f.beq e else false
+  | ([], i), ([], j) => i==j
+  | (⟨⟨β, _⟩, _, p⟩ :: f, _), (⟨⟨γ, _⟩, _, p'⟩ :: f', _) =>
+    if h:β=γ then p.beq (h▸p') && f.beq f' else false
   | _, _ => false
 
 instance : BEq (Prim x) where beq a b := Prim.beq a b
@@ -86,12 +45,14 @@ def VPar.rename (r: Ren): VPar α → VPar α
   | VPar.v x => .v (x.rename r)
   | VPar.p x => .p x
 
-def Env.rename (r: Ren): Env → Env
-  | nil => .nil
-  | func Γ α p     => func (Γ.rename r) α p
-  | forc Γ n p     => forc (Γ.rename r) n p
-  | itec Γ i true  => itec (Γ.rename r) (i.rename r) true
-  | itec Γ i false => itec (Γ.rename r) (i.rename r) false
+def EnvPart.rename (r: Ren): EnvPart → EnvPart
+| func α p     => func α p
+| forc n p     => forc n p
+| itec i true  => itec (i.rename r) true
+| itec i false => itec (i.rename r) false
+
+def Env.rename (r: Ren)(env: Env): Env :=
+  env.map (EnvPart.rename r)
 
 def Prim.rename (r: Ren): Prim α → Prim α
   | .cst0 k => .cst0 k
@@ -102,10 +63,14 @@ def Prim.rename (r: Ren): Prim α → Prim α
   | .abs i e   => .abs i (e.rename r)
   | .ite a b c => .ite (a.rename r) (b.rename r) (c.rename r)
   | .bld i f => .bld i (f.rename r)
+  | .ref v => .ref (v.rename r)
+  | .bndRef re v => .bndRef (re.rename r) (v.rename r)
+
+def Bnd.rename (r: Ren): Bnd → Bnd
+| ⟨⟨_,i⟩, env, prim⟩ => ⟨⟨_, i⟩, env.rename r, prim.rename r⟩
 
 def AINF.rename (r: Ren): AINF α → AINF α
-  | .ret i       => .ret (i.rename r)
-  | .bnd Γ i v e => .bnd (Γ.rename r) i (v.rename r) (e.rename r)
+| (bnds, ret) => (bnds.map (Bnd.rename r), ret.rename r)
 -----------------------------------------------
 
 -- Reverse AiNF variable bindigs (like AINF.bnd) in reverse order
@@ -117,26 +82,26 @@ inductive Tern where | L | R | M
 -- intersection of two environments
 def Env.or (Γ: Env) (Δ: Env) (t: Tern): Option Env := match Γ, Δ with
   -- keep if identical
-  | nil,        nil        => return .nil
-  | func Γ α p, func Δ β q =>
-    if h: α=β then if h▸ p==q then return func (<- Γ.or Δ t) α p else none else none
-  | forc Γ n p, forc Δ m q =>
-    if h: n=m then if h▸ p==q then return forc (<- Γ.or Δ t) n p else none else none
-  | itec Γ i b, itec Δ j d =>
+  | [],         []        => return .nil
+  | .func α p :: Γ, .func β q :: Δ =>
+    if h: α=β then if h▸ p==q then return .func α p :: (<- Env.or Γ Δ t) else none else none
+  | .forc n p :: Γ, .forc m q :: Δ =>
+    if h: n=m then if h▸ p==q then return .forc n p :: (<- Env.or Γ Δ t) else none else none
+  | .itec i b :: Γ, .itec j d :: Δ =>
     if i==j then
       if b==d
-      then return itec (<- Γ.or Δ t) i b  -- keep
-      else return      (<- Γ.or Δ t)      -- (i=T||i=F) <-> T
+      then return .itec i b :: (<- Env.or Γ Δ t)  -- keep
+      else return      (<- Env.or Γ Δ t)      -- (i=T||i=F) <-> T
     else none
   -- keep itec if on Trilean side or Middle
-  | itec Γ _ _, Δ => match t with
-    | .L => Γ.or Δ .L
-    | .M => Γ.or Δ .L
+  | .itec _ _ :: Γ, Δ => match t with
+    | .L => Env.or Γ Δ .L
+    | .M => Env.or Γ Δ .L
     | .R => none
-  | Γ, itec Δ _ _ => match t with
+  | Γ, .itec _ _ :: Δ => match t with
     | .L => none
-    | .M => Γ.or Δ .R
-    | .R => Γ.or Δ .R
+    | .M => Env.or Γ Δ .R
+    | .R => Env.or Γ Δ .R
   -- else none
   | _,          _          => none
 
@@ -153,8 +118,8 @@ def RAINF.upgrade : RAINF → Var b → Env → Option RAINF
 
 -- Renaming and RAINF to be initallized with []
 def AINF.cse' (r: Ren) (σ: RAINF): AINF α → (RAINF × VPar α)
-  | ret v       => (σ, v.rename r)
-  | bnd Γ v prim rest =>
+  | ([], v)       => (σ, v.rename r)
+  | (⟨⟨_,v⟩, Γ, prim⟩ :: rest, ret) =>
     let Γ' := Γ.rename r
     let prim' := prim.rename r
 
@@ -167,12 +132,12 @@ def AINF.cse' (r: Ren) (σ: RAINF): AINF α → (RAINF × VPar α)
 
     match tmp with
     -- no identical variable in RAINF found => add new variable
-    | none         => cse' r              (⟨_,prim',(v,Γ')⟩::σ) rest
+    | none         => cse' r              (⟨_,prim',(v,Γ')⟩::σ) (rest, ret)
     -- identical variable RAINF found => rename to it, update RAINF with new env
-    | some (v',σ') => cse' (⟨_,v,v'⟩::r)  σ'                    rest
+    | some (v',σ') => cse' (⟨_,v,v'⟩::r)  σ'                    (rest, ret)
 
 def RAINF.merge (rainf: RAINF) (v: VPar α): AINF α :=
-  rainf.foldl (λ acc ⟨_,x,(v,Γ)⟩ => .bnd Γ v x acc) (.ret v)
+  rainf.foldl (λ (acc, ret) ⟨_,x,(v,Γ)⟩ => (⟨⟨_,v⟩,Γ,x⟩ :: acc, ret)) ([], v)
 
 def AINF.cse (a: AINF α): AINF α :=
   let (rainf, v) := a.cse' [] []
@@ -181,6 +146,6 @@ def AINF.cse (a: AINF α): AINF α :=
 -- invers of AINF.merge
 def AINF.list: AINF α → RAINF × VPar α :=
   λ
-  | .ret i       => ([], i)
-  | .bnd (α:=β) Γ v prim rest => rest.list.map (⟨β ,prim, (v, Γ)⟩ :: ·) id
+  | ([],i)       => ([], i)
+  | (⟨⟨β, v⟩, Γ, prim⟩ :: rest, ret) => AINF.list (rest, ret)|>.map (⟨β ,prim, (v, Γ)⟩ :: ·) id
   |>.map List.reverse id

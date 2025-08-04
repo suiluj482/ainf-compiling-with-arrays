@@ -1,6 +1,6 @@
 import Polara.Codegeneration.Utils
 
-def Const0.tmgenJax (const0: Const0 α): String := s!"jnp.array({const0.pretty})"
+def Const0.tmgenJax (const0: Const0 α): String := s!"jnp.array({const0})"
 
 def Const1.tmgenJax (a: String): Const1 α₁ α → String
   | normCdf => "normCdf" ++ s!"({a})"
@@ -15,9 +15,10 @@ def Const1.tmgenJax (a: String): Const1 α₁ α → String
   | suml => "jnp.sum"            ++ s!"({a})"
 
 def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op => s!"{a} {op.pretty} {b}"
-  | linOp op => s!"{a} {op.pretty} {b}"
-  | linScale op => s!"{a} {op.pretty} {b}"
+  | arithOp op => s!"{a} {op} {b}"
+  | linOp op => s!"{a} {op} {b}"
+  | linScale op => s!"{a} {op} {b}"
+  | lt => s!"{a} < {b}"
   | maxf => s!"max({a}, {b})"
   | addi => s!"{a} + {b}"
   | tup  => s!"({a}, {b})"
@@ -27,22 +28,22 @@ def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
 partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
   -- | err => return "None"
   | err => (Tm.inst α).codegenJax' -- guranteed termination because inst has no error but how to prove this?
-  | var i => return i.pretty
+  | var i => return i.toString
   | cst0 k => return k.tmgenJax
   | cst1 k a => return k.tmgenJax s!"({(← a.codegenJax')})"
   | cst2 k a b => return k.tmgenJax s!"({← a.codegenJax'})" s!"({← b.codegenJax'})"
   | abs f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(lambda {v.pretty}: {(f v).codegenJax' (i,j+1)})"
+    return s!"(lambda {v}: {(f v).codegenJax' (i,j+1)})"
   | bld (n:=n) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(jax.vmap(lambda {v.pretty}: {(f v).codegenJax' (i, j+1)})(jnp.arange({n})))"
+    return s!"(jax.vmap(lambda {v}: {(f v).codegenJax' (i, j+1)})(jnp.arange({n})))"
   | bnd e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)
-    return s!"let({x.pretty} := {e.codegenJax' (i,j)}, \n{(f x).codegenJax' (i+1,j)})"
+    return s!"let({x} := {e.codegenJax' (i,j)}, \n{(f x).codegenJax' (i+1,j)})"
   | ite cond a b =>
     return s!"(lax.cond({← cond.codegenJax'} != 0, lambda: {<- a.codegenJax'}, lambda: {<- b.codegenJax'}))"
 

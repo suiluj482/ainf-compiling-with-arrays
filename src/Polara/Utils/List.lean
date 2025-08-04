@@ -2,6 +2,9 @@ import Polara.Utils.Functions
 
 namespace List
 
+  def fold1 (f: α → α → α)(l: List α)(ok: l≠[]): α :=
+  List.foldl f (l.head ok) l.tail
+
   private def splitAux : Nat → (List α) → (List α) → (List α) × (List α)
   | 0, a, b => (a, b)
   | _, a, [] => (a, [])

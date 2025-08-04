@@ -15,12 +15,29 @@ open Ty Tm Const0 Const1 ArithOp AddOp MulOp Const2
   | s ×× t => s.de Γ × t.de Γ
   | s ~> t => s.de Γ → t.de Γ
   | array n t => Tm Γ (idx n) → t.de Γ
+  | unit => Tm Γ unit
+  | ref _ => Unit -- not supported in term
 
+instance: Inhabited (Ty.de Γ α) :=
+  ⟨
+    let rec go := λ
+    | .nat => cst0 (litn 0)
+    | .flt => cst0 (litf 0)
+    | .lin => cst0 (litl 0)
+    | .idx _ => cst0 (liti 0)
+    | α ×× β => (go α, go β)
+    | _ ~> β => λ _ => go β
+    | .array _ α => λ _ => go α
+    | .unit => cst0 litu
+    | .ref _ => ()
+    go α
+  ⟩
 
 -- schwache starke c(...) Eta gesetz
 mutual
   -- denotation to term
   def quote {Γ} : {α : Ty} → Ty.de Γ α → Tm Γ α
+    | unit  , e => e
     | nat   , e => e
     | flt   , e => e
     | lin   , e => e
@@ -28,8 +45,10 @@ mutual
     | _α ~> _β   , e => abs fun x => quote (e (splice (var x)))
     | _α ×× _β   , e => cst2 tup (quote e.1) (quote e.2)
     | array _n _α, e => bld fun x => quote (e (var x))
+    | .ref _α, _ => panic! "ref not supported in denotation"
   -- term to denotation
   def splice {Γ} : {α : Ty} → Tm Γ α → Ty.de Γ α
+    | unit  , e => e
     | nat   , e => e
     | flt   , e => e
     | lin   , e => e
@@ -37,6 +56,7 @@ mutual
     | _α ~> _β   , e => fun x => splice (cst2 app e (quote x))
     | _α ×× _β   , e => (splice (cst1 fst e), splice (cst1 snd e))
     | array _n _α, e => fun x => splice (cst2 get e x)
+    | .ref _α, _ => panic! "ref not supported in denotation"
 end
 
 def Const0.de : Const0 α → Ty.de Γ α
@@ -44,6 +64,8 @@ def Const0.de : Const0 α → Ty.de Γ α
   | litf f => cst0 (litf f)
   | litl l => cst0 (litl l)
   | liti i => cst0 (liti i)
+  | litu => cst0 litu
+  | litr => panic! "ref not supported in denotation"
 
 def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
   | fst => fun (a , _b) => a
@@ -73,6 +95,11 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
   | app => fun f e => f e
   | get => fun f n => f n
   | tup => fun a b => (a, b)
+  | lt => fun
+    | .err, _
+    | _, .err => err
+    | cst0 (litf a), cst0 (litf b) => cst0 (litn (if a<b then 1 else 0))
+    | a, b                         => cst2 lt a b
   | maxf => fun
     | .err, _ => err
     | _, .err => err
@@ -193,6 +220,8 @@ def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
     | cst0 (litn 0) => e₃.de -- 0 is false
     | cst0 (litn _) => e₂.de
     | a'            => splice (ite a' (quote e₂.de) (quote e₃.de))
+  | ref _ => panic! "ref not supported in denotation"
+  | bndRef _ _ => panic! "bndRef not supported in denotation"
 
 def Tm.norm {α} : (∀ Γ, Tm Γ α) → Tm Γ α
   | e => quote (de (e _))

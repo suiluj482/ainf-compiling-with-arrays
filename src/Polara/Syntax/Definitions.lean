@@ -1,4 +1,5 @@
 import Polara.Utils.Index
+import Std
 
 -- Type
 inductive Ty
@@ -9,7 +10,9 @@ inductive Ty
   | arrow : Ty → Ty → Ty      -- function
   | product : Ty → Ty → Ty    -- tupple
   | array : Nat → Ty → Ty     -- array
-  deriving DecidableEq, Inhabited, BEq
+  | ref : Ty → Ty             -- reference
+  | unit: Ty
+  deriving DecidableEq, Inhabited, Hashable
   open Ty
   infixr : 80 " ~> " => Ty.arrow
   infixr : 70 " ×× " => Ty.product
@@ -20,6 +23,8 @@ inductive Const0 : Ty → Type
   | litf : Float → Const0 flt         -- float
   | litl : Float → Const0 lin         -- float| litf : Float → Const0 flt         -- float
   | liti : Fin (n+1) → Const0 (idx n) -- index
+  | litu : Const0 unit                -- unit
+  | litr : Const0 (ref α)             -- ref to nothing
   deriving BEq
   open Const0
 
@@ -93,6 +98,10 @@ deriving BEq, Repr
 @[default_instance] instance [b: BiLFC α β γ]:
   BiArrayC BiLF (array n α) (array n β) (array n γ) := ⟨.array n b.t⟩
 
+def BiArray.toBiArrays[∀3BR T]: BiArray T α β γ → BiArrays T α β γ
+| .base t => BiArrays.base t
+| .array n t => BiArrays.array n (BiArrays.base t)
+
 inductive ArithOp: Type
 | add: ArithOp
 | sub: ArithOp
@@ -104,23 +113,35 @@ inductive AddOp: Type
 | add: AddOp
 | sub: AddOp
 deriving BEq, Repr
+def AddOp.toArith: AddOp → ArithOp
+| .add => ArithOp.add
+| .sub => ArithOp.sub
 
 inductive MulOp: Type
 | mul: MulOp
 | div: MulOp
 deriving BEq, Repr
+def MulOp.toArith: MulOp → ArithOp
+| .mul => ArithOp.mul
+| .div => ArithOp.div
 
 -- binary functions
 inductive Const2 : Ty → Ty → Ty → Type
   | arithOp [type: BiArraysC BiArith α β γ] (op: ArithOp): Const2 α β γ
   | linOp [type: BiArraysC BiLin α β γ] (op: AddOp): Const2 α β γ
+
+  -- matrixmultiplikation?
   | linScale [type: BiArrayC BiLF α β γ] (op: MulOp): Const2 α β γ
+
+  -- matrix multiplication
 
   | addi: Const2 (idx n) (idx m) (idx (n+m))
   | maxf : Const2 flt flt flt
+  | lt : Const2 flt flt nat                           -- lower than
   | get : Const2 (array n a) (idx n) a          -- array access
   | tup : Const2 α β (α ×× β)                   -- tupple constructor
   | app : Const2 (α~>β) α β                     -- function application
+
 -- kinda missing: zip, reduce?
   deriving BEq
   open Const2
@@ -128,19 +149,21 @@ inductive Const2 : Ty → Ty → Ty → Type
 -- Variable symbols: α is Polara Type of Variable
 inductive Var : Ty → Type
   | mk : Nat → Var α
-  deriving DecidableEq, BEq
+  deriving DecidableEq, Inhabited
 -- Parameter symbols: argument overall functions, loop index
 inductive Par : Ty → Type
   | mk : Nat → Par α
-  deriving DecidableEq, BEq
+  deriving DecidableEq, Inhabited
 -- Var or Par symbols
 inductive VPar α
   | v : Var α → VPar α
   | p : Par α → VPar α
-  deriving DecidableEq, BEq
-
-#check VPar
-#check ((VPar.v (Var.mk 0)): VPar Ty.nat)
+  deriving DecidableEq, Inhabited
+def VPar.var?: VPar α → Option (Var α)
+| .v var => var
+| .p _ => none
+-- #check VPar
+-- #check ((VPar.v (Var.mk 0)): VPar Ty.nat)
 
 ------------------------------------------------------------------------------------------
 -- Polara
@@ -159,25 +182,27 @@ inductive Tm (Γ: Ty → Type): Ty → Type
   | bld : (Γ (idx n) → Tm Γ α) → Tm Γ (array n α)           -- build, construct array
   | ite : Tm Γ nat → Tm Γ β → Tm Γ β → Tm Γ β               -- if (·: nat neq 0) then · else ·
   | var : Γ α → Tm Γ α                                      -- variable of type α
-  | bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β                  -- bind: (Γ α := term; term) the latter term can use xᵢ ~ function depending on it
+  | bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β
+  | ref: (Γ α → Γ (ref α) → Tm Γ β) → Tm Γ β -- let' xr :=& x;
+  -- | mkRef: ((ref α) → Tm Γ β) → Tm Γ β
+  -- | refGet:
+  | bndRef: Tm Γ (ref α) → Tm Γ α → Tm Γ unit -- set reference to value
+  -- refSet:
   open Tm
+instance : Inhabited (Tm Γ α) := ⟨Tm.err⟩
 
-def Term: Ty → Type := Tm VPar
-
-#check Tm VPar Ty.nat
+abbrev Term: Ty → Type := Tm VPar
 
 ------------------------------------------------------------------------------------------
 -- AINF
 ------------------------------------------------------------------------------------------
 
--- Environemnt, Context: list of control flow to apply to primitive
---   reverse order so Env.func (Env.forc ...) ... => forc ..., func ...
-inductive Env : Type
-  | nil  : Env                                --
-  | func : Env → (α:Ty) → Par α → Env         -- function control flow
-  | forc : Env → (n:Nat) → Par (idx n) → Env  -- for
-  | itec : Env → VPar nat → Bool → Env        -- if then else
-  deriving DecidableEq, Inhabited
+inductive EnvPart : Type                    --
+  | func : (α:Ty) → Par α → EnvPart         -- function control flow
+  | forc : (n:Nat) → Par (idx n) → EnvPart  -- for
+  | itec : VPar nat → Bool → EnvPart        -- if then else
+  deriving DecidableEq
+abbrev Env := List EnvPart
 
 -- primitive operations (could maybe be unified with Tm)
 inductive Prim : Ty → Type
@@ -189,30 +214,44 @@ inductive Prim : Ty → Type
   | abs : Par α → VPar β → Prim (α ~> β)
   | ite : VPar nat → VPar α → VPar α → Prim α
   | bld : Par (idx n) → VPar α → Prim (array n α)
+  | ref: Var α → Prim (ref α) -- reference of var
+  | bndRef: VPar (ref α) → VPar α → Prim unit -- bind reference to value
+  deriving BEq
+instance: Inhabited (Prim α) := ⟨Prim.err⟩
 
--- non empty list of variable definitions with primitives in an environment
-inductive AINF : Ty → Type -- Var übergeben
-  | ret : VPar α → AINF α   -- VPar to be returned
-  | bnd : Env → Var α → Prim α → AINF β → AINF β  -- Environemnt xᵢ := Prim; ...
-    -- Beweis fordern, das Var definiert
+def Prim.vpars: Prim α → List (Some VPar)
+  | cst0 _ => []
+  | cst1 _ v => [⟨_,v⟩]
+  | cst2 _ v1 v2 => [⟨_,v1⟩, ⟨_,v2⟩]
+  | err => []
+  | var v => [⟨_,v⟩]
+  | abs _ v => [⟨_,v⟩]
+  | ite v1 v2 v3 => [⟨_,v1⟩, ⟨_,v2⟩, ⟨_,v3⟩]
+  | bld _ v => [⟨_,v⟩]
+  | ref v => []
+  | bndRef r v => [⟨_,r⟩, ⟨_,v⟩]
+def Prim.vars (p: Prim α): List (Some Var) :=
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
 
-----------
-inductive EnvPart : Type                    --
-  | func : (α:Ty) → Par α → EnvPart         -- function control flow
-  | forc : (n:Nat) → Par (idx n) → EnvPart  -- for
-  | itec : VPar nat → Bool → EnvPart        -- if then else
-  deriving DecidableEq
 
-def Env.fromList (e: List EnvPart): Env :=
-  e.foldl (λ acc x => match x with
-    | .func α p => Env.func acc α p
-    | .forc n p => Env.forc acc n p
-    | .itec cond ref => Env.itec acc cond ref
-    ) Env.nil
-def Env.toList: Env → List EnvPart :=
-  let rec aux := (λ
-  | .nil => []
-  | .func acc α p => EnvPart.func α p :: aux acc
-  | .forc acc n p => EnvPart.forc n p :: aux acc
-  | .itec acc cond ref => EnvPart.itec cond ref :: aux acc)
-  List.reverse ∘ aux
+abbrev Bnd := DListMap.eT (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev Bnds := DListMap (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev AINF α := Bnds × (VPar α) -- return variable
+
+-- HashMap
+-- + faster lookup
+-- - no order (renaming harder)
+deriving instance Hashable for Var
+abbrev BndsH := Std.DHashMap (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev AINFH α := BndsH × VPar α
+
+def AINF.toHashMap: AINF α → AINFH α
+| (bnds, ret) => (
+    Std.DHashMap.ofList bnds,
+    ret
+  )
+def AINFH.toList: AINFH α → AINF α
+| (bnds, ret) => (
+  bnds.topologicalSort (λ _ ⟨_, p⟩ => p.vars),
+  ret
+)

@@ -1,5 +1,85 @@
 import Polara.Syntax.Definitions
+import Polara.Syntax.PrettyPrint
 
+-- catamorphism
+-- cata
+@[reducible]
+def Ty.map (f: Ty → Ty) : Ty → Ty
+| .nat => f .nat
+| .idx n => f (.idx n)
+| flt => f .flt
+| lin => f .lin
+| α ~> β => f (α.map f ~> β.map f)
+| α ×× β => f (α.map f ×× β.map f)
+| array n α => f (array n (α.map f))
+| ref α => f (ref (α.map f))
+| unit => f .unit
+
+@[reducible]
+def Ty.contains (t: Ty)(f: Ty → Bool): Bool :=
+  match t with
+  | .nat => f nat
+  | .flt => f flt
+  | .lin => f lin
+  | .idx n => f (idx n)
+  | .ref α => f (ref α)
+  | .unit => f unit
+  | α ×× β => f t ∨ α.contains f ∨ β.contains f
+  | .array _ α => f t ∨ α.contains f
+  | α ~> β => f t ∨ α.contains f ∨ β.contains f
+
+theorem Ty.contains_product_a (α: Ty)(β: Ty)(f: Ty → Bool):
+  Ty.contains (α ×× β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
+theorem Ty.contains_product_b (α: Ty)(β: Ty)(f: Ty → Bool):
+  Ty.contains (α ×× β) f = false → Ty.contains β f = false := by simp[Ty.contains]
+theorem Ty.contains_array (n: Nat)(α: Ty)(f: Ty → Bool):
+  Ty.contains (array n α) f = false → Ty.contains α f = false := by simp[Ty.contains]
+theorem Ty.contains_arrow_a (α: Ty)(β: Ty)(f: Ty → Bool):
+  Ty.contains (α ~> β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
+theorem Ty.contains_arrow_b (α: Ty)(β: Ty)(f: Ty → Bool):
+  Ty.contains (α ~> β) f = false → Ty.contains β f = false := by simp[Ty.contains]
+
+def VPar.changeType: VPar α → VPar β
+| .v (.mk n) => .v (.mk n)
+| .p (.mk n) => .p (.mk n)
+def Var.changeType: Var α → Var β
+| (.mk n) => (.mk n)
+def Par.changeType: Par α → Par β
+| (.mk n) => (.mk n)
+
+
+abbrev VParM (α: Type n) := StateM (ULift (Nat × Nat)) α
+def VParM.var : VParM ((β: Ty) → Var β) :=
+  modifyGet fun i => (
+    λ _ => (.mk i.down.fst),
+    ⟨i.down.map (·+1) id⟩
+  )
+def VParM.par : VParM ((β: Ty) → Par β) :=
+  modifyGet fun i => (
+    λ _ => (.mk i.down.snd),
+    ⟨i.down.map id (·+1)⟩
+  )
+def VParM.vpar : VParM ((β: Ty) → VPar β) :=
+  modifyGet fun i => (
+    λ _ => (.v (.mk i.down.fst)),
+    ⟨i.down.map id (·+1)⟩
+  )
+def VParM.rPar: VParM Unit :=
+  modify fun ⟨(i,_)⟩ => ⟨(i,0)⟩
+def AINF.findFreshVars: AINF α → Nat × Nat
+| (bnds, _) => bnds.foldl (λ (x, i) ⟨⟨_,⟨n⟩⟩, _, prim⟩ =>
+    (
+      x.max n,
+      match prim with
+      | .abs ⟨n⟩ _
+      | .bld ⟨n⟩ _ => i.max n
+      | _ => i
+    )
+  ) (0, 0)
+def VParM.freshAINFVars (a: AINF α)(m: VParM β): β :=
+  m ⟨a.findFreshVars⟩ |>.fst
+
+------
 private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
   : Tm γ α → ReaderM ((ListMap γ Γ) × Nat × (Nat → (β: Ty) → γ β)) (Tm Γ α)
   | .err => return Tm.err
@@ -26,59 +106,54 @@ private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
       return Tm.bnd
         (←t.generalize')
         (λ x => (f v).generalize' (⟨_, v, x⟩ :: ren, n+1, vars))
+  | .ref _ => panic! "Tm.generalize' does not support references"
+  | .bndRef _ _ => panic! "Tm.generalize' does not support binding references"
 
 def Tm.generalize [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
   (vars: Nat → (β: Ty) → γ β): Tm γ α → Tm Γ α :=
   (Tm.generalize' · ([], 0, vars))
-
 def Tm.generalizeVPar : Tm VPar α → Tm Γ α :=
   Tm.generalize (λ n _ => VPar.v (.mk n))
 
+------
 def AINF.size : AINF α → Nat
-  | .ret _ => 0
-  | .bnd _ _ _ p => p.size + 1
+| (bnds, _) => bnds.length
 
+-------------
 -- ReaderMonad for access to original AiNF
 @[reducible] def Orig α := ∀ {β}, ReaderM (AINF β) α
 
 -- lookup enviroment in binding of variable
-def Var.lookupEnv (x: Var α) : AINF β → Option Env
-  | .ret _y => none
-  | .bnd (α:=β) env (y: Var β) _prim rest =>
-    if h: β=α then if h▸ y==x then env
-    else lookupEnv x rest else lookupEnv x rest
+def Var.lookupEnv (x: Var α) : AINF γ → Option Env
+  | (bnds, _) => DListMap.get? ⟨α,x⟩ bnds |>.map (λ (env, _) => env)
 def VPar.lookupEnv (a: AINF β) (v: VPar α): Option Env :=
   match v with
   | .v v => v.lookupEnv a
   | .p _ => some <| .nil
 
 -- check if env defines parameter
-def Env.definesPar (env: Env) (i: Par α): Bool :=
-  match env with
-  | .nil => false
-  | .func env' α' i' => (if h: α=α'        then h▸ i==i' else false) || env'.definesPar i
-  | .forc env' n' i' => (if h: α=(Ty.idx n')  then h▸ i==i' else false) || env'.definesPar i
-  | .itec env' _ _ => env'.definesPar i
+def EnvPart.definesPar (i: Par α): EnvPart → Bool
+| .func _ i' => Some.of i' == Some.of i
+| .forc _ i' => Some.of i' == Some.of i
+| .itec _ _ => false
 
-def Env.isPrefixOf: Env → Env → Bool
-| .nil, _ => true
-| _, .nil => false
-| .func env α i, .func env' α' i' => env.isPrefixOf env' && if h: α=α' then h▸ i==i' else false
-| .forc env n i, .forc env' n' i' => env.isPrefixOf env' && if h: n=n' then h▸ i==i' else false
-| .itec env i b, .itec env' i' b' => env.isPrefixOf env' && i==i' && b==b'
-| _, _ => false
+def Env.definesPar (i: Par α): Env → Bool :=
+  (·.any (·.definesPar i))
+
+def Env.isPrefixOf (a b: Env): Bool :=
+  List.isPrefixOf a b
 
 -- check if variable of env can be used in env' (allows different orders in envs)
 def Env.isCompatibleWith (env env': Env): Bool :=
   match env with
-  | .nil => true
-  | .func env _ i => env.isCompatibleWith env' && env'.definesPar i
-  | .forc env _ i => env.isCompatibleWith env' && env'.definesPar i
-  | .itec env cond val => env.isCompatibleWith env' &&
+  | [] => true
+  | .func _ i :: env => Env.isCompatibleWith env env' && env'.definesPar i
+  | .forc _ i :: env => Env.isCompatibleWith env env' && env'.definesPar i
+  | .itec cond val :: env => Env.isCompatibleWith env env' &&
     let rec containsItec: Env → Bool
-    | .nil => false -- todo auch andere param prüfen
-    | .func env' _ _ | .forc env' _ _ => containsItec env'
-    | .itec env' cond' val' => (cond == cond' && val==val') || containsItec env'
+    | [] => false -- todo auch andere param prüfen
+    | .func _ _ :: env' | .forc _ _ :: env' => containsItec env'
+    | .itec cond' val' :: env' => (cond == cond' && val==val') || containsItec env'
     containsItec env'
 
 def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
@@ -91,17 +166,17 @@ def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
       -- used par need to be defined in the envenv.isCompatibleWith env' &&
     | .p p => env.definesPar p
   let rec checkEnv: Env → Bool -- todo check for multiple definitions of one par
-    | .nil => true
-    | .func env' _ _ | .forc env' _ _ => checkEnv env'
-    | .itec env' cond _ => checkVPar env' cond
+    | [] => true
+    | .func _ _ :: env' | .forc _ _ :: env' => checkEnv env'
+    | .itec cond _ :: env' => checkVPar env' cond
 
   match a with
-  | .ret v => match lookup v  with
+  | ([], ret) => match lookup ret  with
     | some .nil => true -- return var needs to have empty env
     | _ => false
-  | .bnd (α:=β) env v prim rest =>
+  | (⟨⟨β,v⟩, env, prim⟩ :: rest, ret)  =>
     (vars.lookup v |>.isNone) && -- var isn't defined yet
-    valid' (⟨β, v, env⟩ :: vars) rest && -- recursive check
+    valid' (⟨β, v, env⟩ :: vars) (rest, ret) && -- recursive check
     checkEnv env && -- used conditions need to be valid
     match prim with -- used VPars need to be valid
     | .err           => true -- tothink
@@ -110,9 +185,11 @@ def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
     | .cst1 _ v      => checkVPar env v
     | .cst2 _ v1 v2  => checkVPar env v1 && checkVPar env v2
     | .ite cond a b  => checkVPar env cond
-                        && checkVPar (Env.itec env cond true)  a
-                        && checkVPar (Env.itec env cond false) b
-    | .abs (α:=β) par v => checkVPar (Env.func env β par) v
-    | .bld (n:=n) i v   => checkVPar (Env.forc env n i)   v
+                        && checkVPar (.itec cond true :: env)  a
+                        && checkVPar (.itec cond false :: env) b
+    | .abs (α:=β) par v => checkVPar (.func β par :: env) v
+    | .bld (n:=n) i v   => checkVPar (.forc n i :: env)   v
+    | .ref _ => panic! "AINF.valid' does not support references"
+    | .bndRef _ _ => panic! "AINF.valid' does not support binding references"
 
 def AINF.valid (a: AINF α): Bool := a.valid' []

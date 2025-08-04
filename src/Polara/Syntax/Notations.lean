@@ -18,6 +18,7 @@ notation:max "for'v "i" => "term => Tm.bld (λ i => term)
 notation:max "for'v "i":"n" => "term => @Tm.bld _ n _ (λ i => term)
 
 -- cst0
+def tlitu: Tm Γ unit := Tm.cst0 Const0.litu
 def tlitn: Nat → Tm Γ nat := Tm.cst0 ∘ Const0.litn
 def tlitf: Float → Tm Γ flt := Tm.cst0 ∘ Const0.litf
 def tlitl: Float → Tm Γ lin := Tm.cst0 ∘ Const0.litl
@@ -40,8 +41,22 @@ end Tm
 -- cst2
 infixl:65 " @@ " => Tm.cst2 Const2.app
 notation:max array"[["index"]]" => Tm.cst2 Const2.get array index
-
 def tupple': Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
+notation:max "("a",,"b")" => tupple' a b
+
+-- refs
+def Tm.dumpFor (a: Tm Γ α)(b: Tm Γ β): Tm Γ β := -- otherwise reducible construct to keep ref in tm
+  (a,,b) |>.snd
+notation:max ref" *:= "term => Tm.bndRef ref term
+notation:max ref" *:= "term";"k => Tm.dumpFor (Tm.bndRef ref term) k
+notation:max "let' "xr" :=& "x";"res => Tm.ref (λ x xr => res)
+def Tm.useForRef(a: Tm Γ α)
+    (refT: (Tm Γ α → Tm Γ β)): Tm Γ α :=
+    let' tmp := a;
+    refT tmp |>.dumpFor tmp
+def Tm.aF (t: Tm Γ α)(f: Tm Γ α → Tm Γ β): Tm Γ β := f t -- apply to function
+def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
+  let' rx :=& x; Tm.dumpFor (f (Tm.var x)) (Tm.var rx)
 
 @[default_instance] instance [BiArraysC BiArith α β γ]:
   HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩
@@ -65,6 +80,8 @@ def tupple': Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
 @[default_instance] instance : Max (Tm Γ flt) :=
   ⟨Tm.cst2 Const2.maxf⟩
 
+notation a"<'"b => Tm.cst2 Const2.lt a b
+
 ------------------------------------------------------------------------------------------
 -- AINF
 ------------------------------------------------------------------------------------------
@@ -74,7 +91,11 @@ notation:max "fun'' "par", "x => Prim.abs par x
 notation:max "for'' "par":"n", "x => Prim.bld (par: Par (idx n)) x
 notation:max "if'' "cond" then "a" else "b => Prim.ite cond a b
 -- bnd
-notation:max "let'' "envList" in "var" := "prim"; "ainf => AINF.bnd (Env.fromList envList) var prim ainf
+notation:max "let'' "env" in "var" := "prim => (⟨⟨_, var⟩, env, prim⟩: Bnd)
+notation:max "let'' "env" in "var":"α" := "prim => (⟨⟨α, var⟩, env, prim⟩: Bnd)
+
+notation:max "let''' "env" in "var" := "prim"; "rest => ((⟨⟨_, var⟩, env, prim⟩: Bnd) :: Prod.fst rest, Prod.snd rest)
+notation:max ".ret "v => ([],(v: VPar _))
 
 -- cst0
 def plitn: Nat → Prim nat := Prim.cst0 ∘ Const0.litn

@@ -1,20 +1,23 @@
 import Polara.Syntax.Index
 import Polara.Optimizations.NbE
+import Polara.Optimizations.CSE
 
 @[reducible]
 def Ty.aD: Ty → Ty
+| .unit => .unit
 | .nat => .nat
 | .flt => .flt ×× .lin
-| .lin => .lin
 | .idx n => .idx n
 | α ~> β => α.aD ~> β.aD
 | α ×× β => α.aD ×× β.aD
 | .array n α => .array n α.aD
+| .ref α => .ref α.aD
+| .lin => .lin -- todo
 
-#reduce Ty.nat.aD
-#reduce Ty.flt.aD
-#reduce Ty.flt ~> Ty.flt |>.aD
-#reduce Ty.flt ~> Ty.flt ~> Ty.flt |>.aD
+-- #reduce Ty.nat.aD
+-- #reduce Ty.flt.aD
+-- #reduce Ty.flt ~> Ty.flt |>.aD
+-- #reduce Ty.flt ~> Ty.flt ~> Ty.flt |>.aD
 
 -- f : flt → flt
 -- f' : flt → flt
@@ -26,6 +29,8 @@ def Const0.aD: Const0 α → Tm Γ α.aD
 | .litf f => tupple' (tlitf f) (tlitl 0)
 | .liti i => tliti i
 | .litl l => (tlitl l)
+| .litu => tlitu
+| .litr => panic! "ref not supported in automatic differentiation"
 
 def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
 | .exp     => tupple' x.fst.exp     (x.snd * x.fst.exp) -- (e^x)' = e^x
@@ -90,16 +95,14 @@ def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | linOp op => linOpAD op a b
 | linScale op => linScaleAD op a b
 | .addi => Tm.cst2 (.addi) a b
+| .lt => a.fst <' b.fst
 | .maxf => tupple'
     (Tm.cst2 (.maxf) a.fst b.fst)
-    (if' Tm.err then a.snd else b.snd) -- todo a < b operator
+    (if' a.fst <' b.fst then a.snd else b.snd)
 | .get  => Tm.cst2 (.get)  a b
 | .tup  => Tm.cst2 (.tup)  a b
 | .app  => Tm.cst2 (.app)  a b
 
-def VPar.changeType: VPar α → VPar β
-| .v (.mk n) => .v (.mk n)
-| .p (.mk n) => .p (.mk n)
 def VPar.aD: VPar α → VPar α.aD := VPar.changeType
 def VPar.iaD: VPar α.aD → VPar α := VPar.changeType
 
@@ -113,6 +116,10 @@ def Tm.aD: Tm VPar α → Tm VPar α.aD
 | .ite cond a b => .ite cond a.aD b.aD
 | .var v => .var v.aD
 | .bnd rest l => .bnd rest.aD (λ v => (l v.iaD).aD)
+| .ref _ => panic! "ref not supported in automatic differentiation"
+| .bndRef _ _ => panic! "bndRef not supported in automatic differentiation"
 
 -- #eval (fun' j: Ty.flt => for'v i:10 => (Tm.n2f (Tm.i2n (Tm.var i))) + j).aD.normVPar
--- #eval (fun' i: Ty.flt => fun' j: Ty.flt => i + j).aD.normVPar
+-- #eval (fun' i: Ty.flt => fun' j: Ty.flt => i + j).aD.normVPar.toAINF
+
+-- direkt auf ainf und getrennten ainf generieren? how to map params in val to params in ad?

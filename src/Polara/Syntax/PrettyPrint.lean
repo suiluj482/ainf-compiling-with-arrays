@@ -4,22 +4,28 @@ import Polara.Syntax.Definitions
 -- Tm ToString
 ------------------------------------------------------------------------------------------
 
-def Ty.pretty : Ty → String
+def Ty.toString : Ty → String
   | flt  => "Float"
   | nat  => "Nat"
   | lin => "Lin"
   | idx i => s!"Idx {i}"
-  | a~>b => s!"({a.pretty} ~> {b.pretty})"
-  | a××b => s!"({a.pretty} ×× {b.pretty})"
-  | array n b => s!"(array {n} {b.pretty})"
+  | a~>b => s!"({a.toString} ~> {b.toString})"
+  | a××b => s!"({a.toString} ×× {b.toString})"
+  | array n b => s!"(array {n} {b.toString})"
+  | ref b => s!"(ref {b.toString})"
+  | unit => "Unit"
+instance: ToString Ty := ⟨Ty.toString⟩
 
-def Const0.pretty : Const0 α → String
+def Const0.toString : Const0 α → String
   | litn n => ToString.toString n
   | litf f => ToString.toString f
   | liti i => ToString.toString i.val
   | litl l => ToString.toString l
+  | litu => "()"
+  | litr => "ref(_)"
+instance: ToString (Const0 α) := ⟨Const0.toString⟩
 
-def Const1.pretty : Const1 α₁ α → String
+def Const1.toString : Const1 α₁ α → String
   | exp => "exp"
   | sqrt => "sqrt"
   | log => "log"
@@ -30,51 +36,59 @@ def Const1.pretty : Const1 α₁ α → String
   | suml => "sum"
   | i2n => "val"
   | n2f => "ofNat"
+instance: ToString (Const1 α₁ α) := ⟨Const1.toString⟩
 
-def ArithOp.pretty : ArithOp → String
+def ArithOp.toString : ArithOp → String
   | add => "+"
   | sub => "-"
   | mul => "*"
   | div => "/"
+instance: ToString ArithOp := ⟨ArithOp.toString⟩
 
-def AddOp.pretty : AddOp → String
+def AddOp.toString : AddOp → String
 | add => "+"
 | sub => "-"
+instance: ToString AddOp := ⟨AddOp.toString⟩
 
-def MulOp.pretty : MulOp → String
+def MulOp.toString : MulOp → String
 | mul => "*"
 | div => "/"
+instance: ToString MulOp := ⟨MulOp.toString⟩
 
-def Const2.pretty (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op => s!"{a} {op.pretty} {b}"
-  | linOp op => s!"{a} {op.pretty} {b}"
-  | linScale op => s!"{a} {op.pretty} {b}"
+def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
+  | arithOp op => s!"{a} {op.toString} {b}"
+  | linOp op => s!"{a} {op.toString} {b}"
+  | linScale op => s!"{a} {op.toString} {b}"
   | addi => s!"{a} + {b}"
+  | lt => s!"{a} < {b}"
   | maxf => s!"max {a} {b}"
   | tup  => s!"({a}, {b})"
   | app  => s!"{a} {b}"
   | get  => s!"{a}[{b}]"
 
-def Par.pretty : Par α → String
+def Par.toString : Par α → String
   | mk x => "i" ++ x.repr
-def Var.pretty : Var α → String
+instance: ToString (Par α) := ⟨Par.toString⟩
+def Var.toString : Var α → String
   | .mk x => "x" ++ x.repr
-def VPar.pretty : VPar α → String
-  | .v x => x.pretty
-  | .p i => i.pretty
+instance: ToString (Var α) := ⟨Var.toString⟩
+def VPar.toString : VPar α → String
+  | .v x => x.toString
+  | .p i => i.toString
+instance: ToString (VPar α) := ⟨VPar.toString⟩
 
--- pretty print
+-- toString print
 --  (next Var number, next Param number)
 def Tm.pp : Tm VPar α → ReaderM (Nat × Nat) String
-  | var i => return i.pretty
+  | var i => return i.toString
   | err => return "ERROR"
-  | cst0 k => return k.pretty
-  | cst1 k a => return (k.pretty ++ " " ++ (<- a.pp)).parens
-  | cst2 k b a => return (k.pretty (<- b.pp) (<- a.pp)).parens
+  | cst0 k => return k.toString
+  | cst1 k a => return (k.toString ++ " " ++ (<- a.pp)).parens
+  | cst2 k b a => return (k.toString (<- b.pp) (<- a.pp)).parens
   | abs f => do
     let (i,j) <- read
     let tmp: String := (f (.p (.mk j))).pp (i,j+1)
-    return s!"fun i{j} =>" ++ tmp.indent
+    return s!"(fun i{j} =>{tmp.indent})"
   | bld (n:=n) f => do
     let (i,j) <- read
     let tmp: String := (f (.p (.mk j))).pp (i,j+1)
@@ -84,54 +98,48 @@ def Tm.pp : Tm VPar α → ReaderM (Nat × Nat) String
     let xx := VPar.v (.mk i)
     let tmp1: String := e.pp (i,j)
     let tmp2: String := (f xx).pp (i+1,j)
-    return s!"let {xx.pretty} = {tmp1};\n{tmp2}"
+    return s!"let {xx.toString} = {tmp1};\n{tmp2}"
   | ite a b c => return s!"(if {<- a.pp} then {<- b.pp} else {<- c.pp})"
+  | ref f => do
+    let (i,j) <- read
+    let x := VPar.v (.mk i)
+    let refx := VPar.v (.mk (i+1))
+    return s!"{x.toString} := *ref({refx.toString}); {f refx x |>.pp (i+2,j)}"
+  | bndRef r v => return s!"({<- r.pp} *:= {<- v.pp})"
 
-def Tm.pretty (t: Tm VPar α): String := Tm.pp t (0,0)
-def Tm.toString (t: Tm VPar α) := t.pretty
+def Tm.toString (t: Tm VPar α): String := Tm.pp t (0,0)
 instance: ToString (Tm VPar α) := ⟨Tm.toString⟩
 
 ------------------------------------------------------------------------------------------
 -- AINF ToString
 ------------------------------------------------------------------------------------------
-
-def Env.patmat : String → Env → String
-  | s, .nil             => s
-  | s, .func Γ α i      => Γ.patmat s!"fun {i.pretty}:{α.pretty}, {s}"
-  | s, .forc Γ i (n:=n) => Γ.patmat s!"for {i.pretty}:{n}, {s}"
-  | s, .itec Γ i true   => Γ.patmat s!"if {i.pretty}!=0, {s}"
-  | s, .itec Γ i false  => Γ.patmat s!"if {i.pretty}==0, {s}"
-
-def Env.pretty: Env → String := Env.patmat ""
-def Env.toString (Γ: Env): String := Γ.pretty
+def EnvPart.toString: EnvPart → String
+  | .func α i      => s!"fun {i.toString}:{α.toString}"
+  | .forc i (n:=n) => s!"for {i.toString}:{n}"
+  | .itec i true   => s!"if {i.toString}!=0"
+  | .itec i false  => s!"if {i.toString}==0"
+instance : ToString EnvPart := ⟨EnvPart.toString⟩
+def Env.toString (env: Env): String :=
+  env.toStringSep ", "
 instance: ToString Env := ⟨Env.toString⟩
 
-def Prim.pretty: Prim α → String
+def Prim.toString: Prim α → String
   | .err => "ERROR"
-  | .cst0 k => k.pretty
-  | .cst1 k a => k.pretty ++ " " ++ a.pretty ++ ""
-  | .cst2 k a b => k.pretty ("" ++ a.pretty ++ "") ("" ++ b.pretty ++ "")
-  | .var i => i.pretty
-  | .abs (α:=γ) i e => s!"fun {i.pretty}:{γ.pretty}, " ++ (e.pretty).replace "\n" "\n  "
-  | .bld (n:=n) i e => s!"for {i.pretty}:{n}, {e.pretty}"
-  | .ite a b c => "if " ++ a.pretty ++ " != 0 then " ++ b.pretty ++ " else " ++ c.pretty
+  | .cst0 k => k.toString
+  | .cst1 k a => k.toString ++ " " ++ a.toString ++ ""
+  | .cst2 k a b => k.toString ("" ++ a.toString ++ "") ("" ++ b.toString ++ "")
+  | .var i => i.toString
+  | .abs (α:=γ) i e => s!"fun {i.toString}:{γ.toString}, " ++ (e.toString).replace "\n" "\n  "
+  | .bld (n:=n) i e => s!"for {i.toString}:{n}, {e.toString}"
+  | .ite a b c => "if " ++ a.toString ++ " != 0 then " ++ b.toString ++ " else " ++ c.toString
+  | .ref v => s!"({v.toString} := *ref)"
+  | .bndRef r v => s!"({r.toString} *:= {v.toString})"
+instance : ToString (Prim α) := ⟨Prim.toString⟩
 
-def AINF.pretty (k: String → String): AINF α → String
-  | .ret x => k x.pretty
-  | .bnd (α:=β) Γ x v e =>
-    let string := s!"({x.pretty} : {β.pretty} := {v.pretty})"
-    s!"  let {Γ.patmat string}\n" ++
-    e.pretty k
+def Bnd.toString: Bnd → String
+| ⟨⟨α, var⟩, env, prim⟩ => s!"let {env} ({var} : {α} := {prim})"
+instance : ToString Bnd := ⟨Bnd.toString⟩
 
-def AINF.toString : AINF α → String | e => e.pretty id
+def AINF.toString: AINF α → String
+| (bnds, ret) => s!"{bnds.map Bnd.toString |>.toStringSep "\n" |>.indent}\n{ret}"
 instance : ToString (AINF α) where toString x := x.toString
-
--------------
-
-def EnvPart.toString: EnvPart → String
-  | .func α i      => s!"fun {i.pretty}:{α.pretty}"
-  | .forc i (n:=n) => s!"for {i.pretty}:{n}"
-  | .itec i true   => s!"if {i.pretty}!=0"
-  | .itec i false  => s!"if {i.pretty}==0"
-instance : ToString EnvPart where
-  toString := EnvPart.toString
