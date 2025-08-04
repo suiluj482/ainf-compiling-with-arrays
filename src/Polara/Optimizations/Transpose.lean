@@ -14,12 +14,12 @@ def Ty.tl: Ty → Ty :=
   )
 
 def Const0.tl: Const0 α → Term α.tl
-| .litl l => .cst0 <| .litr
+| .litl l => .cst0 <| .mkRef
 | .litn n => .cst0 <| .litn n
 | .litf f => .cst0 <| .litf f
 | .liti i => .cst0 <| .liti i
 | .litu => .cst0 <| .litu
-| .litr => panic! "Const0.tl doesn't support references"
+| .mkRef => panic! "Const0.tl doesn't support references"
 
 def Const1.tl (c: Const1 α β) (a: Term α.tl): Term β.tl :=
   match c with
@@ -32,11 +32,12 @@ def Const1.tl (c: Const1 α β) (a: Term α.tl): Term β.tl :=
   | .sumf => .cst1 .sumf a
   | .suml => (let' rx :=& x;
       (
-        for' i => a[[i]] *:= (Tm.var x)
-      ).dumpFor (Tm.var rx)
+        for' i => a[[i]] *:= x
+      ).dumpFor rx
     )
   | .i2n => .cst1 .i2n a
   | .n2f => .cst1 .n2f a
+  | .refGet => panic! "Const1.tl doesn't support references"
 
 def linOpTl [t: BiArraysC BiLin α β γ](op: AddOp)
   (a: Tm Γ α.tl)(b: Tm Γ β.tl): Tm Γ γ.tl :=
@@ -47,14 +48,14 @@ def linOpTl [t: BiArraysC BiLin α β γ](op: AddOp)
   | .base t' => match t' with
     | .lins => match op with
       | .add => (let' rx :=& x;
-        a *:= Tm.var x;
-        b *:= Tm.var x;
-        Tm.var rx
+        a *:= x;
+        b *:= x;
+        rx
       )
       | .sub => (let' rx :=& x;
-        a *:= Tm.var x;
-        b *:= tlitl 0 - Tm.var x;
-        Tm.var rx
+        a *:= x;
+        b *:= tlitl 0 - x;
+        rx
       )
 def linScaleTl [t: BiArrayC BiLF α β γ](op: MulOp)
   (a: Tm Γ α.tl)(b: Tm Γ β.tl): Tm Γ γ.tl :=
@@ -62,12 +63,12 @@ def linScaleTl [t: BiArrayC BiLF α β γ](op: MulOp)
     match t with
     | .lf => match op with
       | .mul => (let' rx :=& x;
-        a *:= Tm.var x * b;
-        Tm.var rx
+        a *:= x * b;
+        rx
       )
       | .div => (let' rx :=& x;
-        a *:= Tm.var x / b;
-        Tm.var rx
+        a *:= x / b;
+        rx
       )
   match t.t with
   | .array n t' => for' i => go t' a[[i]] b[[i]]
@@ -90,6 +91,7 @@ def Const2.tl (c: Const2 α β γ)(a: Term α.tl)(b: Term β.tl): Term γ.tl :=
   | .app => .cst2 .app a b
   | .linOp (type:=t) op => linOpTl op a b
   | .linScale (type:=t) op => linScaleTl op a b
+  | .refSet => panic! "Const2.tl doesn't support references"
 
 -- could be stopped from going deeper as soon as there is no lin in type
 def Tm.tl': Term α → Term α.tl
@@ -102,8 +104,6 @@ def Tm.tl': Term α → Term α.tl
 | .cst0 cst => cst.tl
 | .cst1 cst a => cst.tl a.tl'
 | .cst2 cst a b => cst.tl a.tl' b.tl'
-| .ref _ => panic! "Tm.tl' does not support references"
-| .bndRef _ _ => panic! "Tm.tl' does not support binding references"
 
 def Tm.tl (t: Term α): Term α.tl :=
   t.tl'
@@ -152,6 +152,8 @@ def Ty.unzipRefs (α: Ty): (Option Ty) × (Option Ty) :=
 
 open Ty in
 #eval ((flt ×× (ref lin)) ~> (flt ×× (ref lin))).unzipRefs
+open Ty in
+#eval (flt ~> (flt ×× (flt ~> flt))).aD.tl.unzipRefs
 
 -- @[reducible] -- ?????
 -- def AINF.unzipRefsType (α: Ty): Type :=

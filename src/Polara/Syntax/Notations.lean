@@ -36,6 +36,10 @@ namespace Tm
   def suml    : Tm Γ (array n lin) → Tm Γ lin := Tm.cst1 Const1.suml
   def i2n     : Tm Γ (idx n) → Tm Γ nat := Tm.cst1 Const1.i2n
   def n2f     : Tm Γ nat → Tm Γ flt := Tm.cst1 Const1.n2f
+
+  def mkRef: Tm Γ (ref α) := Tm.cst0 Const0.mkRef
+  def refGet: Tm Γ (ref α) → Tm Γ α := Tm.cst1 Const1.refGet
+  def refSet: Tm Γ (ref α) → Tm Γ α → Tm Γ unit := Tm.cst2 Const2.refSet
 end Tm
 
 -- cst2
@@ -47,16 +51,19 @@ notation:max "("a",,"b")" => tupple' a b
 -- refs
 def Tm.dumpFor (a: Tm Γ α)(b: Tm Γ β): Tm Γ β := -- otherwise reducible construct to keep ref in tm
   (a,,b) |>.snd
-notation:max ref" *:= "term => Tm.bndRef ref term
-notation:max ref" *:= "term";"k => Tm.dumpFor (Tm.bndRef ref term) k
-notation:max "let' "xr" :=& "x";"res => Tm.ref (λ x xr => res)
+notation:max ref" *:= "term => Tm.refSet ref term
+notation:max ref" *:= "term";"k => Tm.dumpFor (Tm.refSet ref term) k
+notation:max "let' "xr" :=& "x";"res =>
+  let' xr := Tm.mkRef;
+  let' x := Tm.refGet xr;
+  res
 def Tm.useForRef(a: Tm Γ α)
     (refT: (Tm Γ α → Tm Γ β)): Tm Γ α :=
     let' tmp := a;
     refT tmp |>.dumpFor tmp
 def Tm.aF (t: Tm Γ α)(f: Tm Γ α → Tm Γ β): Tm Γ β := f t -- apply to function
 def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
-  let' rx :=& x; Tm.dumpFor (f (Tm.var x)) (Tm.var rx)
+  let' rx :=& x; Tm.dumpFor (f x) rx
 
 @[default_instance] instance [BiArraysC BiArith α β γ]:
   HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩

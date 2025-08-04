@@ -63,9 +63,6 @@ def Prim.rename (r: Ren): Prim α → Prim α
   | .abs i e   => .abs i (e.rename r)
   | .ite a b c => .ite (a.rename r) (b.rename r) (c.rename r)
   | .bld i f => .bld i (f.rename r)
-  | .ref v => .ref (v.rename r)
-  | .bndRef re v => .bndRef (re.rename r) (v.rename r)
-
 def Bnd.rename (r: Ren): Bnd → Bnd
 | ⟨⟨_,i⟩, env, prim⟩ => ⟨⟨_, i⟩, env.rename r, prim.rename r⟩
 

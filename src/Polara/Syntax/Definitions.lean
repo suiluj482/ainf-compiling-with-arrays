@@ -24,7 +24,7 @@ inductive Const0 : Ty → Type
   | litl : Float → Const0 lin         -- float| litf : Float → Const0 flt         -- float
   | liti : Fin (n+1) → Const0 (idx n) -- index
   | litu : Const0 unit                -- unit
-  | litr : Const0 (ref α)             -- ref to nothing
+  | mkRef: Const0 (ref α)
   deriving BEq
   open Const0
 
@@ -41,6 +41,7 @@ inductive Const1 : Ty → Ty → Type
   -- | mul
   | i2n  : Const1 (idx n) nat     -- indices -> nat
   | n2f  : Const1 nat flt         -- nat -> float
+  | refGet: Const1 (ref α) α
   deriving BEq
   open Const1
 
@@ -142,6 +143,7 @@ inductive Const2 : Ty → Ty → Ty → Type
   | tup : Const2 α β (α ×× β)                   -- tupple constructor
   | app : Const2 (α~>β) α β                     -- function application
 
+  | refSet: Const2 (ref α) α unit -- set reference
 -- kinda missing: zip, reduce?
   deriving BEq
   open Const2
@@ -183,11 +185,6 @@ inductive Tm (Γ: Ty → Type): Ty → Type
   | ite : Tm Γ nat → Tm Γ β → Tm Γ β → Tm Γ β               -- if (·: nat neq 0) then · else ·
   | var : Γ α → Tm Γ α                                      -- variable of type α
   | bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β
-  | ref: (Γ α → Γ (ref α) → Tm Γ β) → Tm Γ β -- let' xr :=& x;
-  -- | mkRef: ((ref α) → Tm Γ β) → Tm Γ β
-  -- | refGet:
-  | bndRef: Tm Γ (ref α) → Tm Γ α → Tm Γ unit -- set reference to value
-  -- refSet:
   open Tm
 instance : Inhabited (Tm Γ α) := ⟨Tm.err⟩
 
@@ -214,8 +211,6 @@ inductive Prim : Ty → Type
   | abs : Par α → VPar β → Prim (α ~> β)
   | ite : VPar nat → VPar α → VPar α → Prim α
   | bld : Par (idx n) → VPar α → Prim (array n α)
-  | ref: Var α → Prim (ref α) -- reference of var
-  | bndRef: VPar (ref α) → VPar α → Prim unit -- bind reference to value
   deriving BEq
 instance: Inhabited (Prim α) := ⟨Prim.err⟩
 
@@ -228,8 +223,6 @@ def Prim.vpars: Prim α → List (Some VPar)
   | abs _ v => [⟨_,v⟩]
   | ite v1 v2 v3 => [⟨_,v1⟩, ⟨_,v2⟩, ⟨_,v3⟩]
   | bld _ v => [⟨_,v⟩]
-  | ref v => []
-  | bndRef r v => [⟨_,r⟩, ⟨_,v⟩]
 def Prim.vars (p: Prim α): List (Some Var) :=
   p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
 

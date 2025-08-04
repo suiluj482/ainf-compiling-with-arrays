@@ -1,6 +1,8 @@
 import Polara.Codegeneration.Utils
 
-def Const0.tmgenJax (const0: Const0 α): String := s!"jnp.array({const0})"
+def Const0.tmgenJax (const0: Const0 α): String := match const0 with
+| mkRef => panic! "mkRef not supported in tmgen"
+| _ => s!"jnp.array({const0})"
 
 def Const1.tmgenJax (a: String): Const1 α₁ α → String
   | normCdf => "normCdf" ++ s!"({a})"
@@ -13,6 +15,7 @@ def Const1.tmgenJax (a: String): Const1 α₁ α → String
   | n2f => s!"{a}.astype(float)"
   | sumf
   | suml => "jnp.sum"            ++ s!"({a})"
+  | refGet => panic! "ref not supported in tmgen"
 
 def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
   | arithOp op => s!"{a} {op} {b}"
@@ -24,6 +27,7 @@ def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
   | tup  => s!"({a}, {b})"
   | app  => s!"{a}({b})"
   | get  => s!"{a}[{b}]"
+  | refSet => panic! "refSet not supported in tmgen"
 
 partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
   -- | err => return "None"

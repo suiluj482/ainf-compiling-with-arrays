@@ -22,7 +22,7 @@ def Const0.toString : Const0 α → String
   | liti i => ToString.toString i.val
   | litl l => ToString.toString l
   | litu => "()"
-  | litr => "ref(_)"
+  | mkRef => "mkRef"
 instance: ToString (Const0 α) := ⟨Const0.toString⟩
 
 def Const1.toString : Const1 α₁ α → String
@@ -36,6 +36,7 @@ def Const1.toString : Const1 α₁ α → String
   | suml => "sum"
   | i2n => "val"
   | n2f => "ofNat"
+  | refGet => "refGet"
 instance: ToString (Const1 α₁ α) := ⟨Const1.toString⟩
 
 def ArithOp.toString : ArithOp → String
@@ -65,6 +66,7 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
   | tup  => s!"({a}, {b})"
   | app  => s!"{a} {b}"
   | get  => s!"{a}[{b}]"
+  | refSet => s!"refSet {a} {b}"
 
 def Par.toString : Par α → String
   | mk x => "i" ++ x.repr
@@ -100,12 +102,6 @@ def Tm.pp : Tm VPar α → ReaderM (Nat × Nat) String
     let tmp2: String := (f xx).pp (i+1,j)
     return s!"let {xx.toString} = {tmp1};\n{tmp2}"
   | ite a b c => return s!"(if {<- a.pp} then {<- b.pp} else {<- c.pp})"
-  | ref f => do
-    let (i,j) <- read
-    let x := VPar.v (.mk i)
-    let refx := VPar.v (.mk (i+1))
-    return s!"{x.toString} := *ref({refx.toString}); {f refx x |>.pp (i+2,j)}"
-  | bndRef r v => return s!"({<- r.pp} *:= {<- v.pp})"
 
 def Tm.toString (t: Tm VPar α): String := Tm.pp t (0,0)
 instance: ToString (Tm VPar α) := ⟨Tm.toString⟩
@@ -132,8 +128,6 @@ def Prim.toString: Prim α → String
   | .abs (α:=γ) i e => s!"fun {i.toString}:{γ.toString}, " ++ (e.toString).replace "\n" "\n  "
   | .bld (n:=n) i e => s!"for {i.toString}:{n}, {e.toString}"
   | .ite a b c => "if " ++ a.toString ++ " != 0 then " ++ b.toString ++ " else " ++ c.toString
-  | .ref v => s!"({v.toString} := *ref)"
-  | .bndRef r v => s!"({r.toString} *:= {v.toString})"
 instance : ToString (Prim α) := ⟨Prim.toString⟩
 
 def Bnd.toString: Bnd → String

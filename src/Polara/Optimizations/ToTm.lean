@@ -110,3 +110,5 @@ def Tm.inst (α: Ty): Tm Γ α :=
   | _ ~> β => Tm.abs (λ _ => Tm.inst β)
   | α ×× β => Tm.cst2 Const2.tup (Tm.inst α) (Tm.inst β)
   | .array _ α => Tm.bld (λ _ => Tm.inst α)
+  | .unit => Tm.cst0 Const0.litu
+  | .ref _ => panic! "Tm.inst does not support references"

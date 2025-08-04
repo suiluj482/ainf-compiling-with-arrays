@@ -106,8 +106,6 @@ private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
       return Tm.bnd
         (←t.generalize')
         (λ x => (f v).generalize' (⟨_, v, x⟩ :: ren, n+1, vars))
-  | .ref _ => panic! "Tm.generalize' does not support references"
-  | .bndRef _ _ => panic! "Tm.generalize' does not support binding references"
 
 def Tm.generalize [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
   (vars: Nat → (β: Ty) → γ β): Tm γ α → Tm Γ α :=
@@ -156,6 +154,7 @@ def Env.isCompatibleWith (env env': Env): Bool :=
     | .itec cond' val' :: env' => (cond == cond' && val==val') || containsItec env'
     containsItec env'
 
+-- todo refs
 def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
   let lookup: {γ: Ty} → VPar γ → Option Env := λ
     | .v v => vars.lookup v
@@ -189,7 +188,5 @@ def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
                         && checkVPar (.itec cond false :: env) b
     | .abs (α:=β) par v => checkVPar (.func β par :: env) v
     | .bld (n:=n) i v   => checkVPar (.forc n i :: env)   v
-    | .ref _ => panic! "AINF.valid' does not support references"
-    | .bndRef _ _ => panic! "AINF.valid' does not support binding references"
 
 def AINF.valid (a: AINF α): Bool := a.valid' []

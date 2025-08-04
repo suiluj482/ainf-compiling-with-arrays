@@ -39,16 +39,6 @@ def Tm.toAINF' {α β} (env : Env) (e : Tm VPar α)
   | bnd e f =>
     toAINF' env e fun v =>
     toAINF' env (f v) reti
-  | ref f => do
-    let xr := (←VParM.var) _
-    let x := (←VParM.var) _
-    let t := f (.v xr) (.v x)
-    AINF.smart_bnd env (.ref x) fun _ =>
-    toAINF' env t reti
-  | bndRef xr x =>
-    toAINF' env xr fun v₁ =>
-    toAINF' env x  fun v₂ =>
-    AINF.smart_bnd env (.bndRef v₁ v₂) reti
 
 def Tm.toAINFM (e: Tm VPar α): VParM (AINF α) :=
   (toAINF' .nil e fun v => pure ([], v))

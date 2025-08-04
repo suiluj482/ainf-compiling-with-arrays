@@ -10,8 +10,14 @@ def Ty.gen': Ty → String
   | a~>b => s!"({a.gen'} → Except String {b.gen'})"
   | a××b => s!"({a.gen'} × {b.gen'})"
   | array n b => s!"(Vector {b.gen'} {n})"
+  | .unit => "Unit"
+  | .ref _ => panic! "ref not supported in gen"
 -- for Tm.err
 def Ty.gen (t: Ty): String := s!"Except String {t.gen'}"
+
+def Const0.tmgen (const0: Const0 α): String := match const0 with
+| mkRef => panic! "mkRef not supported in tmgen"
+| _ => s!"jnp.array({const0})"
 
 def Const1.tmgen: Const1 α₁ α → String
   | normCdf => "Float.normCdf"
@@ -24,6 +30,7 @@ def Const1.tmgen: Const1 α₁ α → String
   | n2f => "Float.ofNat"
   | sumf
   | suml => "Vector.esum"
+  | refGet => panic! "refGet not supported in tmgen"
 
 def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | arithOp op => s!"{a} {op} {b}"
@@ -37,12 +44,14 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | app  => s!"← {a} {b}"
   | get  => s!"{a}[{b}]!"
 
+  | refSet => panic! "refSet not supported in tmgen"
+
 def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | err => return "Except.error"
   | var i => return match i with
     | .v v => v.toString
     | .p p => s!"(return {p})"
-  | cst0 k => return s!"return {k}"
+  | cst0 k => return s!"return {k.tmgen}"
   | cst1 k a => return s!"return {k.tmgen} (←{(← a.codegen')})"
   | cst2 k a b => return "return " ++ k.tmgen s!"(←{<- a.codegen'})" s!"(←{<- b.codegen'})"
   | abs (α:=γ) f => do

@@ -65,7 +65,7 @@ def Const0.de : Const0 α → Ty.de Γ α
   | litl l => cst0 (litl l)
   | liti i => cst0 (liti i)
   | litu => cst0 litu
-  | litr => panic! "ref not supported in denotation"
+  | mkRef => panic! "ref not supported in denotation"
 
 def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
   | fst => fun (a , _b) => a
@@ -87,6 +87,7 @@ def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
   | suml => fun a => splice (cst1 suml (quote a))
   | i2n => fun a => splice (cst1 i2n (quote a))
   | n2f => fun a => splice (cst1 n2f (quote a))
+  | refGet => panic! "ref not supported in denotation"
 
 def Tm.isZeroF : Tm Γ α → Bool | cst0 (litf f) => f == 0 | _ => false
 def Tm.isOneF  : Tm Γ α → Bool | cst0 (litf f) => f == 1 | _ => false
@@ -201,6 +202,7 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
     | .array n t =>
       (λ a b i => goS t (a i) (b i))
     | .base t => goS t
+  | refSet => panic! "ref not supported in denotation"
 
 -- term in dessen env sich bereich denotierte terme befinden, im prinzip interpreter
 def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
@@ -220,8 +222,6 @@ def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
     | cst0 (litn 0) => e₃.de -- 0 is false
     | cst0 (litn _) => e₂.de
     | a'            => splice (ite a' (quote e₂.de) (quote e₃.de))
-  | ref _ => panic! "ref not supported in denotation"
-  | bndRef _ _ => panic! "bndRef not supported in denotation"
 
 def Tm.norm {α} : (∀ Γ, Tm Γ α) → Tm Γ α
   | e => quote (de (e _))
