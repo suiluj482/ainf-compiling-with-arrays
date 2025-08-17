@@ -6,10 +6,12 @@ def Ty.val: Ty → Type
 | .nat => Nat
 | .flt => Float
 | .lin => Float
+| .unit => Unit
 | .idx n => Fin (n+1)
 | α ×× β => α.val × β.val
 | .array n α => Vector α.val n
 | _ ~> _ => Unit
+| ref _ => panic! "ref not supported"
 
 def String.unwrap (st: String)(s e: String): Option String :=
   if st.startsWith s && st.endsWith e then
@@ -39,6 +41,7 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | .nat => s.firstVal (·.toNat?)
   | .flt => s.firstVal (·.toFloat?)
   | .lin => s.firstVal (·.toFloat?)
+  | .unit => if s == "()" then some ((), s.drop 2) else none
   | .idx _ => s.firstVal (·.toFin?)
   | α ×× β => do
       let s ← s.accept "("
@@ -57,6 +60,7 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
       let s ← s.accept "]"
       return (v, s)
   | _ ~> _ => ((), s)
+  | .ref _ => panic! "ref not supported in parsing"
 
 def Ty.parse (α: Ty)(s: String): Option α.val := do
   let (a, s) ← α.parse' s
@@ -70,12 +74,14 @@ def Ty.similarVal (α: Ty)(a b: α.val): Bool :=
   | .nat => a == b
   | .flt => a.similar b
   | .lin => a.similar b
+  | .unit => true
   | .idx _ => a == b
   | α ×× β =>
       α.similarVal a.fst  b.fst &&
       β.similarVal a.snd b.snd
   | array _ α => a.zipWith (α.similarVal · ·) b |>.all id
   | _ ~> _ => true
+  | .ref _ => panic! "ref not supported in similarity check"
 
 def Ty.allSimilarVal (α: Ty)(l: List α.val): Bool :=
   match l with

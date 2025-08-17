@@ -14,6 +14,7 @@ notation:max "if' "cond" then "a" else "b => Tm.ite cond a b
 
 notation:max "let'v "x" := "term";"res => Tm.bnd term (λ x => res)
 notation:max "fun'v "i" => "term => Tm.abs (λ i => term)
+notation:max "fun'v "i":"α" => "term => @Tm.abs _ α _ (λ i => term)
 notation:max "for'v "i" => "term => Tm.bld (λ i => term)
 notation:max "for'v "i":"n" => "term => @Tm.bld _ n _ (λ i => term)
 
@@ -36,10 +37,14 @@ namespace Tm
   def suml    : Tm Γ (array n lin) → Tm Γ lin := Tm.cst1 Const1.suml
   def i2n     : Tm Γ (idx n) → Tm Γ nat := Tm.cst1 Const1.i2n
   def n2f     : Tm Γ nat → Tm Γ flt := Tm.cst1 Const1.n2f
+  def maxf    : Tm Γ flt → Tm Γ flt → Tm Γ flt := Tm.cst2 Const2.maxf
+  def addi  : Tm Γ (idx n) → Tm Γ (idx m) → Tm Γ (idx (n+m)) := Tm.cst2 Const2.addi
 
   def mkRef: Tm Γ (ref α) := Tm.cst0 Const0.mkRef
   def refGet: Tm Γ (ref α) → Tm Γ α := Tm.cst1 Const1.refGet
   def refSet: Tm Γ (ref α) → Tm Γ α → Tm Γ unit := Tm.cst2 Const2.refSet
+
+  def π: Tm Γ flt := tlitf 3.14159265358979323846
 end Tm
 
 -- cst2
@@ -47,6 +52,7 @@ infixl:65 " @@ " => Tm.cst2 Const2.app
 notation:max array"[["index"]]" => Tm.cst2 Const2.get array index
 def tupple': Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
 notation:max "("a",,"b")" => tupple' a b
+notation:max "()'" => tlitu
 
 -- refs
 def Tm.dumpFor (a: Tm Γ α)(b: Tm Γ β): Tm Γ β := -- otherwise reducible construct to keep ref in tm
@@ -88,6 +94,18 @@ def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
   ⟨Tm.cst2 Const2.maxf⟩
 
 notation a"<'"b => Tm.cst2 Const2.lt a b
+
+def Tm.inst (α: Ty): Tm Γ α :=
+  match α with
+  | .nat => Tm.cst0 (Const0.litn 0)
+  | .idx _ => Tm.cst0 (Const0.liti 0)
+  | .flt => Tm.cst0 (Const0.litf 0)
+  | .lin => Tm.cst0 (Const0.litl 0)
+  | _ ~> β => Tm.abs (λ _ => Tm.inst β)
+  | α ×× β => Tm.cst2 Const2.tup (Tm.inst α) (Tm.inst β)
+  | .array _ α => Tm.bld (λ _ => Tm.inst α)
+  | .unit => Tm.cst0 Const0.litu
+  | .ref _ => panic! "Tm.inst does not support references"
 
 ------------------------------------------------------------------------------------------
 -- AINF

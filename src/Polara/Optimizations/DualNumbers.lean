@@ -2,48 +2,6 @@ import Polara.Syntax.Index
 import Polara.Optimizations.NbE
 import Polara.Optimizations.CSE
 
--- @[reducible]
--- def Ty.aD': Ty → Option Ty
--- | .unit
--- | .idx _
--- | .ref _
--- | .lin
--- | .nat => none
--- | .flt => lin
--- | .array n α => α.aD'.map (.array n ·)
--- | α ×× β => α.aD'.merge (·××·) β.aD'
--- | α ~> β => α.aD'.merge (·~>·) β.aD'
-
--- -- #eval Ty.contains
--- @[reducible]
--- def Ty.containsFunc := (Ty.contains · (λ
---   | _ ~> _ => true
---   | _ => false
---   ))
-
--- def Ty.aD (l: Option Ty): Ty → Ty
--- | α ~> β => α.aD (none) ~> β.aD (α.aD')
--- | _ => sorry
-
--- -- flt ~> flt     |>.aD flt ~> (flt ×× (lin ~> lin))
--- -- flt ~> (flt ×× nat) |>.aD flt ~> ((flt ×× nat) ×× (lin ~> lin))
--- -- flt ~> (flt ~> flt) |>.aD flt ~> (flt ~> (flt ×× (lin ~> lin ~> lin)))
-
--- -- flt ~> (flt ×× (flt ~> flt)) |>.aD flt ~> (flt ×× ((flt ~> flt) ×× (lin ~> lin ~> lin))) ×× (lin ~> lin)
--- -- alternatively (lin ~> (lin ×× (lin ~> lin)) but we need info from not lin part
-
--- def Ty.aD (l: Option Ty): Ty → Ty
--- | .unit => l.map (.unit ×× ·) |>.getD .unit
--- | .idx n => l.map (.idx n ×× ·) |>.getD .idx n
--- | .lin => l.map (.lin ×× ·) |>.getD .lin
--- | .nat => l.map (.nat ×× ·) |>.getD .nat
--- | .flt =>
--- | .ref α =>
--- | .array n α => α.aD'.map (.array n ·)
--- | α ×× β => α.aD'.merge (·××·) β.aD'
--- | α ~> β => α.aD'.merge (·~>·) β.aD'
--- | _ => sorry
-
 @[reducible]
 def Ty.aD: Ty → Ty
 | .unit => .unit
@@ -55,6 +13,10 @@ def Ty.aD: Ty → Ty
 | .array n α => .array n α.aD
 | .ref α => .ref α.aD
 | .lin => .lin -- todo
+
+
+-- f: flt ×× lin ×× flt ×× lin ~> flt ×× lin
+-- f(x, 0, y, 1): (z, f' x y)
 
 -- #reduce Ty.nat.aD
 -- #reduce Ty.flt.aD
@@ -68,7 +30,7 @@ def Ty.aD: Ty → Ty
 
 def Const0.aD: Const0 α → Tm Γ α.aD
 | .litn n => tlitn n
-| .litf f => tupple' (tlitf f) (tlitl 0)
+| .litf f => tupple' (tlitf f) (tlitl 0) -- selector, gewicht der Ableitungsrichtung
 | .liti i => tliti i
 | .litl l => (tlitl l)
 | .litu => tlitu

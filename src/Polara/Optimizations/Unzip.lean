@@ -3,6 +3,20 @@
 -- (flt × lin) ~> (flt × lin)
 -- => flt ~> (flt, lin ~> lin)
 
+-- flt ~> (flt ~> flt)
+-- flt ×× flt ~> flt
+-- lin ~> lin ×× lin
+-- flt ~> (flt ~> (flt ×× (lin ~> lin ~> lin))) forward mode
+-- flt ~> (flt ~> (flt ×× (lin ~> lin (ptr as error hilfe) ×× lin))) backward mode
+
+-- f: (flt ×× lin) ~> (flt ×× lin) ~> (flt ×× lin)
+-- f (3.14, 0) (2.2, 1) = (f ..., f' ...)
+
+-- g: (flt ×× ref lin) ~> (flt ×× ref lin) ~> (flt ×× ref lin)
+-- g (3, ref (x')) (2, ref (y')) = (g ..., zref)
+-- zref *:= 1
+--
+
 -- (flt × lin × (flt × lin)) ~> (flt × lin)
 
 -- (flt × rlin × (flt × rlin)) ~> (flt × rlin)

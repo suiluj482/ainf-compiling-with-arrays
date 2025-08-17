@@ -17,7 +17,7 @@ def Ty.gen (t: Ty): String := s!"Except String {t.gen'}"
 
 def Const0.tmgen (const0: Const0 α): String := match const0 with
 | mkRef => panic! "mkRef not supported in tmgen"
-| _ => s!"jnp.array({const0})"
+| _ => s!"{const0}"
 
 def Const1.tmgen: Const1 α₁ α → String
   | normCdf => "Float.normCdf"

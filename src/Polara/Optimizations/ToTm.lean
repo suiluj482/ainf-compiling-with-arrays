@@ -98,17 +98,3 @@ def AINF.toTm'(a: AINF α)(ren: RenTm Γ): Tm Γ α :=
     AINF.toTm' (rest, ret) (ren.addVar v ⟨env, v'⟩)
 
 def AINF.toTm (a: AINF α): Tm Γ α := a.toTm' ⟨[], []⟩
-
------------------------------------------------------------
-
-def Tm.inst (α: Ty): Tm Γ α :=
-  match α with
-  | .nat => Tm.cst0 (Const0.litn 0)
-  | .idx _ => Tm.cst0 (Const0.liti 0)
-  | .flt => Tm.cst0 (Const0.litf 0)
-  | .lin => Tm.cst0 (Const0.litl 0)
-  | _ ~> β => Tm.abs (λ _ => Tm.inst β)
-  | α ×× β => Tm.cst2 Const2.tup (Tm.inst α) (Tm.inst β)
-  | .array _ α => Tm.bld (λ _ => Tm.inst α)
-  | .unit => Tm.cst0 Const0.litu
-  | .ref _ => panic! "Tm.inst does not support references"
