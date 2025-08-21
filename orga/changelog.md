@@ -38,3 +38,7 @@
 - improve ref definition
 05.08 - 11.08:
 - fixed tests
+11.08 - 18.08:
+- Tm.df
+18.08 - 25.08:
+- Tm.dr
