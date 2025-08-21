@@ -31,12 +31,28 @@ end
 @[reducible]
 def EnvDf := List (Some VPar)
 @[reducible]
-def EnvDf.ty: EnvDf → Ty
-| [] => .unit
-| ⟨α,_⟩ :: env' => α ×× EnvDf.ty env'
+def EnvDf.ty (α: Ty): EnvDf → Ty
+| [] => α
+| ⟨β,_⟩ :: env' => β.df'.linArg ~> (EnvDf.ty α env')
+
 @[reducible]
 def Ty.dfEnv (env: EnvDf): Ty → Ty
-| α => (α.df ×× (Ty.linFun (EnvDf.ty env).df' α.df'))
+| α => (α.df ×× (env.ty α.df'.linRet))
+
+def EnvDf.wrap (env: EnvDf)(a: ListMap VPar (Γ ·.df'.linArg) → Tm Γ α): Tm Γ (env.ty α) :=
+  match env with
+  | [] => a []
+  | ⟨β, x⟩ :: env' => fun'v v => (EnvDf.wrap env' (λ m => a (⟨β,x,v⟩  :: m)))
+
+def EnvDf.unwrap (env: EnvDf)(m: ListMap VPar (VPar ·.df'.linArg))(a: Tm VPar (env.ty α)): Tm VPar α:=
+  match env with
+  | [] => a
+  | ⟨_, x⟩ :: env' => EnvDf.unwrap env' m.tail (a @@ (Tm.var (m.lookup x).get!))
+
+def EnvDf.unwrapLinZero (env: EnvDf)(a: Tm VPar (env.ty α)): Tm VPar α:=
+  match env with
+  | [] => a
+  | _ :: env' => EnvDf.unwrapLinZero env' (a @@ (Tm.linZero _))
 
 -- open Ty in
 -- #eval flt ~> flt |>.df
@@ -185,46 +201,39 @@ def VPar.df: VPar α → VPar α.df := VPar.changeType
 def VPar.idf: VPar α.df → VPar α := VPar.changeType
 
 def Tm.df'(env: EnvDf): Tm VPar α → Tm VPar (α.dfEnv env)
-| .err => (.err,, fun' e => .err)
+| .err => (.err,, env.wrap (λ _ => .err))
 | .cst0 const0        => (
       const0.df,,
-      fun' e => const0.df'
+      env.wrap (λ _ => const0.df')
     )
 | .cst1 const1 t      =>
     let' t := t.df' env;
     (
       const1.df t.fst,,
-      fun' e => const1.df' t.fst (t.snd @@ e)
+      env.wrap (λ e => const1.df' t.fst (env.unwrap e t.snd))
+      -- fun' e => const1.df' t.fst (t.snd @@ e)
     )
 | .cst2 const2 a b    =>
     let' a := a.df' env;
     let' b := b.df' env;
     (
       const2.df a.fst b.fst,,
-      fun' e => const2.df' a.fst b.fst (a.snd @@ e) (b.snd @@ e)
+      env.wrap (λ e => const2.df' a.fst b.fst (env.unwrap e a.snd) (env.unwrap e b.snd))
+      -- fun' e => const2.df' a.fst b.fst (a.snd @@ e) (b.snd @@ e)
     )
 | .bld a              =>
   let' arr := for'v idx =>
-    let'v idx := (.var idx,, fun' e => ()');
+    let'v idx := (.var idx,, env.wrap (λ _ => ()'));
     (a (idx.idfEnv env)).df' env;
   (
     for' idx => arr[[idx]].fst,,
-    fun' e => for' idx => (arr[[idx]].snd @@ e)
+    env.wrap (λ e => for' idx => (env.unwrap e arr[[idx]].snd))
   )
 | .ite cond a b       => .ite cond (a.df' env) (b.df' env)
 | .var v (α:=α)       =>
-    let rec go (env': EnvDf)(f: Tm VPar env.ty.df'.linArg → Tm VPar (env'.ty.df'.linArg)):
-      Tm VPar (α.dfEnv env) :=
-        match env' with
-        | [] =>
-          -- dbg_trace s!"did not found {v} in env {env}"
-          .var (v.dfEnv env) -- VPar not in env therefore allready changed by Tm.df'
-        | ⟨α',x⟩ :: env'' => if t: α=α' then if x=t▸v
-            then
-              -- dbg_trace s!"found {x} in env {env}"
-              (.var v.df,, fun' e => t▸(f e).fst) -- in env, get df from env
-            else go env'' (Tm.snd ∘ f) else go env'' (Tm.snd ∘ f)
-    go env id
+    match env.contains ⟨_, v⟩ with
+    | true => .var (v.dfEnv env) -- VPar not in env therefore
+    | false => (.var v.df,, env.wrap (λ e => .var (e.lookup v).get!)) -- in env, get df from env
 | .bnd t f            => let'v v := t.df' env; (f (v.idfEnv env)).df' env
 | .abs f              =>
     let' f := fun'v x => (f x.idf).df' (⟨_,x.idf⟩ :: env);
@@ -233,11 +242,12 @@ def Tm.df'(env: EnvDf): Tm VPar α → Tm VPar (α.dfEnv env)
         let' body := f @@ x;
         (
           body.fst,,
-          fun' x' => body.snd @@ (x',, Tm.linZero _)
+          fun' x' => env.unwrapLinZero (body.snd @@ x')
         ),,
-      fun' e => fun' x =>
+      env.wrap (λ e => fun' x =>
         let' body := f @@ x;
-        body.snd @@ (Tm.linZero _,, e)
+        env.unwrap e (body.snd @@ Tm.linZero _)
+      )
     )
 
 def Tm.df (t: Tm VPar α): Tm VPar α.df :=

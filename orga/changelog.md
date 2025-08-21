@@ -42,3 +42,4 @@
 - Tm.df
 18.08 - 25.08:
 - Tm.dr
+- Tm.df env with functions not tupples
