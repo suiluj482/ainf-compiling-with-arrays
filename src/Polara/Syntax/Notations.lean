@@ -39,6 +39,7 @@ namespace Tm
   def n2f     : Tm Γ nat → Tm Γ flt := Tm.cst1 Const1.n2f
   def maxf    : Tm Γ flt → Tm Γ flt → Tm Γ flt := Tm.cst2 Const2.maxf
   def addi  : Tm Γ (idx n) → Tm Γ (idx m) → Tm Γ (idx (n+m)) := Tm.cst2 Const2.addi
+  -- def fori  : Tm Γ ((idx n ×× α) ~> α) → Tm Γ α → Tm Γ α := Tm.cst2 Const2.fori
 
   def mkRef: Tm Γ (ref α) := Tm.cst0 Const0.mkRef
   def refGet: Tm Γ (ref α) → Tm Γ α := Tm.cst1 Const1.refGet
@@ -94,6 +95,7 @@ def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
   ⟨Tm.cst2 Const2.maxf⟩
 
 notation a"<'"b => Tm.cst2 Const2.lt a b
+notation a"=='"b => Tm.cst2 Const2.eqi a b
 
 def Tm.inst (α: Ty): Tm Γ α :=
   match α with

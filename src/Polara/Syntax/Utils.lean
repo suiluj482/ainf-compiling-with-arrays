@@ -1,5 +1,6 @@
 import Polara.Syntax.Definitions
 import Polara.Syntax.PrettyPrint
+import Polara.Syntax.Notations
 
 -- catamorphism
 -- cata
@@ -190,3 +191,61 @@ def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
     | .bld (n:=n) i v   => checkVPar (.forc n i :: env)   v
 
 def AINF.valid (a: AINF α): Bool := a.valid' []
+
+
+----- lins ------
+
+@[reducible]
+def Ty.linArg: Ty → Ty
+| .unit
+| .nat
+| .idx _
+| .lin       => .unit
+| α ×× β     => α.linArg ×× β.linArg
+| .array n α => .array n α.linArg
+| .ref _     => panic! "ref not supported in automatic differentiation"
+| .flt       => .lin
+| α ~> β     => α ~> β.linArg
+
+@[reducible]
+def Ty.linRet := Ty.linArg
+
+@[reducible]
+def Ty.linFun: Ty → Ty → Ty
+| α, β => α.linArg ~> β.linRet
+
+def Tm.linZero (α: Ty): Tm Γ α :=
+  match α with
+  | .lin => Tm.cst0 (Const0.litl 0)
+  | _ ~> β => Tm.abs (λ _ => Tm.linZero β)
+  | α ×× β => Tm.cst2 Const2.tup (Tm.linZero α) (Tm.linZero β)
+  | .array _ α => Tm.bld (λ _ => Tm.linZero α)
+  | .unit => ()'
+  | .nat | .idx _ | .flt => panic! "Tm.linZero does not support this type"
+  | .ref _ => panic! "Tm.linZero does not support references"
+
+def Tm.sumLins (a b: Tm Γ α): Tm Γ α :=
+  match α with
+  | .lin => a + b
+  | .unit => ()'
+  | _ ×× _ => (
+      Tm.sumLins a.fst b.fst,,
+      Tm.sumLins a.snd b.snd
+    )
+  | .array _ _ => for' i => Tm.sumLins a[[i]] b[[i]]
+  | _ ~> _ => fun' p => Tm.sumLins (a @@ p) (b @@ p)
+  | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
+  | .ref _ => panic! "sumArrayOfLins not supported for references"
+
+def Tm.sumArrayOfLins (arr: Tm Γ (.array n α)): Tm Γ α :=
+  match α with
+  | .lin => arr.suml
+  | .unit => ()'
+  | _ ×× _ => (
+      (for' i => arr[[i]].fst).sumArrayOfLins,,
+      (for' i => arr[[i]].snd).sumArrayOfLins
+    )
+  | .array _ _ => for' j => (for' i => arr[[i]][[j]]).sumArrayOfLins
+  | _ ~> _ => fun' a => (for' i => arr[[i]] @@ a).sumArrayOfLins
+  | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
+  | .ref _ => panic! "sumArrayOfLins not supported for references"

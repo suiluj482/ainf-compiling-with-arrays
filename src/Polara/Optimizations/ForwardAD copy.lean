@@ -1,6 +1,20 @@
 import Polara.Syntax.Index
 import Polara.Optimizations.NbE
--- import Polara.Optimizations.CSE
+import Polara.Optimizations.CSE
+
+@[reducible]
+def Ty.linArg: Ty → Ty
+| .unit
+| .nat
+| .idx _
+| .lin       => .unit
+| α ×× β     => α.linArg ×× β.linArg
+| .array n α => .array n α.linArg
+| .ref _     => panic! "ref not supported in automatic differentiation"
+| .flt       => .lin
+| α ~> β     => α ~> β.linArg
+@[reducible]
+def Ty.linFun: Ty → Ty := Ty.linArg
 
 mutual
   @[reducible]
@@ -21,32 +35,17 @@ mutual
   | .nat       => .nat
   | .flt       => .flt
   | .idx n     => .idx n
-  | α ~> β     => α.df ~> (β.df ×× (Ty.linFun α.df' β.df'))
+  | α ~> β     => α.df ~> (β.df ×× (α.df'.linArg ~> β.df'.linFun))
   | α ×× β     => α.df ×× β.df
   | .array n α => .array n α.df
   | .lin       => .lin
   | .ref _     => panic! "ref not supported in automatic differentiation"
 end
 
-@[reducible]
-def EnvDf := List (Some VPar)
-@[reducible]
-def EnvDf.ty: EnvDf → Ty
-| [] => .unit
-| ⟨α,_⟩ :: env' => α ×× EnvDf.ty env'
-@[reducible]
-def Ty.dfEnv (env: EnvDf): Ty → Ty
-| α => (α.df ×× (Ty.linFun (EnvDf.ty env).df' α.df'))
-
 -- open Ty in
 -- #eval flt ~> flt |>.df
 -- open Ty in
 -- #eval flt ~> flt ~> flt |>.df
-
-
-------------------------------------------------------------------------------------------
--- except Const2.app functions only changing type
-----
 
 def Const0.df: Const0 α → Tm Γ α.df
 | .litn n => tlitn n
@@ -105,27 +104,22 @@ def Const2.df (a: Tm Γ α.df)(b: Tm Γ β.df): Const2 α β γ → Tm Γ γ.df
 | linOp op => linOpDf op a b
 | linScale op => linScaleDf op a b
 | .addi => Tm.cst2 (.addi) a b
-| .eqi => a ==' b
 | .lt => a <' b
 | .maxf => Max.max a b
 | .get  => a[[b]]
 | .tup  => (a,, b)
 | .refSet => panic! "refSet not supported in automatic differentiation"
--- | .fori => (fun' t => (a @@ t).fst).fori b
 | .app  => (a @@ b).fst -- derivation no longer needed
 
 
------------------------------------------------------------------------------------------
--- derivation rules
-----
-
-def Const0.df': Const0 α → Tm Γ α.df'.linRet
+--------------------------------------------------------------------
+def Const0.df': Const0 α → Tm Γ α.df'.linFun
 | .litn n | .liti i | .litl l | .litu => ()'
 | mkRef => panic! "ref not supported in automatic differentiation"
 | .litf f => tlitl 0
 
-def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
-  Const1 α β → Tm Γ β.df'.linRet
+def Const1.df' (x: Tm Γ α)(x': Tm Γ α.df'.linFun):
+  Const1 α β → Tm Γ β.df'.linFun
 | .exp     => x' * x.exp               -- (e^x)' = e^x
 | .sqrt    => x' / (tlitf 2 * x.sqrt)  -- (sqrt x)' = 1/(2*sqrt x)
 | .normCdf =>                          -- (normCdf x)' = (1/sqrt(2*pi)) * e^(-x^2/2) * dx
@@ -140,7 +134,7 @@ def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
 | refGet => panic! "ref not supported in automatic differentiation"
 
 def ArithOp.df' [t: BiArraysC BiArith α β γ](op: ArithOp)
-  (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm Γ β.df'.linRet): Tm Γ γ.df'.linRet :=
+  (a: Tm Γ α)(b: Tm Γ β)(a': Tm Γ α.df'.linFun)(b': Tm Γ β.df'.linFun): Tm Γ γ.df'.linFun :=
    match t.t with
   | .array n t' =>
       have: BiArraysC BiArith _ _ _ := ⟨t'⟩
@@ -153,102 +147,66 @@ def ArithOp.df' [t: BiArraysC BiArith α β γ](op: ArithOp)
         | .sub => a' - b'                     -- (a - b)' = a' - b'
         | .mul => b' * a + a' * b             -- (a * b)' = a' * b + a * b'
         | .div => (a' * b - b' * a) / (b * b) -- (a / b)' = (a' * b - a * b') / (b^2)
-def linOpDf' [t: BiArraysC BiLin α β γ]: Tm Γ γ.df'.linRet :=
+def linOpDf' [t: BiArraysC BiLin α β γ]: Tm Γ γ.df'.linFun :=
   match t.t with
   | .array n t' => for' i => @linOpDf' _ _ _ _ ⟨t'⟩
   | .base (.lins) => ()'
-def linScaleDf' [t: BiArrayC BiLF α β γ]: Tm Γ γ.df'.linRet :=
+def linScaleDf' [t: BiArrayC BiLF α β γ]: Tm Γ γ.df'.linFun :=
   match t.t with
   | .array n (.lf) => for' i => ()'
   | .base (.lf) => ()'
 
-def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm Γ β.df'.linRet): Const2 α β γ → Tm Γ γ.df'.linRet
+def Const2.df' (a: Tm Γ α)(b: Tm Γ β)(a': Tm Γ α.df'.linFun)(b': Tm Γ β.df'.linFun): Const2 α β γ → Tm Γ γ.df'.linFun
 | arithOp op  => op.df' a b a' b'
 | linOp op    => @linOpDf' α β _ _ _
 | linScale op => @linScaleDf' α β _ _ _
 | .addi       => ()'
-| .eqi        => ()'
 | .lt         => ()'
 | .maxf       => if' a <' b then a' else b'
 | .get        => a'[[b]]
 | .tup        => (a',, b')
 | .refSet     => panic! "refSet not supported in automatic differentiation"
-| .app        => (a @@ b).snd @@ b'
+| .app        => sorry -- (a' @@ b').snd --
 
+-- def Tm.df' (x': VPar α'): Tm VPar α → Tm VPar α.df'.linFun
+-- | .err => .err
+-- | .cst0 const0        => const0.df'
+-- | .cst1 const1 t      => const1.df' t (t.df' x')
+-- | .cst2 const2 a b    => const2.df' a b (a.df' x') (b.df' x')
+-- | .bld a              => for'v idx => (a idx).df' x'
+-- | .ite cond a b       => .ite cond (a.df' x') (b.df' x')
+-- | .var v              => .var v.changeType
+-- | .bnd t f            => let'v v := t.df' x'; (f v.changeType).df' x'
+-- | .abs f              => fun'v y => (f y.changeType).df' x'
 
-----------------------------------------------------------------------------------------------
+-- def Tm.df: Tm VPar α → Tm VPar α.df
+-- | .err => .err
+-- | .cst0 const0        => const0.df
+-- | .cst1 const1 t      => const1.df t.df
+-- | .cst2 const2 a b    => const2.df a.df b.df
+-- | .bld a              => for'v idx => (a idx).df
+-- | .ite cond a b       => .ite cond a.df b.df
+-- | .var v              => .var v.changeType
+-- | .bnd t f            => let'v v := t.df; (f v.changeType).df
+-- | .abs f              => fun'v x =>
+--   let body := f x.changeType
+--   (
+--     body.df,,
+--     fun'v x' => body.df' x'
+--   )
 
-def VPar.dfEnv (env: EnvDf): VPar α → VPar (α.dfEnv env) := VPar.changeType
-def VPar.idfEnv (env: EnvDf): VPar (α.dfEnv env) → VPar α := VPar.changeType
+def RenDf := ListMap Var (Var) -- x => x', also model type change?, parameters?
 
-def VPar.df: VPar α → VPar α.df := VPar.changeType
-def VPar.idf: VPar α.df → VPar α := VPar.changeType
+def Bnds.df' (ren: RenDf): Bnds → VParM Bnds
+| [] => return []
+| ⟨⟨_,v⟩, env, prim⟩ :: rest =>
+    match prim with
+    | .err => sorry
+    | _ => sorry
 
-def Tm.df'(env: EnvDf): Tm VPar α → Tm VPar (α.dfEnv env)
-| .err => (.err,, fun' e => .err)
-| .cst0 const0        => (
-      const0.df,,
-      fun' e => const0.df'
-    )
-| .cst1 const1 t      =>
-    let' t := t.df' env;
-    (
-      const1.df t.fst,,
-      fun' e => const1.df' t.fst (t.snd @@ e)
-    )
-| .cst2 const2 a b    =>
-    let' a := a.df' env;
-    let' b := b.df' env;
-    (
-      const2.df a.fst b.fst,,
-      fun' e => const2.df' a.fst b.fst (a.snd @@ e) (b.snd @@ e)
-    )
-| .bld a              =>
-  let' arr := for'v idx =>
-    let'v idx := (.var idx,, fun' e => ()');
-    (a (idx.idfEnv env)).df' env;
-  (
-    for' idx => arr[[idx]].fst,,
-    fun' e => for' idx => (arr[[idx]].snd @@ e)
-  )
-| .ite cond a b       => .ite cond (a.df' env) (b.df' env)
-| .var v (α:=α)       =>
-    let rec go (env': EnvDf)(f: Tm VPar env.ty.df'.linArg → Tm VPar (env'.ty.df'.linArg)):
-      Tm VPar (α.dfEnv env) :=
-        match env' with
-        | [] =>
-          -- dbg_trace s!"did not found {v} in env {env}"
-          .var (v.dfEnv env) -- VPar not in env therefore allready changed by Tm.df'
-        | ⟨α',x⟩ :: env'' => if t: α=α' then if x=t▸v
-            then
-              -- dbg_trace s!"found {x} in env {env}"
-              (.var v.df,, fun' e => t▸(f e).fst) -- in env, get df from env
-            else go env'' (Tm.snd ∘ f) else go env'' (Tm.snd ∘ f)
-    go env id
-| .bnd t f            => let'v v := t.df' env; (f (v.idfEnv env)).df' env
-| .abs f              =>
-    let' f := fun'v x => (f x.idf).df' (⟨_,x.idf⟩ :: env);
-    (
-      fun' x =>
-        let' body := f @@ x;
-        (
-          body.fst,,
-          fun' x' => body.snd @@ (x',, Tm.linZero _)
-        ),,
-      fun' e => fun' x =>
-        let' body := f @@ x;
-        body.snd @@ (Tm.linZero _,, e)
-    )
+-- renaming
+def AINF.df' (ren: RenDf): AINF α → VParM (AINF α.df)
+| (bnds, ret) => return (←bnds.df' ren, ret.changeType) -- ren for ret?
 
-def Tm.df (t: Tm VPar α): Tm VPar α.df :=
-  t.df' [] |>.fst -- remove derivation of empty env
-
-
-------------------------------------------------
--- open Ty
-
--- #eval (fun' x:flt => x.exp).df |>.normVPar
-
--- #eval flt |>dfEnv [⟨flt, (.v (.mk 1))⟩]
--- #eval flt ~> flt |>.dfEnv []
--- #eval flt ~> flt ~> flt |>.dfEnv []
+def AINF.df: AINF α → AINF α.df
+| a => a.df' [] |>.freshAINFVars a

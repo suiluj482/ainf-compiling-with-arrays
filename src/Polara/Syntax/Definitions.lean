@@ -9,7 +9,9 @@ inductive Ty
   | lin : Ty                  -- linear (aD)
   | arrow : Ty → Ty → Ty      -- function
   | product : Ty → Ty → Ty    -- tupple
+  -- | sum: Ty → Ty → Ty         -- sum
   | array : Nat → Ty → Ty     -- array
+  -- | list: Ty → Ty             -- list
   | ref : Ty → Ty             -- reference
   | unit: Ty
   deriving DecidableEq, Inhabited, Hashable
@@ -39,6 +41,7 @@ inductive Const1 : Ty → Ty → Type
   | sumf : Const1 (array n flt) flt    -- sum of array Monoide fordern
   | suml : Const1 (array n lin) lin
   -- | mul
+  -- | arr2list : Const1 (array n α) (list α) -- array to list
   | i2n  : Const1 (idx n) nat     -- indices -> nat
   | n2f  : Const1 nat flt         -- nat -> float
   | refGet: Const1 (ref α) α
@@ -50,27 +53,27 @@ def BiOpT := Ty → Ty → Ty → Type
 inductive BiArith: BiOpT where
 | nats: BiArith nat nat nat
 | flts: BiArith flt flt flt
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 class BiArithC (α β: Ty)(γ: outParam Ty) where
   t: BiArith α β γ
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 @[default_instance] instance: BiArithC nat nat nat := ⟨BiArith.nats⟩
 @[default_instance] instance: BiArithC flt flt flt := ⟨.flts⟩
 
 inductive BiLin: BiOpT where
 | lins: BiLin lin lin lin
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 class BiLinC (α β: Ty)(γ: outParam Ty) where
   t: BiLin α β γ
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 @[default_instance] instance: BiLinC lin lin lin := ⟨.lins⟩
 
 inductive BiLF: BiOpT where
 | lf: BiLF lin flt lin
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 class BiLFC (α β: Ty)(γ: outParam Ty) where
   t: BiLF α β γ
-deriving BEq, Repr
+deriving BEq, Repr, DecidableEq
 @[default_instance] instance: BiLFC lin flt lin := ⟨.lf⟩
 
 class abbrev BEqRepr (α: Type u) := BEq α, Repr α
@@ -136,7 +139,9 @@ inductive Const2 : Ty → Ty → Ty → Type
 
   -- matrix multiplication
 
+  -- | fori: Const2 ((idx n ×× α) ~> α) α α        -- body_fun, init
   | addi: Const2 (idx n) (idx m) (idx (n+m))
+  | eqi: Const2 (idx n) (idx n) nat
   | maxf : Const2 flt flt flt
   | lt : Const2 flt flt nat                           -- lower than
   | get : Const2 (array n a) (idx n) a          -- array access

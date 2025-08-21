@@ -92,6 +92,9 @@ def Const1.de : Const1 β α → Ty.de Γ β → Ty.de Γ α
 def Tm.isZeroF : Tm Γ α → Bool | cst0 (litf f) => f == 0 | _ => false
 def Tm.isOneF  : Tm Γ α → Bool | cst0 (litf f) => f == 1 | _ => false
 
+def Tm.isZeroL : Tm Γ α → Bool | cst0 (litl f) => f == 0 | _ => false
+def Tm.isOneL : Tm Γ α → Bool | cst0 (litl f) => f == 1 | _ => false
+
 def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
   | app => fun f e => f e
   | get => fun f n => f n
@@ -106,7 +109,16 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
     | _, .err => err
     | cst0 (litf a), cst0 (litf b) => cst0 (litf (max a b))
     | a, b                         => cst2 maxf a b
-  | addi => cst2 addi
+  | addi => fun
+    | .err, _
+    | _, err => err
+    -- | cst0 (liti a), cst0 (liti b) => tliti (a.add' b)
+    | a, b => cst2 addi a b
+  | eqi => fun
+    | .err, _
+    | _, err => err
+    | cst0 (liti a), cst0 (liti b) => if a==b then tlitn 1 else tlitn 0
+    | a, b => cst2 eqi a b
   | @arithOp _ _ _ type op =>
     let rec goA {α' β' γ': Ty}: BiArrays BiArith α' β' γ' → Ty.de Γ α' → Ty.de Γ β' → Ty.de Γ γ' :=
       (λ
@@ -118,10 +130,13 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
             | .add => fun
               | .err, _ | _, .err => err
               | cst0 (litn a), cst0 (litn b) => cst0 (litn (a + b))
+              | cst0 (litn 0), c
+              | c, cst0 (litn 0) => c
               | a, b => cst2 (arithOp add) a b
             | .sub => fun
               | .err, _ | _, .err => err
               | cst0 (litn a), cst0 (litn b) => cst0 (litn (a - b))
+              | c, cst0 (litn 0) => c
               | a, b => cst2 (arithOp sub) a b
             | .mul => fun
               | .err, _ | _, .err => err
@@ -171,13 +186,13 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
               | .err, _ | _, .err => err
               | cst0 (litl a), cst0 (litl b) => cst0 (litl (a + b))
               | a, b =>
-                if a.isZeroF then b else if b.isZeroF then a else
+                if a.isZeroL then b else if b.isZeroL then a else
                 cst2 (linOp add) a b
             | .sub => fun
               | .err, _ | _, .err => err
               | cst0 (litl a), cst0 (litl b) => cst0 (litl (a - b))
               | a, b =>
-                if b.isZeroF then a else
+                if b.isZeroL then a else
                 cst2 (linOp sub) a b
       )
     goL type.t
@@ -189,8 +204,8 @@ def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
             | .err, _ | _, .err => err
             | cst0 (litl a), cst0 (litf b) => cst0 (litl (a * b))
             | a, b =>
-              if      a.isZeroF || b.isZeroF then cst0 (litl 0)
-              else if b.isOneF then a
+              if      a.isZeroL || b.isZeroL then cst0 (litl 0)
+              else if b.isOneL then a
               else cst2 (linScale mul) a b
           | .div => fun
             | .err, _ | _, .err => err

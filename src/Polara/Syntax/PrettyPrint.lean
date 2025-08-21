@@ -61,6 +61,8 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
   | linOp op => s!"{a} {op.toString} {b}"
   | linScale op => s!"{a} {op.toString} {b}"
   | addi => s!"{a} + {b}"
+  | eqi => s!"{a} == {b}"
+  -- | fori => s!"foldi {a} {b}"
   | lt => s!"{a} < {b}"
   | maxf => s!"max {a} {b}"
   | tup  => s!"({a}, {b})"
@@ -100,7 +102,7 @@ def Tm.pp : Tm VPar α → ReaderM (Nat × Nat) String
     let xx := VPar.v (.mk i)
     let tmp1: String := e.pp (i,j)
     let tmp2: String := (f xx).pp (i+1,j)
-    return s!"let {xx.toString} = {tmp1};\n{tmp2}"
+    return s!"(let {xx.toString} := {tmp1};\n{tmp2})"
   | ite a b c => return s!"(if {<- a.pp} then {<- b.pp} else {<- c.pp})"
 
 def Tm.toString (t: Tm VPar α): String := Tm.pp t (0,0)
