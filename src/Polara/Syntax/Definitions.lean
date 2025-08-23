@@ -144,7 +144,7 @@ inductive Const2 : Ty → Ty → Ty → Type
   | eqi: Const2 (idx n) (idx n) nat
   | maxf : Const2 flt flt flt
   | lt : Const2 flt flt nat                           -- lower than
-  | get : Const2 (array n a) (idx n) a          -- array access
+  | get : Const2 (array n α) (idx n) α          -- array access
   | tup : Const2 α β (α ×× β)                   -- tupple constructor
   | app : Const2 (α~>β) α β                     -- function application
 

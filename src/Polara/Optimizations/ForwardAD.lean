@@ -231,9 +231,9 @@ def Tm.df'(env: EnvDf): Tm VPar α → Tm VPar (α.dfEnv env)
   )
 | .ite cond a b       => .ite cond (a.df' env) (b.df' env)
 | .var v (α:=α)       =>
-    match env.contains ⟨_, v⟩ with
-    | true => .var (v.dfEnv env) -- VPar not in env therefore
-    | false => (.var v.df,, env.wrap (λ e => .var (e.lookup v).get!)) -- in env, get df from env
+    if env.contains ⟨_, v⟩ then
+      (.var v.df,, env.wrap (λ e => .var (e.lookup v).get!)) -- in env, get df from env
+    else .var (v.dfEnv env) -- VPar not in env therefore
 | .bnd t f            => let'v v := t.df' env; (f (v.idfEnv env)).df' env
 | .abs f              =>
     let' f := fun'v x => (f x.idf).df' (⟨_,x.idf⟩ :: env);

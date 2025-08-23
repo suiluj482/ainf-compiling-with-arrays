@@ -1,5 +1,6 @@
 import Polara.Syntax.Index
 import Polara.Optimizations.ForwardAD
+import Polara.Optimizations.RmUnits
 
 @[reducible]
 def Ty.copower: Ty → Ty → Ty
@@ -238,7 +239,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
     go env id
 | .bnd t f            => let'v v := t.dr' env; (f (v.idrEnv env)).dr' env
 | .abs f (α:=α) (β:=β)            =>
-    let' f: α.dr ~> (Ty.drEnv (⟨α,(.v (.mk 0))⟩ :: env) (β)) := fun'v x => (f (VPar.idr x)).dr' (⟨_,x.idr⟩ :: env);
+    let' f := fun'v x => (f x.idr).dr' (⟨_,x.idr⟩ :: env);
     (
       fun' x =>
         let' body := f @@ x;
@@ -280,6 +281,9 @@ open Ty
 
 #eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.df |>.normVPar
 #eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.dr |>.normVPar
+
+
+#eval! (fun' x:flt××nat => x.fst) |>.df |>.normVPar |>.rmUnits
 
 -- #eval flt |>drEnv [⟨flt, (.v (.mk 1))⟩]
 -- #eval flt ~> flt |>.drEnv []
