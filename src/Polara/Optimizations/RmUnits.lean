@@ -217,3 +217,7 @@ match α, t with
 | _, .cst0 c     => c.rmUnits
 | _, .cst1 c a   => c.rmUnits a.rmUnits
 | _, .cst2 c a b => c.rmUnits a.rmUnits b.rmUnits
+
+#eval (()',, ()') |>.rmUnits
+#eval (fun' x:Ty.flt => for' i:42 => ()',, ()') |>.rmUnits
+#eval (fun' x:Ty.unit => tlitf 1) |>.rmUnits

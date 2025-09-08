@@ -246,3 +246,15 @@ def Tm.normVPar (t: Tm VPar α): Tm VPar α :=
 
 -- #eval ((norm (fun Γ => ((fun' i0 => i0): Tm Γ (Ty.nat ~> Ty.nat)))) : Tm VPar (Ty.nat ~> Ty.nat))
 -- #eval (fun x => x) 0
+
+#eval (
+  let' f := (fun' x:flt => x+x);
+  let' fd := (f,, f);
+  fun' x:flt => (fd.fst @@ x) + (fd.snd @@ x)
+).normVPar
+
+#eval (
+  let' f := (fun' x:flt => x+x);
+  let' g := (fun' x:flt => x+x);
+  fun' a:nat => (fun' x:flt => ((if' a then f else g) @@ x))
+).normVPar

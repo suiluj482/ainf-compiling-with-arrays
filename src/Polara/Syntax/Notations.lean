@@ -25,6 +25,10 @@ def tlitf: Float → Tm Γ flt := Tm.cst0 ∘ Const0.litf
 def tlitl: Float → Tm Γ lin := Tm.cst0 ∘ Const0.litl
 def tliti: (Fin (n+1)) → Tm Γ (Ty.idx (n)) := Tm.cst0 ∘ Const0.liti
 
+def Par.tm: Par α → Tm VPar α := Tm.var ∘ VPar.p
+def Var.tm: Var α → Tm VPar α := Tm.var ∘ VPar.v
+def VPar.tm: VPar α → Tm VPar α := Tm.var
+
 -- cst1
 namespace Tm
   def log     : Tm Γ flt → Tm Γ flt := Tm.cst1 Const1.log

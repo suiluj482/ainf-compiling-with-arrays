@@ -169,6 +169,9 @@ inductive VPar α
 def VPar.var?: VPar α → Option (Var α)
 | .v var => var
 | .p _ => none
+def VPar.par?: VPar α → Option (Par α)
+| .v _ => none
+| .p par => par
 -- #check VPar
 -- #check ((VPar.v (Var.mk 0)): VPar Ty.nat)
 
@@ -230,7 +233,8 @@ def Prim.vpars: Prim α → List (Some VPar)
   | bld _ v => [⟨_,v⟩]
 def Prim.vars (p: Prim α): List (Some Var) :=
   p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
-
+def Prim.pars (p: Prim α): List (Some Par) :=
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
 
 abbrev Bnd := DListMap.eT (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev Bnds := DListMap (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
@@ -253,3 +257,20 @@ def AINFH.toList: AINFH α → AINF α
   bnds.topologicalSort (λ _ ⟨_, p⟩ => p.vars),
   ret
 )
+
+----
+def EnvPar.vpar?: EnvPart → Option (Some VPar)
+| .itec cond _ => some ⟨_,cond⟩
+| .forc _ _ => none
+| .func _ _ => none
+def Env.vpars: Env → List (Some VPar)
+| env => env.filterMap EnvPar.vpar?
+def Bnd.vpars: Bnd → List (Some VPar)
+| ⟨⟨_,_⟩,env,prim⟩ => env.vpars.append prim.vpars
+
+def filterVars (l: List (Some VPar)): List (Some Var) :=
+  l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
+def filterPars (l: List (Some VPar)): List (Some Par) :=
+  l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
+def Bnd.vars := filterVars ∘ Bnd.vpars
+def Bnd.pars := filterPars ∘ Bnd.vpars

@@ -13,7 +13,8 @@ def Const0.le: Const0 α → Const0 α.le
 | .litf f => .litf f
 | .liti i => .liti i
 | .litu => .litu
-| .litr => .litr
+| .mkRef => .mkRef
+
 def Const1.le: Const1 α β → Const1 α.le β.le
 | .suml => .sumf
 | .exp => .exp
@@ -25,6 +26,8 @@ def Const1.le: Const1 α β → Const1 α.le β.le
 | .sumf => .sumf
 | .i2n => .i2n
 | .n2f => .n2f
+| .refGet => .refGet
+
 def Const2.le: Const2 α β γ → Const2 α.le β.le γ.le
 | linOp (type:=t) op =>
   have: BiArraysC BiArith α.le β.le γ.le := ⟨
@@ -51,9 +54,12 @@ def Const2.le: Const2 α β γ → Const2 α.le β.le γ.le
 | .addi => .addi
 | .maxf => maxf
 | .lt => .lt
+| .eqi => .eqi
 | .get => .get
 | .tup => .tup
 | .app => .app
+| .refSet => .refSet
+
 def Tm.le : Tm VPar α → Tm VPar α.le
 | .err => .err
 | .cst0 const0 => Tm.cst0 const0.le
@@ -64,8 +70,7 @@ def Tm.le : Tm VPar α → Tm VPar α.le
 | .ite cond a b => .ite cond.le a.le b.le
 | .var v => .var v.changeType
 | .bnd rest l => .bnd rest.le (λ v => (l v.changeType).le)
-| .ref (α:=α) f => .ref (λ (x: VPar α.le) xr => (f x.changeType xr.changeType).le)
-| .bndRef xr x => .bndRef xr.le x.le
+
 def AINF.le: AINF α → AINF α.le
 | (bnds, ret) => (bnds.map (λ ⟨⟨α,v⟩,env,prim⟩ =>
   ⟨⟨α.le,v.changeType⟩,env.map (λ
@@ -81,7 +86,5 @@ def AINF.le: AINF α → AINF α.le
   | .abs x y => .abs x.changeType y.changeType
   | .bld i x => .bld i x.changeType
   | .ite cond a b => .ite cond.changeType a.changeType b.changeType
-  | .ref x => .ref x.changeType
-  | .bndRef (α:=α) xr x => .bndRef (α:=α.le) xr.changeType x.changeType
   ⟩
 ), ret.changeType)

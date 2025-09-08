@@ -23,7 +23,7 @@ def Ty.contains (t: Ty)(f: Ty → Bool): Bool :=
   | .flt => f flt
   | .lin => f lin
   | .idx n => f (idx n)
-  | .ref α => f (ref α)
+  | .ref α => f (ref α) ∨ α.contains f
   | .unit => f unit
   | α ×× β => f t ∨ α.contains f ∨ β.contains f
   | .array _ α => f t ∨ α.contains f
@@ -39,6 +39,8 @@ theorem Ty.contains_arrow_a (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ~> β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
 theorem Ty.contains_arrow_b (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ~> β) f = false → Ty.contains β f = false := by simp[Ty.contains]
+theorem Ty.contains_ref (α: Ty)(f: Ty → Bool):
+  Ty.contains (α.ref) f = false → Ty.contains α f = false := by simp[Ty.contains]
 
 def VPar.changeType: VPar α → VPar β
 | .v (.mk n) => .v (.mk n)
@@ -46,6 +48,14 @@ def VPar.changeType: VPar α → VPar β
 def Var.changeType: Var α → Var β
 | (.mk n) => (.mk n)
 def Par.changeType: Par α → Par β
+| (.mk n) => (.mk n)
+
+def VPar.changeTypeF (f: Ty → Ty): VPar α → VPar (f α)
+| .v (.mk n) => .v (.mk n)
+| .p (.mk n) => .p (.mk n)
+def Var.changeTypeF (f: Ty → Ty): Var α → Var (f α)
+| (.mk n) => (.mk n)
+def Par.changeTypeF (f: Ty → Ty): Par α → Par (f α)
 | (.mk n) => (.mk n)
 
 
@@ -81,6 +91,8 @@ def VParM.freshAINFVars (a: AINF α)(m: VParM β): β :=
   m ⟨a.findFreshVars⟩ |>.fst
 
 ------
+def Tm.toVPar: Tm VPar α → Tm VPar α := id
+
 private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
   : Tm γ α → ReaderM ((ListMap γ Γ) × Nat × (Nat → (β: Ty) → γ β)) (Tm Γ α)
   | .err => return Tm.err
@@ -122,13 +134,27 @@ def AINF.size : AINF α → Nat
 -- ReaderMonad for access to original AiNF
 @[reducible] def Orig α := ∀ {β}, ReaderM (AINF β) α
 
+
 -- lookup enviroment in binding of variable
-def Var.lookupEnv (x: Var α) : AINF γ → Option Env
-  | (bnds, _) => DListMap.get? ⟨α,x⟩ bnds |>.map (λ (env, _) => env)
+def Var.defB (x: Var α): Bnds → Option (Env × Prim α)
+  | bnds => DListMap.get? ⟨α,x⟩ bnds
+def Var.def (x: Var α): AINF γ → Option (Env × Prim α) :=
+ x.defB ∘ Prod.fst
+
+-- lookup enviroment in binding of variable
+def Var.lookupEnvB (x: Var α) : Bnds → Option Env
+  | bs => x.defB bs |>.map (λ (env, _) => env)
+def Var.lookupEnv (x: Var α) : AINF γ → Option Env :=
+  x.lookupEnvB ∘ Prod.fst
 def VPar.lookupEnv (a: AINF β) (v: VPar α): Option Env :=
   match v with
   | .v v => v.lookupEnv a
   | .p _ => some <| .nil
+
+def AINF.mapBnds (f: Bnds → Bnds): AINF α → AINF α := Prod.map f id
+
+def AINF.flatMapMBnd (g: Ty → Ty)(f: Bnd → VParM Bnds)(a: AINF α): AINF (g α) := match a with
+| (bnds, v) => ((bnds.flatMapM f).freshAINFVars a, v.changeType)
 
 -- check if env defines parameter
 def EnvPart.definesPar (i: Par α): EnvPart → Bool
@@ -141,6 +167,9 @@ def Env.definesPar (i: Par α): Env → Bool :=
 
 def Env.isPrefixOf (a b: Env): Bool :=
   List.isPrefixOf a b
+
+def Env.getPrefix (a b: Env): Env :=
+  List.getPrefix a b
 
 -- check if variable of env can be used in env' (allows different orders in envs)
 def Env.isCompatibleWith (env env': Env): Bool :=

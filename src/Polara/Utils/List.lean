@@ -1,6 +1,46 @@
 import Polara.Utils.Functions
 
+def Vector.eq [BEq α](vec: Vector α n): Option α := do
+  if h: n≠0 then
+    have: NeZero n := ⟨h⟩
+    let ref := vec.head
+    if vec.all (ref==·) then ref else none
+  else none
+
+private def Vector.splitListPrefix' [BEq α](ref: List α)(ls: Vector (List α) n): List α × Vector (List α) n :=
+  match ref with
+    | [] => ([], ls)
+    | h :: tail => if ls.all (λ l => l.head?.any (·==h))
+      then splitListPrefix' tail (ls.map List.tail) |>.map (h::·) id
+      else ([], ls)
+
+def Vector.splitListPrefix [BEq α](ls: Vector (List α) n): List α × Vector (List α) n :=
+  if h: n≠0 then
+    have: NeZero n := ⟨h⟩
+    Vector.splitListPrefix' ls.head ls
+  else ([], ls)
+
 namespace List
+
+  def eq [BEq α]: List α → Bool
+  | [] => true
+  | _ :: [] => true
+  | a :: b :: rest => a == b ∧ (b :: rest).eq
+
+  def getPrefix [BEq α]: List α → List α → List α
+  | a :: as, b :: bs => if a==b then a :: List.getPrefix as bs else []
+  | _, _ => []
+
+  private def splitListPrefix' [BEq α](main: List α)(ls: List (List α)):  List α × List (List α) :=
+    match main with
+    | [] => ([], ls)
+    | h :: tail => if ls.all (λ l => l.head?.any (·==h))
+      then splitListPrefix' tail (ls.map List.tail) |>.map (h::·) id
+      else ([], ls)
+
+  def splitListPrefix [BEq α]: List (List α) → List α × List (List α)
+  | [] => ([], [[]])
+  | l :: ls => splitListPrefix' l (l::ls)
 
   def fold1 (f: α → α → α)(l: List α)(ok: l≠[]): α :=
   List.foldl f (l.head ok) l.tail

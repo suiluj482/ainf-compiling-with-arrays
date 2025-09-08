@@ -50,3 +50,28 @@ def Tm.toAINFMEV (env: Env)(v: Var α)(t: Tm VPar α): VParM Bnds :=
 
 def Tm.toAINF (e : Tm VPar α) : AINF α :=
   e.toAINFM ⟨(0,0)⟩ |>.fst
+
+---
+
+abbrev BndTm := DListMap.eT (Some Var) (λ ⟨α,_⟩ => Env × Tm VPar α)
+
+def AINF.mapBndTm (f: (α: Ty) → Env → Prim α → Option (Env × Tm VPar α))(a: AINF α): AINF α := match a with
+| (bnds, v) => (
+    bnds.flatMapM (λ (bnd: Bnd) => match bnd with
+      | ⟨⟨α,v⟩, env, prim⟩ =>
+        match (f α env prim) with
+        | none => pure [bnd]
+        | some (env', tm') => tm'.toAINFMEV env' v
+    ) |>.freshAINFVars a,
+    v
+  )
+
+def AINF.mapBndTmF (t: Ty → Ty)(f: (α: Ty) → Env → Prim α → Env × Tm VPar (t α))(a: AINF α): AINF (t α) := match a with
+| (bnds, v) => (
+    bnds.flatMapM (λ (bnd: Bnd) => match bnd with
+      | ⟨⟨α,v⟩, env, prim⟩ =>
+        let (env', tm') := (f α env prim)
+        tm'.toAINFMEV env' (v.changeTypeF t)
+    ) |>.freshAINFVars a,
+    v.changeTypeF t
+  )

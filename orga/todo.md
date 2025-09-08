@@ -14,19 +14,13 @@
 - (common errors, keine _ kein # im text)
 
 ## aD -- top priority
-todo:
-- direkt ungeziped?
-
-- higher order function? CHAD paper
-
-- unzip (types)
-- transpose (explizit dup drop of linear?)
-
+- can reverse be done by transpose? (explizitly model LFun?)
 
 
 ## Optimizations
 - array operations
     - transform to array operations where possible (NbE)
+- matrix multiplication
 - fusion
     - operations on arrays functions
     - multiparameter functions
@@ -49,4 +43,5 @@ todo:
 
 
 # Secondary ideas:
+- make var type dependent of env, to allow implizit drop?
 - macros for notations: https://leanprover-community.github.io/lean4-metaprogramming-book/main/08_dsls.html

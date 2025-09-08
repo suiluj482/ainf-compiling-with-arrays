@@ -44,3 +44,7 @@
 - Tm.dr
 - Tm.df env with functions not tupples
 - Tm.rmUnits
+25.08 - 08.09:
+- AINF.cleanEnv (remove unnecessary EnvParts (allowing vectorize))
+- AINF.unzip (push tupples up through arrays (improving vectorize))
+- AINF.vectorize (push arrays into op)

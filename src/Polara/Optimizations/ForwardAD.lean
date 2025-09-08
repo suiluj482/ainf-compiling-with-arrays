@@ -87,7 +87,7 @@ def Const1.df (x: Tm Γ α.df): Const1 α β → Tm Γ β.df
 
 def ArithOp.df [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.df)(b: Tm Γ β.df): Tm Γ γ.df :=
-   match t.t with
+  match t.t with
   | .array n t' =>
       have: BiArraysC BiArith _ _ _ := ⟨t'⟩
       for' i => (ArithOp.df op a[[i]] b[[i]])

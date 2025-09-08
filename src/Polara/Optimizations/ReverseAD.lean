@@ -5,6 +5,8 @@ import Polara.Optimizations.RmUnits
 @[reducible]
 def Ty.copower: Ty → Ty → Ty
 | α, β => (α ×× β) -- todo [(a, b)]
+-- erlaubt quasi mehrfachanwendung innerer funktion ohne mehrfaches auswerten
+-- aber list hätte keine statische Größe, Probleme mit jax (vllt parametriesierte funktionen? in lean?)
 
 mutual
   @[reducible]
@@ -200,8 +202,12 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
       const1.dr t.fst,,
       fun' y' => t.snd @@ (const1.dr' t.fst y')
     )
-| .cst2 const2 a b =>
-    match const2 with
+| .cst2 const2 a b (α₁:=α) (α₂:=β) (α:=γ) =>
+    -- if h: α = β ~> γ then
+    --   if const2 = h▸Const2.app then sorry
+    -- else sorry else sorry
+
+    match h: const2 with
     | Const2.app => -- special case
       let' f := a.dr' env;
       let' arg := b.dr' env;
@@ -216,7 +222,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
       (
         const2.dr a.fst b.fst,,
         fun' y' =>
-          let (a', b') := const2.dr' a.fst b.fst y' (by sorry)
+          let (a', b') := const2.dr' a.fst b.fst y' (by  sorry)
           Tm.sumLins (a.snd @@ a') (b.snd @@ b')
     )
 | .bld a              =>
@@ -247,7 +253,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
           body.fst,,
           fun' y' => (body.snd @@ y').fst
         ),,
-      fun' copower => -- todo fold
+      fun' copower => -- copower.fold λ copower => -- todo fold
         let x  := copower.fst;
         let y' := copower.snd;
         let body := f @@ x;
@@ -257,6 +263,24 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
 def Tm.dr (t: Tm VPar α): Tm VPar α.dr :=
   t.dr' [] |>.fst -- remove derivation of empty env
 
+
+-- f(x)(y) = x+y
+-- [1,2,3].map (·+1)
+-- a := [1,2,3]
+-- b := for' i => a[i] + 1
+-- [1,2,3]
+
+
+-- (lin, lin)
+-- (
+--  suml e,
+--  suml e
+-- )
+
+-- f [n: Nat](a: array n α)
+-- list
+
+-- f
 
 ------------------------------------------------
 open Ty
