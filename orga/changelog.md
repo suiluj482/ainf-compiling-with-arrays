@@ -42,9 +42,9 @@
 - Tm.df
 18.08 - 25.08:
 - Tm.dr
-- Tm.df env with functions not tupples
+- Tm.df env with functions not tuples
 - Tm.rmUnits
 25.08 - 08.09:
 - AINF.cleanEnv (remove unnecessary EnvParts (allowing vectorize))
-- AINF.unzip (push tupples up through arrays (improving vectorize))
+- AINF.unzip (push tuples up through arrays (improving vectorize))
 - AINF.vectorize (push arrays into op)

@@ -1,40 +1,39 @@
-import Polara.Syntax.Index
-import Polara.Optimizations.NbE
+import Polara.Optimizations.Basics
 
 @[reducible]
-def Ty.isTupple: Ty → Bool := (λ | _ ×× _ => true | _ => false)
+def Ty.isTuple: Ty → Bool := (λ | _ ×× _ => true | _ => false)
 @[reducible]
-def Ty.containsTupple: Ty → Bool := (Ty.contains · Ty.isTupple)
+def Ty.containsTuple: Ty → Bool := (Ty.contains · Ty.isTuple)
 
 
 @[reducible]
-def Ty.tuppleMap (f: Ty → Ty): Ty → Ty
-| α ×× β => α.tuppleMap f ×× β.tuppleMap f
+def Ty.tupleMap (f: Ty → Ty): Ty → Ty
+| α ×× β => α.tupleMap f ×× β.tupleMap f
 | α => f α
 
-theorem Ty.tuppleMap_noTupple {α: Ty}(h: α.containsTupple = false): α.tuppleMap f = f α := by
+theorem Ty.tupleMap_noTuple {α: Ty}(h: α.containsTuple = false): α.tupleMap f = f α := by
   match α with
   | _ ×× _ => contradiction
   | α => sorry
 
-def Tm.tuppleMap (f: Ty → Ty)(g: {α': Ty} → Tm Γ α' → Tm Γ (f α'))
-  (x: Tm Γ α): Tm Γ (α.tuppleMap f) :=
-  match α with
-  | α ×× β => (x.fst.tuppleMap f g,, x.snd.tuppleMap f g)
-  | α =>
-    have t: Ty.tuppleMap f α = f α := by sorry
+def Tm.tupleMap (f: Ty → Ty)(g: {α': Ty} → Tm Γ α' → Tm Γ (f α'))
+  (x: Tm Γ α): Tm Γ (α.tupleMap f) :=
+  match h: α with
+  | α ×× β => (x.fst.tupleMap f g,, x.snd.tupleMap f g)
+  | α => -- all cases?, if then else
+    have t: Ty.tupleMap f α = f α := by subst h; unfold Ty.tupleMap; sorry
     t▸(g x)
 
-def Tm.tuppleDeMap (f: Ty → Ty)(g: {α': Ty} → Tm Γ (f α') → Tm Γ α')
-  (x: Tm Γ (α.tuppleMap f)): Tm Γ α :=
+def Tm.tupleDeMap (f: Ty → Ty)(g: {α': Ty} → Tm Γ (f α') → Tm Γ α')
+  (x: Tm Γ (α.tupleMap f)): Tm Γ α :=
   match α with
-  | α ×× β => (x.fst.tuppleDeMap f g,, x.snd.tuppleDeMap f g)
+  | α ×× β => (x.fst.tupleDeMap f g,, x.snd.tupleDeMap f g)
   | α =>
-    have t: Ty.tuppleMap f α = f α := by sorry
+    have t: Ty.tupleMap f α = f α := by sorry
     g (t▸x)
 
 @[reducible]
-def Ty.unzip' (n: Nat): Ty → Ty := Ty.tuppleMap (λ α => Ty.array n α)
+def Ty.unzip' (n: Nat): Ty → Ty := Ty.tupleMap (λ α => Ty.array n α)
 
 -- @[reducible]
 -- def Ty.unzip' (n: Nat): Ty → Ty
@@ -59,12 +58,12 @@ def Ty.unzip: Ty → Ty
 #eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt))).unzip
 #eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt ×× Ty.flt))).unzip
 
--- def Tm.tuppleZipWith {α β γ: Ty}(f: Ty → Ty)(g: {α' β' γ': Ty} → Tm Γ α' → Tm Γ β' → Tm Γ γ')
---   (a: Tm Γ (α.tuppleMap f))(b: Tm Γ (β.tuppleMap f)): Tm Γ (γ.tuppleMap f) :=
+-- def Tm.tupleZipWith {α β γ: Ty}(f: Ty → Ty)(g: {α' β' γ': Ty} → Tm Γ α' → Tm Γ β' → Tm Γ γ')
+--   (a: Tm Γ (α.tupleMap f))(b: Tm Γ (β.tupleMap f)): Tm Γ (γ.tupleMap f) :=
 --   match α with asdfsad
---   | α ×× β => (Tm.tuppleZipWith f g a.fst b.fst,, Tm.tuppleZipWith f g a.snd b.snd)
+--   | α ×× β => (Tm.tupleZipWith f g a.fst b.fst,, Tm.tupleZipWith f g a.snd b.snd)
 --   | α =>
---     have t: Ty.tuppleMap f α = f α := by sorry
+--     have t: Ty.tupleMap f α = f α := by sorry
 --     g (t▸a) (t▸b)
 
 -- def ArithOp.unzip (t: BiArith α β γ)(op: ArithOp)
@@ -91,7 +90,7 @@ def Ty.unzip: Ty → Ty
 --   | .base t' => unzip' t' a b
 
 
--- theorem ArithOp.unzipα (t: BiArith α β γ): α.containsTupple = false := by
+-- theorem ArithOp.unzipα (t: BiArith α β γ): α.containsTuple = false := by
 --   match t with
 --   | .nats => simp
 --   | .flts => simp
@@ -99,25 +98,25 @@ def Ty.unzip: Ty → Ty
 --   match t with
 --   | .nats => simp
 --   | .flts => simp
--- theorem Ty.noTuppleEqUnzip {α: Ty}(t: α.containsTupple = false): α.unzip = α := by
+-- theorem Ty.noTupleEqUnzip {α: Ty}(t: α.containsTuple = false): α.unzip = α := by
 --   match α with
 --   | .nat      => simp
 --   | .idx n    => simp
 --   | .flt       => simp
 --   | .lin       => simp
 --   | α ~> β    => simp [
---       Ty.noTuppleEqUnzip (Ty.contains_arrow_a α β Ty.isTupple t),
---       Ty.noTuppleEqUnzip (Ty.contains_arrow_b α β Ty.isTupple t)
+--       Ty.noTupleEqUnzip (Ty.contains_arrow_a α β Ty.isTuple t),
+--       Ty.noTupleEqUnzip (Ty.contains_arrow_b α β Ty.isTuple t)
 --     ]
 --   | α ×× β    => contradiction
 --   | .ref α     => simp [
---       Ty.noTuppleEqUnzip (Ty.contains_ref α Ty.isTupple t)
+--       Ty.noTupleEqUnzip (Ty.contains_ref α Ty.isTuple t)
 --     ]
 --   | .unit      => simp
 --   | .array n α =>
---     have r': α.containsTupple = false := (Ty.contains_array n α Ty.isTupple t)
---     have r : α.unzip = α := Ty.noTuppleEqUnzip r'
---     have u: α.unzip' n = Ty.array n α := by simp[Ty.tuppleMap_noTupple r']
+--     have r': α.containsTuple = false := (Ty.contains_array n α Ty.isTuple t)
+--     have r : α.unzip = α := Ty.noTupleEqUnzip r'
+--     have u: α.unzip' n = Ty.array n α := by simp[Ty.tupleMap_noTuple r']
 --     have fin: α.unzip.unzip' n = Ty.array n α := by simp[r,u]
 --     simp[fin]
 
@@ -161,7 +160,7 @@ def Const2.unzip (a: Tm Γ α.unzip)(b: Tm Γ β.unzip): Const2 α β γ → Tm 
 | .maxf   => Tm.cst2 maxf a b
 | .lt     => Tm.cst2 .lt a b
 | .eqi    => Tm.cst2 .eqi a b
-| .get (α:=α) (n:=n) => a.tuppleDeMap (λ α => Ty.array n α) (Tm.cst2 .get · b)
+| .get (α:=α) (n:=n) => a.tupleDeMap (λ α => Ty.array n α) (Tm.cst2 .get · b)
 | .tup    => Tm.cst2 .tup a b
 | .refSet => Tm.cst2 .refSet a b
 | .app  => a @@ b
@@ -193,8 +192,8 @@ open Ty
 #eval! (
   let' f := fun' i:(idx 10) => tlitf 1;
   (for' i => (f @@ i))
-).unzip
+).toAINF
 
 #eval! (
   fun' x: (flt ×× flt).array 10 => (for' i => x[[i]].fst + x[[i]].snd )
-).unzip.normVPar
+).toAINF

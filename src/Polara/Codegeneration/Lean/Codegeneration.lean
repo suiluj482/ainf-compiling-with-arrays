@@ -40,6 +40,7 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | lt => s!"{a} < {b}"
   | maxf => s!"max {a} {b}"
   | addi => s!"{a}.add' {b}"
+  | eqi  => s!"{a} == {b}"
   | tup  => s!"({a}, {b})"
   | app  => s!"← {a} {b}"
   | get  => s!"{a}[{b}]!"

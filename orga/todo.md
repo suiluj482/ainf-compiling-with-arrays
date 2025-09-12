@@ -18,8 +18,6 @@
 
 
 ## Optimizations
-- array operations
-    - transform to array operations where possible (NbE)
 - matrix multiplication
 - fusion
     - operations on arrays functions

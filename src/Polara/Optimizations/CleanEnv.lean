@@ -1,6 +1,8 @@
 import Polara.Syntax.Index
 import Polara.Optimizations.ToAinf
 
+-- loop invariant codemotion
+
 -- requires topological order
 def Bnds.cleanEnv (res: Bnds): Bnds → Bnds
 | [] => res
