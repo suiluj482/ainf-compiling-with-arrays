@@ -1,4 +1,4 @@
-import Polara.Utils.Index
+import Polara.Utils.All
 
 structure TestCase (α: Type u) where
   name: String

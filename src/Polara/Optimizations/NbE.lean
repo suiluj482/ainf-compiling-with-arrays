@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 import Polara.Codegeneration.Lean.Runtime -- Float.normCdf needed
 open Ty Tm Const0 Const1 ArithOp AddOp MulOp Const2
 

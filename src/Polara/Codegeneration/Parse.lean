@@ -1,5 +1,5 @@
-import Polara.Syntax.Index
-import Polara.Optimizations.Index
+import Polara.Syntax.All
+import Polara.Optimizations.All
 
 @[reducible]
 def Ty.val: Ty → Type

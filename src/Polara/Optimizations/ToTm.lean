@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 import Polara.Optimizations.CSE
 
 -- variable type in target language needs to consider environment

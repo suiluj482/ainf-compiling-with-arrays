@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 import Polara.Optimizations.ToAinf
 import Polara.Optimizations.AutomaticDifferentation
 import Std

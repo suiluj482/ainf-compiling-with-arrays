@@ -1,4 +1,4 @@
-import Polara.Codegeneration.Index
+import Polara.Codegeneration.All
 import Polara.Tests.Utils
 
 def runners: List (String × (AINF α → IO String)) := [

@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 
 -- but everything as function from an env?
 -- ainf?

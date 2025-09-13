@@ -1,7 +1,7 @@
 import Polara.Optimizations.CSE
 import Polara.Optimizations.NbE
 import Polara.Optimizations.ToTm
-import Polara.Codegeneration.Index
+import Polara.Codegeneration.All
 
 open Tm Ty Const0 Const1 Const2
 

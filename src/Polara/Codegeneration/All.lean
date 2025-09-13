@@ -1,6 +1,6 @@
-import Polara.Codegeneration.Lean.Index
-import Polara.Codegeneration.Python.Index
-import Polara.Codegeneration.Jax.Index
+import Polara.Codegeneration.Lean.All
+import Polara.Codegeneration.Python.All
+import Polara.Codegeneration.Jax.All
 
 import Polara.Codegeneration.Utils
 import Polara.Codegeneration.RunCode

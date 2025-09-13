@@ -1,6 +1,6 @@
 import Lean
 import Polara.Syntax.Definitions
--- import Polara.Codegeneration.Index
+-- import Polara.Codegeneration.All
 
 -- tothink
 -- - reinkopierne vs importieren

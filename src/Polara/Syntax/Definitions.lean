@@ -1,4 +1,4 @@
-import Polara.Utils.Index
+import Polara.Utils.All
 import Std
 
 -- Type

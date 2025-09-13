@@ -3,7 +3,7 @@
 -- import Polara.Examples.Definitions
 -- import Lean
 -- import Polara.Codegeneration.Lean.Runtime
--- import Polara.Codegeneration.Index
+-- import Polara.Codegeneration.All
 
 -- def evalStr (e : String) : IO String := runLean e
 -- -- Utility for testing

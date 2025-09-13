@@ -1,4 +1,4 @@
-import Polara.Codegeneration.Index
+import Polara.Codegeneration.All
 import Polara.Tests.Utils
 
 namespace AinfTestCases

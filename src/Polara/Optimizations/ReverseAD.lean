@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 import Polara.Optimizations.ForwardAD
 import Polara.Optimizations.RmUnits
 

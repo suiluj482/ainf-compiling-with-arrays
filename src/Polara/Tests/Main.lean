@@ -1,4 +1,4 @@
-import Polara.Tests.TestCases.Index
+import Polara.Tests.TestCases.All
 
 def main: IO Unit :=
   testCaseTree.print

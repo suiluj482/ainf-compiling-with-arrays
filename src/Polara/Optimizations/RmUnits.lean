@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 
 @[reducible]
 def Ty.rmUnits: Ty → Ty

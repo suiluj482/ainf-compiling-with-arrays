@@ -1,4 +1,4 @@
-import Polara.Syntax.Index
+import Polara.Syntax.All
 
 -- todo reset par num on new row?
 -- destroy tuples?
