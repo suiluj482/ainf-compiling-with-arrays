@@ -100,6 +100,7 @@ def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | linOp op => linOpAD op a b
 | linScale op => linScaleAD op a b
 | .addi => Tm.cst2 (.addi) a b
+| .eqi  => Tm.cst2 (.eqi) a b
 | .lt => a.fst <' b.fst
 | .maxf => tupple'
     (Tm.cst2 (.maxf) a.fst b.fst)

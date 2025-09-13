@@ -1,6 +1,6 @@
 import Polara.Syntax.All
 import Polara.Optimizations.ToAinf
-import Polara.Optimizations.AutomaticDifferentation
+-- import Polara.Optimizations.AutomaticDifferentation
 import Std
 
 -- transpose linear

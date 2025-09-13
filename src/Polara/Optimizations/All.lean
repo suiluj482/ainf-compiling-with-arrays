@@ -1,1 +1,14 @@
+import Polara.Optimizations.NbE
+import Polara.Optimizations.CSE
+import Polara.Optimizations.ToAinf
 import Polara.Optimizations.ToTm
+import Polara.Optimizations.Unzip
+import Polara.Optimizations.LinearityErasure
+import Polara.Optimizations.ForwardAD
+import Polara.Optimizations.DualNumbers
+import Polara.Optimizations.ReverseAD
+import Polara.Optimizations.RmUnits
+import Polara.Optimizations.Defunc
+import Polara.Optimizations.Vectorization
+import Polara.Optimizations.CleanEnv
+import Polara.Optimizations.Basics

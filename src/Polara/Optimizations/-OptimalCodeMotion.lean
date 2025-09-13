@@ -1,6 +1,6 @@
 import Polara.Syntax.All
 import Polara.Optimizations.NbE
-import Polara.Examples.Definitions
+-- import Polara.Examples.Definitions
 
 def Bnd := ((β: Ty) × Var β × Prim β)
 def EnvBnd := (List EnvPart) × Bnd
