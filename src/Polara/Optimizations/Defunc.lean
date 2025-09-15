@@ -5,7 +5,7 @@ import Polara.Syntax.All
 
 @[reducible]
 def Ty.defunc: Ty → Ty :=
-  Ty.map (λ
+  Ty.transform (λ
   | _ ~> _ => .unit
   | α => α)
 

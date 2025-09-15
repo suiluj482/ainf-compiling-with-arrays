@@ -113,17 +113,15 @@ inductive ArithOp: Type
 | div: ArithOp
 deriving BEq, Repr
 
-inductive AddOp: Type
-| add: AddOp
-| sub: AddOp
+inductive AddOp
+| add | sub
 deriving BEq, Repr
 def AddOp.toArith: AddOp → ArithOp
 | .add => ArithOp.add
 | .sub => ArithOp.sub
 
-inductive MulOp: Type
-| mul: MulOp
-| div: MulOp
+inductive MulOp
+| mul | div
 deriving BEq, Repr
 def MulOp.toArith: MulOp → ArithOp
 | .mul => ArithOp.mul

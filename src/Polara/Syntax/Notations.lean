@@ -50,6 +50,8 @@ namespace Tm
   def refSet: Tm Γ (ref α) → Tm Γ α → Tm Γ unit := Tm.cst2 Const2.refSet
 
   def π: Tm Γ flt := tlitf 3.14159265358979323846
+
+  def linScale: Tm Γ lin → Tm Γ flt → Tm Γ lin := Tm.cst2 (.linScale .mul)
 end Tm
 
 -- cst2

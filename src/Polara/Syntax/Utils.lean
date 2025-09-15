@@ -2,18 +2,16 @@ import Polara.Syntax.Definitions
 import Polara.Syntax.PrettyPrint
 import Polara.Syntax.Notations
 
--- catamorphism
--- cata
 @[reducible]
-def Ty.map (f: Ty → Ty) : Ty → Ty
+def Ty.transform (f: Ty → Ty) : Ty → Ty
 | .nat => f .nat
 | .idx n => f (.idx n)
 | flt => f .flt
 | lin => f .lin
-| α ~> β => f (α.map f ~> β.map f)
-| α ×× β => f (α.map f ×× β.map f)
-| array n α => f (array n (α.map f))
-| ref α => f (ref (α.map f))
+| α ~> β => f (α.transform f ~> β.transform f)
+| α ×× β => f (α.transform f ×× β.transform f)
+| array n α => f (array n (α.transform f))
+| ref α => f (ref (α.transform f))
 | unit => f .unit
 
 @[reducible]

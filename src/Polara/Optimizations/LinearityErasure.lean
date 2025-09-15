@@ -4,7 +4,7 @@ import Polara.Syntax.All
 -- linErase
 @[reducible]
 def Ty.le: Ty → Ty :=
-  Ty.map (λ
+  Ty.transform (λ
   | .lin => .flt
   | α => α)
 def Const0.le: Const0 α → Const0 α.le
