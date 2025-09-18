@@ -1,5 +1,4 @@
 import Polara.Syntax.All
-import Polara.Optimizations.ToAinf
 
 open Ty Tm Const0 Const1 Const2
 

@@ -1,6 +1,4 @@
 import Polara.Syntax.All
-import Polara.Optimizations.ForwardAD
-import Polara.Optimizations.RmUnits
 
 @[reducible]
 def Ty.copower: Ty → Ty → Ty
@@ -283,31 +281,31 @@ def Tm.dr (t: Tm VPar α): Tm VPar α.dr :=
 -- f
 
 ------------------------------------------------
-open Ty
+-- open Ty
 
-#eval! (fun' x:flt => x.exp).df |>.normVPar
-#eval! (fun' x:flt => x.exp).dr |>.normVPar
+-- #eval! (fun' x:flt => x.exp).df |>.normVPar
+-- #eval! (fun' x:flt => x.exp).dr |>.normVPar
 
-#eval! (fun' x:flt××flt => x.fst+x.snd).df |>.normVPar
-#eval! (fun' x:flt××flt => x.fst+x.snd).dr |>.normVPar
+-- #eval! (fun' x:flt××flt => x.fst+x.snd).df |>.normVPar
+-- #eval! (fun' x:flt××flt => x.fst+x.snd).dr |>.normVPar
 
-#eval! (fun' x:flt××flt => x.fst*x.snd).df |>.normVPar
-#eval! (fun' x:flt××flt => x.fst*x.snd).dr |>.normVPar
+-- #eval! (fun' x:flt××flt => x.fst*x.snd).df |>.normVPar
+-- #eval! (fun' x:flt××flt => x.fst*x.snd).dr |>.normVPar
 
-#eval! (fun' x:flt => fun' y:flt => x+y).df |>.normVPar
-#eval! (fun' x:flt => fun' y:flt => x+y).dr |>.normVPar
+-- #eval! (fun' x:flt => fun' y:flt => x+y).df |>.normVPar
+-- #eval! (fun' x:flt => fun' y:flt => x+y).dr |>.normVPar
 
-#eval! (fun' x:flt => fun' y:flt => x*y).df |>.normVPar
-#eval! (fun' x:flt => fun' y:flt => x*y).dr |>.normVPar
+-- #eval! (fun' x:flt => fun' y:flt => x*y).df |>.normVPar
+-- #eval! (fun' x:flt => fun' y:flt => x*y).dr |>.normVPar
 
-#eval! (fun' x:flt => ((fun' a:flt => a)@@x)) |>.df |>.normVPar
-#eval! (fun' x:flt => ((fun' a:flt => a)@@x)) |>.dr |>.normVPar
+-- #eval! (fun' x:flt => ((fun' a:flt => a)@@x)) |>.df |>.normVPar
+-- #eval! (fun' x:flt => ((fun' a:flt => a)@@x)) |>.dr |>.normVPar
 
-#eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.df |>.normVPar
-#eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.dr |>.normVPar
+-- #eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.df |>.normVPar
+-- #eval! (fun' x:flt => (for' i:42 => i.i2n.n2f + x)) |>.dr |>.normVPar
 
 
-#eval! (fun' x:flt××nat => x.fst) |>.df |>.normVPar |>.rmUnits
+-- #eval! (fun' x:flt××nat => x.fst) |>.df |>.normVPar
 
 -- #eval flt |>drEnv [⟨flt, (.v (.mk 1))⟩]
 -- #eval flt ~> flt |>.drEnv []

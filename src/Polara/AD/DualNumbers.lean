@@ -109,8 +109,8 @@ def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | .app  => a @@ b
 | .refSet => panic! "refSet not supported in automatic differentiation"
 
-def VPar.aD: VPar α → VPar α.aD := VPar.changeType
-def VPar.iaD: VPar α.aD → VPar α := VPar.changeType
+def VPar.aD:  VPar α    → VPar α.aD := VPar.changeType
+def VPar.iaD: VPar α.aD → VPar α    := VPar.changeType
 
 def Tm.aD: Tm VPar α → Tm VPar α.aD
 | .err => .err
