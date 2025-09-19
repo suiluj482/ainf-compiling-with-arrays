@@ -17,6 +17,15 @@ instance [DecidableEq α][∀ γ, BEq (F γ)]: BEq (@Some α F) :=
   ⟨λ ⟨γ,f⟩ ⟨γ',f'⟩ => if t: γ = γ' then t▸ f == f' else false⟩
 instance [Hashable α][∀ γ: α, Hashable (F γ)]: Hashable (@Some α F) :=
   ⟨λ ⟨γ,f⟩ => mixHash (Hashable.hash γ) (Hashable.hash f)⟩
+-- instance [DecidableEq α][LawfulBEq α]
+--   [∀ γ, BEq (F γ)][∀ γ, LawfulBEq (F γ)]
+--   [BEq (Some F)]: LawfulBEq (@Some α F) where
+--   eq_of_beq {a b} h := sorry
+--   rfl {a} := match a with
+--     | ⟨α,v⟩ =>
+--       have t: α == α := by simp
+--       have t': v == v := by simp
+--       by simp[t,t']
 
 instance [Inhabited α][∀ γ:α, Inhabited (F γ)]: Inhabited (Sigma F) :=
   ⟨Inhabited.default,Inhabited.default⟩
