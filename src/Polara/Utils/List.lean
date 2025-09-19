@@ -27,6 +27,21 @@ namespace List
   | _ :: [] => true
   | a :: b :: rest => a == b ∧ (b :: rest).eq
 
+  def addToSet [BEq α](l: List α)(a: α): List α :=
+    if l.contains a
+      then l
+      else a :: l
+
+  def combineSets [BEq α](l: List α): List α → List α
+  | [] => l
+  | a :: as => (l.addToSet a).combineSets as
+
+  def seperateBy (f: α → Bool): List α → List α × List α
+  | [] => ([], [])
+  | a :: as => match f a with
+    | true  => as.seperateBy f |>.map (a::·) id
+    | false => as.seperateBy f |>.map id (a::·)
+
   def getPrefix [BEq α]: List α → List α → List α
   | a :: as, b :: bs => if a==b then a :: List.getPrefix as bs else []
   | _, _ => []

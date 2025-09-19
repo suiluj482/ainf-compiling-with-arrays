@@ -1,32 +1,59 @@
 import Polara.Syntax.All
 import Polara.Optimizations.Convert.All
 
--- loop invariant codemotion
-
 -- requires topological order
-def Bnds.cleanEnv (res: Bnds): Bnds → Bnds
+-- behavior:
+-- - loop invariant codemotion
+-- - loop unswitching
+
+private def Env.clean (pars: List (Some Par))(reqEnvs: List EnvPart)(ites: List (VPar .nat × Bool × (Par .nat ⊕ Env)))(env: Env): ReaderM Bnds Env :=
+  match env with
+  | [] => return ites.map (λ (c,b,_) => .itec c b)
+  | envPart :: env' => do match envPart with
+    | .func _ p
+    | .forc _ p =>
+        let (reqItes, ites) := ites.seperateBy (λ -- seperate if itec is required to be in envPart
+            | (_,_, .inl p  ) => if t: p.type = .nat then t▸p == p else false
+            | (_,_, .inr env) => env.contains envPart
+          )
+        if -- envPart is required (loop&func invariant code motion)
+          !reqItes.isEmpty           -- needed for an ites
+          ∨ pars.contains ⟨_,p⟩      -- paramter bound by envPart is needed
+          ∨ reqEnvs.contains envPart -- needed for the env of a used var
+        then
+          let itecs := reqItes.map (λ (c,b,_) => EnvPart.itec c b)
+          let pars'    := reqItes.filterMap (λ | (_,_, .inl p) => some ⟨_,p⟩ | _ => none) |>.foldl (·.addToSet ·) pars
+          let reqEnvs' := reqItes.filterMap (λ | (_,_, .inr e) => some e     | _ => none) |>.foldl (·.combineSets ·) reqEnvs
+          return itecs.append (envPart :: (←clean pars' reqEnvs' ites env'))
+        else clean pars reqEnvs ites env'
+    | .itec c b => -- buffer in ites until end or required (loop&func unswitching)
+        match c with
+        | .v v =>
+            let env := (←v.lookupEnvRB).get!
+            clean pars reqEnvs (ites.concat (c,b, .inr env)) env'
+        | .p p =>
+            clean pars reqEnvs (ites.concat (c,b, .inl p  )) env'
+
+private def Bnds.cleanEnv (res: Bnds): Bnds → Bnds
 | [] => res
 | bnd :: bnds' =>
   let ⟨⟨_,v⟩,env,prim⟩ := bnd
-  let pars := Bnd.pars bnd
-  let vars := Bnd.vars bnd
-  let defsEnv: List EnvPart := vars.flatMap (λ ⟨_,v⟩ => (v.lookupEnvB res).get!) -- remove duplicates?
-  let env' := env.filter (λ
-    -- an envPart isn't needed if its par isn't directly used or used by a required def
-    | .func _ x => pars.contains ⟨_,x⟩ ∨ defsEnv.contains (.func _ x)
-    | .forc _ i => pars.contains ⟨_,i⟩ ∨ defsEnv.contains (.forc _ i)
-    | .itec _ _ => true -- itec always good to have
-  )
+
+  let pars    := prim.pars
+  let reqEnvs := prim.vars.map (λ ⟨_,v⟩ => (v.lookupEnvB res).get!) |>.foldl (·.combineSets ·) []
+
+  let env' := env.clean pars reqEnvs [] res
   Bnds.cleanEnv (res.concat ⟨⟨_,v⟩,env',prim⟩) bnds'
 
-def AINF.cleanEnv: AINF α → AINF α
-| (bnds, ret) => (Bnds.cleanEnv [] bnds, ret)
+def AINF.cleanEnv: AINF α → AINF α :=
+  AINF.mapBnds (Bnds.cleanEnv [])
 
 
-open Ty
-#eval (for' i:10 => (tlitf 1) + (tlitf 1)).toAINF.cleanEnv
-#eval (for' i:10 => (tlitf 1) + i.i2n.n2f).toAINF.cleanEnv
-#eval (for' i:10 => if' i.i2n then (tlitf 0) else (tlitf 1)).toAINF.cleanEnv
-
--- todo push itec as far back as possible? (loop unswitching)
-#eval (for' i:10 => for' j:10 => if' i.i2n then (tlitf 0) else j.i2n.n2f).toAINF.cleanEnv
+-- open Ty
+-- -- loop invariant code motion
+-- #eval (for' i:10 => (tlitf 1) + (tlitf 1)).toAINF.cleanEnv
+-- #eval (for' i:10 => (tlitf 1) + i.i2n.n2f).toAINF.cleanEnv
+-- -- loop required for if
+-- #eval (for' i:10 => if' i.i2n then (tlitf 0) else (tlitf 1)).toAINF.cleanEnv
+-- -- loop unswitching
+-- #eval (for' i:10 => for' j:10 => if' i.i2n then (tlitf 0) else j.i2n.n2f).toAINF.cleanEnv

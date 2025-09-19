@@ -40,6 +40,9 @@ theorem Ty.contains_arrow_b (α: Ty)(β: Ty)(f: Ty → Bool):
 theorem Ty.contains_ref (α: Ty)(f: Ty → Bool):
   Ty.contains (α.ref) f = false → Ty.contains α f = false := by simp[Ty.contains]
 
+def VPar.type(_: VPar α): Ty := α
+def Par.type(_: Par α): Ty := α
+def Var.type(_: Var α): Ty := α
 def VPar.changeType: VPar α → VPar β
 | .v (.mk n) => .v (.mk n)
 | .p (.mk n) => .p (.mk n)
@@ -142,6 +145,7 @@ def Var.def (x: Var α): AINF γ → Option (Env × Prim α) :=
 -- lookup enviroment in binding of variable
 def Var.lookupEnvB (x: Var α) : Bnds → Option Env
   | bs => x.defB bs |>.map (λ (env, _) => env)
+def Var.lookupEnvRB (x: Var α) : ReaderM Bnds (Option Env) := x.lookupEnvB
 def Var.lookupEnv (x: Var α) : AINF γ → Option Env :=
   x.lookupEnvB ∘ Prod.fst
 def VPar.lookupEnv (a: AINF β) (v: VPar α): Option Env :=
