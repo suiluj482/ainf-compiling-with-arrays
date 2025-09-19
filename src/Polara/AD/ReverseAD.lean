@@ -34,7 +34,7 @@ end
 
 
 @[reducible]
-def EnvDr := List (Some VPar)
+def EnvDr := List (Sigma VPar)
 @[reducible]
 def EnvDr.ty: EnvDr → Ty
 | [] => .unit

@@ -53,7 +53,7 @@ def Tm.toAINF (e : Tm VPar α) : AINF α :=
 
 ---
 
-abbrev BndTm := DListMap.eT (Some Var) (λ ⟨α,_⟩ => Env × Tm VPar α)
+abbrev BndTm := DListMap.eT (Sigma Var) (λ ⟨α,_⟩ => Env × Tm VPar α)
 
 def AINF.mapBndTm (f: (α: Ty) → Env → Prim α → Option (Env × Tm VPar α))(a: AINF α): AINF α := match a with
 | (bnds, v) => (

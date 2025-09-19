@@ -5,7 +5,7 @@ namespace AinfTestCases
 
   open Notations Ty Const0 Const1 ArithOp Const2 Prim AINF EnvPart
 
-  def ainfSimpleTestCases : List (TestCase (Some AINF)) := [
+  def ainfSimpleTestCases : List (TestCase (Sigma AINF)) := [
     -- cst0
     ⟨"litn", Ty.nat, ([
             let'' [] in x0 := plitn 42
@@ -209,7 +209,7 @@ namespace AinfTestCases
   ------------------------------------------------------------------------------------------
   -- Invalid AINF
   ------------------------------------------------------------------------------------------
-  def ainfInvalidTestCases: List (TestCase (Some AINF)) := [
+  def ainfInvalidTestCases: List (TestCase (Sigma AINF)) := [
     ⟨"nonExistingVar", nat,
       ([], .v x0)
     ⟩,

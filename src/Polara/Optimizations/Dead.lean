@@ -4,7 +4,7 @@ import Polara.Syntax.All
 
 open Std
 
-private def Bnds.dead(marked: HashMap (Some Var) Unit): Bnds → Bnds
+private def Bnds.dead(marked: HashMap (Sigma Var) Unit): Bnds → Bnds
 | [] => []
 | bnd :: bnds =>
     let ⟨v,_,prim⟩ := bnd

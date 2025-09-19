@@ -6,7 +6,7 @@ import Polara.Optimizations.Convert.All
 -- - loop invariant codemotion
 -- - loop unswitching
 
-private def Env.clean (pars: List (Some Par))(reqEnvs: List EnvPart)(ites: List (VPar .nat × Bool × (Par .nat ⊕ Env)))(env: Env): ReaderM Bnds Env :=
+private def Env.clean (pars: List (Sigma Par))(reqEnvs: List EnvPart)(ites: List (VPar .nat × Bool × (Par .nat ⊕ Env)))(env: Env): ReaderM Bnds Env :=
   match env with
   | [] => return ites.map (λ (c,b,_) => .itec c b)
   | envPart :: env' => do match envPart with

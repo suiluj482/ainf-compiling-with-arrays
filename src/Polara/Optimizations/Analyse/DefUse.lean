@@ -1,6 +1,6 @@
 import Polara.Syntax.All
 
-abbrev DefUse := Std.HashMap (Some Var) (List Bnd)
+abbrev DefUse := Std.HashMap (Sigma Var) (List Bnd)
 
 def AINF.defUse: AINF α → DefUse
 | (bnds, _) =>

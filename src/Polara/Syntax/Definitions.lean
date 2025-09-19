@@ -220,7 +220,7 @@ inductive Prim : Ty → Type
   deriving BEq
 instance: Inhabited (Prim α) := ⟨Prim.err⟩
 
-def Prim.vpars: Prim α → List (Some VPar)
+def Prim.vpars: Prim α → List (Sigma VPar)
   | cst0 _ => []
   | cst1 _ v => [⟨_,v⟩]
   | cst2 _ v1 v2 => [⟨_,v1⟩, ⟨_,v2⟩]
@@ -229,20 +229,20 @@ def Prim.vpars: Prim α → List (Some VPar)
   | abs _ v => [⟨_,v⟩]
   | ite v1 v2 v3 => [⟨_,v1⟩, ⟨_,v2⟩, ⟨_,v3⟩]
   | bld _ v => [⟨_,v⟩]
-def Prim.vars (p: Prim α): List (Some Var) :=
+def Prim.vars (p: Prim α): List (Sigma Var) :=
   p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
-def Prim.pars (p: Prim α): List (Some Par) :=
+def Prim.pars (p: Prim α): List (Sigma Par) :=
   p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
 
-abbrev Bnd := DListMap.eT (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
-abbrev Bnds := DListMap (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev Bnd := DListMap.eT (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev Bnds := DListMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev AINF α := Bnds × (VPar α) -- return variable
 
 -- HashMap
 -- + faster lookup
 -- - no order (renaming harder)
 deriving instance Hashable for Var
-abbrev BndsH := Std.DHashMap (Some Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev BndsH := Std.DHashMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev AINFH α := BndsH × VPar α
 
 def AINF.toHashMap: AINF α → AINFH α
@@ -257,18 +257,18 @@ def AINFH.toList: AINFH α → AINF α
 )
 
 ----
-def EnvPar.vpar?: EnvPart → Option (Some VPar)
+def EnvPar.vpar?: EnvPart → Option (Sigma VPar)
 | .itec cond _ => some ⟨_,cond⟩
 | .forc _ _ => none
 | .func _ _ => none
-def Env.vpars: Env → List (Some VPar)
+def Env.vpars: Env → List (Sigma VPar)
 | env => env.filterMap EnvPar.vpar?
-def Bnd.vpars: Bnd → List (Some VPar)
+def Bnd.vpars: Bnd → List (Sigma VPar)
 | ⟨⟨_,_⟩,env,prim⟩ => env.vpars.append prim.vpars
 
-def filterVars (l: List (Some VPar)): List (Some Var) :=
+def filterVars (l: List (Sigma VPar)): List (Sigma Var) :=
   l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
-def filterPars (l: List (Some VPar)): List (Some Par) :=
+def filterPars (l: List (Sigma VPar)): List (Sigma Par) :=
   l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
 def Bnd.vars := filterVars ∘ Bnd.vpars
 def Bnd.pars := filterPars ∘ Bnd.vpars

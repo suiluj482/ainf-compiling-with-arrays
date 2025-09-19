@@ -1,11 +1,18 @@
 import Polara.Utils.Print
+import Std
 
+instance [Inhabited β]: Inhabited (α → β) := ⟨λ _ => Inhabited.default⟩
 -----
-abbrev Some (F: α → Type u) := (γ: α) × F γ
-def Some.of (f: F α): Some F := ⟨α, f⟩
-instance [Inhabited α][∀ γ:α, Inhabited (F γ)]: Inhabited (Some F) :=
+def Sigma.of (f: F α): Sigma F := ⟨α, f⟩
+instance [Inhabited α][∀ γ:α, Inhabited (F γ)]
+  : Inhabited (Sigma F) :=
   ⟨Inhabited.default,Inhabited.default⟩
-instance [DecidableEq α][∀ γ, DecidableEq (F γ)]: DecidableEq (@Some α F) :=
+instance [Hashable α][∀ γ: α, Hashable (F γ)]
+  : Hashable (@Sigma α F) :=
+  ⟨λ ⟨γ,f⟩ => mixHash (Hashable.hash γ) (Hashable.hash f)⟩
+
+instance [DecidableEq α][∀ γ, DecidableEq (F γ)]
+  : DecidableEq (@Sigma α F) :=
   λ ⟨γ,f⟩ ⟨γ',f'⟩ => if t: γ = γ' then
     if t': t▸f=f' then
       isTrue (by subst t; simp[t'])
@@ -13,23 +20,9 @@ instance [DecidableEq α][∀ γ, DecidableEq (F γ)]: DecidableEq (@Some α F) 
       isFalse (by subst t; simp[t'])
   else
     isFalse (by simp[t])
-instance [DecidableEq α][∀ γ, BEq (F γ)]: BEq (@Some α F) :=
-  ⟨λ ⟨γ,f⟩ ⟨γ',f'⟩ => if t: γ = γ' then t▸ f == f' else false⟩
-instance [Hashable α][∀ γ: α, Hashable (F γ)]: Hashable (@Some α F) :=
-  ⟨λ ⟨γ,f⟩ => mixHash (Hashable.hash γ) (Hashable.hash f)⟩
--- instance [DecidableEq α][LawfulBEq α]
---   [∀ γ, BEq (F γ)][∀ γ, LawfulBEq (F γ)]
---   [BEq (Some F)]: LawfulBEq (@Some α F) where
---   eq_of_beq {a b} h := sorry
---   rfl {a} := match a with
---     | ⟨α,v⟩ =>
---       have t: α == α := by simp
---       have t': v == v := by simp
---       by simp[t,t']
-
-instance [Inhabited α][∀ γ:α, Inhabited (F γ)]: Inhabited (Sigma F) :=
-  ⟨Inhabited.default,Inhabited.default⟩
-instance [Inhabited β]: Inhabited (α → β) := ⟨λ _ => Inhabited.default⟩
+instance [DecidableEq (Sigma β)]
+  : BEq (Sigma β) where
+  beq x y := decide (x = y)
 
 ---
 instance TrivialInhabited (a: α): Inhabited α := ⟨a⟩

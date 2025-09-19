@@ -31,7 +31,7 @@ def runners: List (String × (Tm VPar α → IO String)) := [
   ⟨"Jax", RunTmJax.run⟩
 ]
 
-def runner: Runner (Some (Tm VPar)) := λ ⟨α, tm⟩ => do
+def runner: Runner (Sigma (Tm VPar)) := λ ⟨α, tm⟩ => do
   let results ← runners.mapM (λ (name, run) => do
     let res ← run tm
     return (name, res)

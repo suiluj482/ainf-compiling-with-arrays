@@ -160,8 +160,8 @@ def AINF.flatMapMBnd (g: Ty → Ty)(f: Bnd → VParM Bnds)(a: AINF α): AINF (g 
 
 -- check if env defines parameter
 def EnvPart.definesPar (i: Par α): EnvPart → Bool
-| .func _ i' => Some.of i' == Some.of i
-| .forc _ i' => Some.of i' == Some.of i
+| .func _ i' => Sigma.of i' == Sigma.of i
+| .forc _ i' => Sigma.of i' == Sigma.of i
 | .itec _ _ => false
 
 def Env.definesPar (i: Par α): Env → Bool :=

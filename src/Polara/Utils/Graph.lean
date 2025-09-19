@@ -57,7 +57,7 @@ def Node.lift {g g': Graph α}(ok: g.s<g'.s)(n: Node g): Node g' :=
   {n with idx := n.idx.lift ok}
 
 private partial def Std.DHashMap.topologicalSort' [BEq α] [Hashable α]
-(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F)(done: List (Some F)): List (Some F) :=
+(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F)(done: List (Sigma F)): List (Sigma F) :=
   let (startNodes, m') := m.partition
     (λ key val => pred key val |>.filter m.contains |>.isEmpty)
   match startNodes.isEmpty, m'.isEmpty with
@@ -66,5 +66,5 @@ private partial def Std.DHashMap.topologicalSort' [BEq α] [Hashable α]
   | _, _ => topologicalSort' pred m' (done ++ startNodes.toList)
 
 def Std.DHashMap.topologicalSort [BEq α] [Hashable α]
-(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F): List (Some F) :=
+(pred: (γ: α) → F γ → List α)(m: Std.DHashMap α F): List (Sigma F) :=
   Std.DHashMap.topologicalSort' pred m []

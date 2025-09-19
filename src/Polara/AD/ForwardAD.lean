@@ -29,7 +29,7 @@ mutual
 end
 
 @[reducible]
-def EnvDf := List (Some VPar)
+def EnvDf := List (Sigma VPar)
 @[reducible]
 def EnvDf.ty (α: Ty): EnvDf → Ty
 | [] => α
