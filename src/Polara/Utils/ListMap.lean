@@ -2,7 +2,7 @@
 
 -- value type depends on key -------------------
 -- element Type
-abbrev DListMap.eT (α: Type u)(β : α → Type v) := ((γ: α) × β γ)
+abbrev DListMap.eT (α: Type u)(β : α → Type v) := Sigma β
 abbrev DListMap (α : Type u)(β : α → Type v) := List (DListMap.eT α β)
 def DListMap.get? [DecidableEq α](k: α)(m: DListMap α β): Option (β k) :=
   m.findSome? (λ ⟨γ, v⟩ => if t: γ = k then some (t▸v) else none)

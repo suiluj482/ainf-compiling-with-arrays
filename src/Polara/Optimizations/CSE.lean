@@ -6,33 +6,6 @@ open Ty Tm Const0 Const1 Const2
 -- fission & common subexpression elimination (AINF)
 ------------------------------------------------------------------------------------------
 
--- boolean equality ----------------------------
-def Prim.beq : Prim α → Prim α → Bool
-  | .err, .err => true
-  | .var i, .var j => i==j
-  | .abs _i f, .abs _j e => f==e
-  | .bld _i f, .bld _j e => f==e
-  | .ite a₀ b₀ c₀, .ite a₁ b₁ c₁ => a₀==a₁ && b₀==b₁ && c₀==c₁
-  | .cst0 k₀, .cst0 k₁ => k₀==k₁
-  | .cst1 (α₁:=α₀) k₀ a₀,
-    .cst1 (α₁:=α₁) k₁ a₁ =>
-      if hα:α₀=α₁ then
-        hα▸k₀==k₁ && hα▸a₀==a₁
-      else false
-  | .cst2 (α₁:=α₀) (α₂:=β₀) k₀ a₀ b₀,
-    .cst2 (α₁:=α₁) (α₂:=β₁) k₁ a₁ b₁ =>
-      if h: α₀=α₁ ∧ β₀=β₁ then let ⟨ hα, hβ ⟩ := h
-        hα▸hβ▸k₀==k₁ && hα▸a₀==a₁ && hβ▸b₀==b₁
-      else false
-  | _, _ => false
-def AINF.beq : AINF α → AINF α → Bool
-  | ([], i), ([], j) => i==j
-  | (⟨⟨β, _⟩, _, p⟩ :: f, _), (⟨⟨γ, _⟩, _, p'⟩ :: f', _) =>
-    if h:β=γ then p.beq (h▸p') && f.beq f' else false
-  | _, _ => false
-
-instance : BEq (Prim x) where beq a b := Prim.beq a b
-
 -- renaming -----------------------------------
 def Ren := ListMap Var Var
 

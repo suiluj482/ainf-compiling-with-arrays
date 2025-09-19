@@ -238,6 +238,12 @@ abbrev Bnd := DListMap.eT (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev Bnds := DListMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev AINF α := Bnds × (VPar α) -- return variable
 
+instance: BEq Bnd := ⟨λ ⟨⟨α,v⟩,e,p⟩ ⟨⟨α',v'⟩,e',p'⟩ =>
+    if t: α=α' then
+      v == t▸v' && e == e' && p == t▸p'
+    else false
+  ⟩
+
 -- HashMap
 -- + faster lookup
 -- - no order (renaming harder)
