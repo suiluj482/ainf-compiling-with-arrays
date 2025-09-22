@@ -228,15 +228,27 @@ def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
   | cst2 k b a => k.de b.de a.de
   | abs f => fun x => (f x).de
   | bnd e f => (f e.de).de
--- alternatively, if you dont want to reduce binds:
---   | bnd e₁ e₂ =>
---     splice (bnd (quote (reduce e₁)) fun x =>
---       quote (reduce (e₂ (splice (Tm.var x)))))
   | bld f => fun a => (f a).de
   | ite e₁ e₂ e₃ => match e₁.de with
     | cst0 (litn 0) => e₃.de -- 0 is false
     | cst0 (litn _) => e₂.de
     | a'            => splice (ite a' (quote e₂.de) (quote e₃.de))
+
+-- def Tm.safeDe : Tm (Ty.de Γ) α → Ty.de Γ α
+--   | var i => i
+--   | err => splice err
+--   | cst0 k => k.de
+--   | cst1 k a => k.de a.de
+--   | cst2 k b a => k.de b.de a.de
+--   | abs f => fun x => (f x).de
+--   | bnd e₁ e₂ =>
+--     splice (bnd (quote (reduce e₁)) fun x =>
+--       quote (reduce (e₂ (splice (Tm.var x)))))
+--   | bld f => fun a => (f a).de
+--   | ite e₁ e₂ e₃ => match e₁.de with
+--     | cst0 (litn 0) => e₃.de -- 0 is false
+--     | cst0 (litn _) => e₂.de
+--     | a'            => splice (ite a' (quote e₂.de) (quote e₃.de))
 
 def Tm.norm {α} : (∀ Γ, Tm Γ α) → Tm Γ α
   | e => quote (de (e _))

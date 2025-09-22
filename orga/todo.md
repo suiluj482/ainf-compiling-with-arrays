@@ -6,6 +6,9 @@
 
 # Todo
 
+- idee, wie man am besten misst?
+- found paper über dual number reverse aD
+
 ## Write -- top priority
 - tu darmstadt template inkompatibel, (koma script template?), begin article
 - infos wie in tu darmstadt template

@@ -48,3 +48,7 @@
 - AINF.cleanEnv (remove unnecessary EnvParts (allowing vectorize))
 - AINF.unzip (push tuples up through arrays (improving vectorize))
 - AINF.vectorize (push arrays into op)
+15.09 - 22.09:
+- improve cleanEnv with loop unswitching
+- improve vectorize for multiple forc
+- dead code elimination

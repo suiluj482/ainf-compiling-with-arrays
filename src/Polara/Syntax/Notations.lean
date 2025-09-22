@@ -78,15 +78,6 @@ def Tm.aF (t: Tm Γ α)(f: Tm Γ α → Tm Γ β): Tm Γ β := f t -- apply to f
 def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
   let' rx :=& x; Tm.dumpFor (f x) rx
 
-@[default_instance] instance [BiArraysC BiArith α β γ]:
-  HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩
-@[default_instance] instance [BiArraysC BiArith α β γ]:
-  HSub (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp sub)⟩
-@[default_instance] instance [BiArraysC BiArith α β γ]:
-  HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp mul)⟩
-@[default_instance] instance [BiArraysC BiArith α β γ]:
-  HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp div)⟩
-
 @[default_instance] instance [BiArraysC BiLin α β γ]:
   HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linOp add)⟩
 @[default_instance] instance [BiArraysC BiLin α β γ]:
@@ -96,6 +87,15 @@ def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
   HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linScale mul)⟩
 @[default_instance] instance [BiArrayC BiLF α β γ]:
   HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linScale div)⟩
+
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp add)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HSub (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp sub)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HMul (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp mul)⟩
+@[default_instance] instance [BiArraysC BiArith α β γ]:
+  HDiv (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.arithOp div)⟩
 
 @[default_instance] instance : Max (Tm Γ flt) :=
   ⟨Tm.cst2 Const2.maxf⟩
