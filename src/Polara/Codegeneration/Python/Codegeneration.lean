@@ -53,3 +53,6 @@ def Tm.codegenPy' : Tm VPar α → ReaderM (Nat × Nat) String
 
 -- generates a python expression
 def Tm.codegenPy (t: Tm VPar α): String := Tm.codegenPy' t (0,0)
+
+instance genPython: Codegen "Python" :=
+  ⟨(s!"print({Tm.codegenPy ·})")⟩

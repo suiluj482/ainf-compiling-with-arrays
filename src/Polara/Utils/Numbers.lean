@@ -20,3 +20,7 @@ def String.toFin? (s: String): Option (Fin n) :=
   match s.toNat? with
   | some v => if lt: v < n then some ⟨v, lt⟩ else none
   | none => none
+
+def Float.similar (a b: Float): Bool :=
+  let epsilon := 1e-3
+  Float.abs (a - b) < epsilon

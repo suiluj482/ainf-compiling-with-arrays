@@ -71,3 +71,6 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
     return s!"(if (←{← cond.codegen'}) != 0 then {<- a.codegen'} else {<- b.codegen'})"
 
 def Tm.codegen (t: Tm VPar α): String := s!"(do \n{Tm.codegen' t (0,0)})"
+
+instance genLean: Codegen "Lean" :=
+  ⟨Tm.codegen⟩

@@ -13,6 +13,8 @@ def Ty.val: Ty → Type
 | _ ~> _ => Unit
 | ref _ => panic! "ref not supported"
 
+def Ty.val? (α: Ty) := Option α.val
+
 def String.unwrap (st: String)(s e: String): Option String :=
   if st.startsWith s && st.endsWith e then
     st.drop s.length |>.dropRight e.length
@@ -66,9 +68,11 @@ def Ty.parse (α: Ty)(s: String): Option α.val := do
   let (a, s) ← α.parse' s
   if s == "" then a else none
 
-def Float.similar (a b: Float): Bool :=
-  let epsilon := 1e-3
-  Float.abs (a - b) < epsilon
+
+--------------------------------------------------
+-- Similarity checks using knowledge of type
+--------------------------------------------------
+
 def Ty.similarVal (α: Ty)(a b: α.val): Bool :=
   match α with
   | .nat => a == b

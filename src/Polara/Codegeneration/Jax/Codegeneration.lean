@@ -55,6 +55,9 @@ partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
 -- generates a python expression
 def Tm.codegenJax (t: Tm VPar α): String := Tm.codegenJax' t (0,0)
 
+instance genJax: Codegen "Jax" :=
+  ⟨(s!"print(to_py({Tm.codegenJax ·}))")⟩
+
 ------------------------------------------------------
 -- todo when to use jit
 -- jit doesn't work with stacked functions

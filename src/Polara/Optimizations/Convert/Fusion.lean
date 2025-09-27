@@ -57,11 +57,18 @@ def x10: Var (flt.array 10) := .mk 10
 def x11: Var (flt.array 10) := .mk 11
 
 def i0: Par (idx 10) := .mk 0
+def i1: Par (idx 10) := .mk 0
 #eval ((
   [
     let'' [] in x3 := .cst0 (.litf 0.1),
-    let'' [.forc 10 i0] in x0 := .cst1 .i2n (.p i0),
-    let'' [.forc 10 i0] in x1 := .cst1 .n2f (.v x0),
+    let'' [.forc 10 i0, .forc 10 i1] in x0 := .cst1 .i2n (.p i0),
+    let'' [.forc 10 i0, .forc 10 i1] in x1 := .cst1 .n2f (.v x0),
+    -- array array ...
+    let'' [.forc 10 i1] in x10 := for'' i0:10, (.v x1),
+    let'' [.forc 10 i0] in x10 := for'' i1:10, (.v x1),
+
+    let'' [] in x4 := .cst0 (.litf 0.2),
+
     let'' [.forc 10 i0] in x2 := .cst2 (.arithOp .add) (.v x1) (.v x3),
 
     -- here two exits
@@ -70,3 +77,5 @@ def i0: Par (idx 10) := .mk 0
   ],
   (.v x1)
 ): AINF flt)
+
+-- #eval (for' i: idx ⟨10, => i.i2n.n2f + 2)
