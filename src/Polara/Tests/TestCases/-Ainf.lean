@@ -41,10 +41,10 @@ namespace AinfTestCases
         ], .v x1)
     ⟩,
     ⟨"fst", flt,
-        let x0: Var _ := (Var.mk 0)
-        let x1: Var _ := x1
-        let x2: Var _ := x2
-        let x3: Var _ := x3
+        let x0: Var _ := (.mk 0)
+        let x1: Var _ := (.mk 1)
+        let x2: Var _ := (.mk 2)
+        let x3: Var _ := (.mk 3)
         ([
             let'' [] in x0 := plitf 4.2,
             let'' [] in x1 := plitn 42,
@@ -52,10 +52,15 @@ namespace AinfTestCases
             let'' [] in x3 := cst1 fst (.v x2)
         ], .v x3)
     ⟩,
-    ⟨"snd", nat, ([
+    ⟨"snd", nat,
+        let x0: Var _ := (.mk 0)
+        let x1: Var _ := (.mk 1)
+        let x2: Var _ := (.mk 2)
+        let x3: Var _ := (.mk 3)
+        ([
             let'' [] in x0 := plitf 4.2,
             let'' [] in x1 := plitn 42,
-            let'' [] in x2 := cst2 tup (.v (@x0 flt)) (.v (@x1 nat)),
+            let'' [] in x2 := cst2 tup (.v x0) (.v x1),
             let'' [] in x3 := cst1 snd (.v (x2: Var (flt ×× nat)))
         ], .v x3)
     ⟩,

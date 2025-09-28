@@ -18,7 +18,7 @@ instance evalI (lang)[c: Codegen lang](fileExt: String)
       return val
 
 abbrev BenchRes := Nat × Float -- iterations, time
-abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → α.val? × BenchRes
+abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → IO (String × α.val? × Float)
 
 class RunC (lang: String) where
   run {α: Ty}(term: Tm VPar α)(name: String): IO (Option α.val × BenchRes)

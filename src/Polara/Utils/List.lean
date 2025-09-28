@@ -36,6 +36,11 @@ namespace List
   | [] => l
   | a :: as => (l.addToSet a).combineSets as
 
+  def slidingPair: List α → List (α × α)
+  | [] => []
+  | _ :: [] => []
+  | a :: b :: rest => (a, b) :: slidingPair (b :: rest)
+
   def seperateBy (f: α → Bool): List α → List α × List α
   | [] => ([], [])
   | a :: as => match f a with

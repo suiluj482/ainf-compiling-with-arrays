@@ -69,6 +69,22 @@ def Ty.parse (α: Ty)(s: String): Option α.val := do
   if s == "" then a else none
 
 
+----
+
+def Parsed.toString {α: Ty}: α.val → String :=
+  match α with
+  | .nat => ToString.toString
+  | .flt => ToString.toString
+  | .lin => ToString.toString
+  | .idx _ => ToString.toString
+  | .unit => λ _ => "()"
+  | _ ~> _ => λ _ => "<fun>"
+  | α ×× β => λ (a, b) => s!"({@toString α a}, {@toString β b})"
+  | .array _ α => λ v => s!"[{(v.toList.map (@toString α ·) |>.foldl (s!"{·}, {·}") "").drop 2}]"
+  | .ref _ => panic! "ref not supported in ToString"
+
+instance {α: Ty}: ToString α.val := ⟨Parsed.toString⟩
+
 --------------------------------------------------
 -- Similarity checks using knowledge of type
 --------------------------------------------------

@@ -10,29 +10,28 @@ import Polara.Optimizations.Convert.All
 import Polara.Optimizations.Analyse.All
 ---
 
-
-abbrev Pipeline := {α: Ty} → Tm VPar α → Tm VPar α
+abbrev Pipeline := {α: Ty} → String → Tm VPar α → IO (Tm VPar α)
 
 def pipelines: List (String × Pipeline) := [
   (
     "noOptimization",
-    id
+    λ _ t => return t
   ),
   (
     "norm",
-    (·.normVPar)
+    λ _ t => return t.normVPar
   ),
   (
     "ainf",
-    (·.toAINF.toTm)
+    λ s t => return t.toAINF.toTm
   ),
   (
     "ainfOptimize",
-    (·.toAINF
+    λ s t => return t.toAINF
       |>.cleanEnv
       |>.cse
       |>.vectorize
       |>.dead
-    |>.toTm)
+    |>.toTm
   ),
 ]
