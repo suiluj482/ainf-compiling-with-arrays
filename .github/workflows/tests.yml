@@ -1,0 +1,33 @@
+name: Lean Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # 2. Build
+      - name: Build
+        uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: "src"
+
+      # 3. Run tests
+      - name: Run tests
+        run: lake exe test
+
+      # 4. Upload test results
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: src/Polara/.tmp/**
+        
