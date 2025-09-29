@@ -1,4 +1,4 @@
-name: Lean Action CI
+name: Tests
 
 on:
   push:
@@ -26,10 +26,15 @@ jobs:
           cd src
           lake exe test
 
+      # 4. Zip test results
+      - name: Zip test results
+        run: |
+          cd src/Polara/.tmp
+          zip -r "${{ github.workspace }}/results.zip" .
+
       # 4. Upload test results
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: src/Polara/.tmp/**
-        
+          path: results.zip
