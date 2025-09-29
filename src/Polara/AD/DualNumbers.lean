@@ -37,7 +37,7 @@ def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
 | .log     => (x.fst.log,,  x.snd / x.fst)                  -- (log x)'  = 1/x
 | .sqrt    => (x.fst.sqrt,, x.snd / (tlitf 2 * x.fst.sqrt)) -- (sqrt x)' = 1/(2*sqrt x)
 | .normCdf => (x.fst.normCdf,, -- (normCdf x)' = (1/sqrt(2*pi)) * e^(-x^2/2) * dx
-      x.snd * (tlitf 2 / Tm.π.sqrt *
+      x.snd * (tlitf 1 / (tlitf 2 * Tm.π).sqrt *
       (tlitf 0 - x.fst * x.fst / tlitf 2).exp)
     )
 | .fst     => x.fst
@@ -102,7 +102,7 @@ def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | .eqi  => Tm.cst2 (.eqi) a b
 | .lt => a.fst <' b.fst
 | .maxf => (a.fst.maxf b.fst,,
-    (if' a.fst <' b.fst then a.snd else b.snd)
+    (if' a.fst <' b.fst then b.snd else a.snd)
   )
 | .get  => a[[b]]
 | .tup  => (a,, b)

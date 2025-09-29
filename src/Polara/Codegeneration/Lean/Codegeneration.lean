@@ -38,12 +38,12 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | linOp op => s!"{a} {op} {b}"
   | linScale op => s!"{a} {op} {b}"
 
-  | lt => s!"{a} < {b}"
+  | lt => s!"(Bool.toNat ({a} < {b}))"
   | maxf => s!"max {a} {b}"
   | addi => s!"{a}.add' {b}"
-  | eqi  => s!"{a} == {b}"
+  | eqi  => s!"(Bool.toNat ({a} == {b}))"
   | tup  => s!"({a}, {b})"
-  | app  => s!"← {a} {b}"
+  | app  => s!"(← ((({a}): {α₁.gen'}) {b}))"
   | get  => s!"{a}[{b}]!"
 
   | refSet => panic! "refSet not supported in tmgen"
@@ -51,7 +51,7 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
 def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | err => return "Except.error \"Tm.err\""
   | var i => return match i with
-    | .v v => v.toString
+    | .v v => s!"{v}"
     | .p p => s!"(return {p})"
   | cst0 k => return s!"return {k.tmgen}"
   | cst1 k a => return s!"return {k.tmgen} (←{(← a.codegen')})"
@@ -59,17 +59,17 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | abs (α:=γ) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(return fun {v}:{γ.gen'} => {(f v).codegen' (i,j+1)})"
+    return s!"(return fun {v}:{γ.gen'} => do {(f v).codegen' (i,j+1)})"
   | bld (n:=n) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return  s!"(Vector.ebuild {n} fun {v} => {(f v).codegen' (i, j+1)})"
+    return  s!"(Vector.ebuild {n} fun {v} => do {(f v).codegen' (i, j+1)})"
   | bnd (α:=β) e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)
     return s!"let {x}: {β.gen} := {e.codegen' (i,j)}; \n{(f x).codegen' (i+1,j)}"
   | ite cond a b =>
-    return s!"(if (←{← cond.codegen'}) != 0 then {<- a.codegen'} else {<- b.codegen'})"
+    return s!"(if ((←{← cond.codegen'}) != 0) then {<- a.codegen'} else {<- b.codegen'})"
 
 def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| ((do\n{(Tm.codegen' t (0,0)).indent}\n): {α.gen})"
 

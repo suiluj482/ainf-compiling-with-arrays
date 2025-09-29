@@ -62,6 +62,8 @@ instance [HDiv α β γ]: HDiv (Vector α n) (Vector β n) (Vector γ n) where
 instance [HDiv α β γ]: HDiv (Vector α n) β (Vector γ n) where
   hDiv := λ as b => as.map (λ a => a / b)
 
+instance: Coe Bool Nat := ⟨(if · then 1 else 0)⟩
+
 set_option linter.unusedVariables false
 ---------------------------------------------------------------------------
 -- Codegeneration to Lean

@@ -1,4 +1,4 @@
-def String.toFloat? (s: String): Option Float :=
+private def String.toFloat'? (s: String): Option Float :=
   let ss := s.splitOn "."
   match l: ss.length with
   | 2 =>
@@ -15,6 +15,12 @@ def String.toFloat? (s: String): Option Float :=
     | some n => some (Float.ofNat n)
     | none => none
   | _ => none
+
+def String.toFloat? (s: String): Option Float :=
+  if s.startsWith "-" then
+    s.drop 1 |>.toFloat'? |>.map (· * -1)
+  else
+    s.toFloat'?
 
 def String.toFin? (s: String): Option (Fin n) :=
   match s.toNat? with

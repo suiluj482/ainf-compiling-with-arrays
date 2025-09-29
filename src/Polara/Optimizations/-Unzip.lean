@@ -53,10 +53,10 @@ def Ty.unzip: Ty → Ty
 | array n α =>
   α.unzip.unzip' n
 
-#eval (Ty.array 10 (Ty.flt ×× Ty.flt)).unzip
-#eval (Ty.array 10 (Ty.flt ×× Ty.flt ×× Ty.flt)).unzip
-#eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt))).unzip
-#eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt ×× Ty.flt))).unzip
+-- #eval (Ty.array 10 (Ty.flt ×× Ty.flt)).unzip
+-- #eval (Ty.array 10 (Ty.flt ×× Ty.flt ×× Ty.flt)).unzip
+-- #eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt))).unzip
+-- #eval (Ty.array 10 (Ty.array 10 (Ty.flt ×× Ty.flt ×× Ty.flt))).unzip
 
 -- def Tm.tupleZipWith {α β γ: Ty}(f: Ty → Ty)(g: {α' β' γ': Ty} → Tm Γ α' → Tm Γ β' → Tm Γ γ')
 --   (a: Tm Γ (α.tupleMap f))(b: Tm Γ (β.tupleMap f)): Tm Γ (γ.tupleMap f) :=

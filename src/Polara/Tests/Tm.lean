@@ -135,12 +135,12 @@ namespace TmTest
           leaf ⟨"mul", _,_,
             (fun' x:flt => fun' y:flt => x * y).aD,
             (·@@ (tlitf 21.0,, tlitl 1.0) @@ (tlitf 2.0,, tlitl 2.0)),
-            some (42.0, 26.0)
+            some (42.0, 44.0)
           ⟩,
           leaf ⟨"div", _,_,
             (fun' x:flt => fun' y:flt => x / y).aD,
             (·@@ (tlitf 84.0,, tlitl 1.0) @@ (tlitf 2.0,, tlitl 2.0)),
-            some (42.0, -21.0/2.0)
+            some (42.0, -41.5)
           ⟩,
           leaf ⟨"adda", _,_,
             (fun' x:(array 10 flt) => fun' y:(array 10 flt) => x + y).aD,
@@ -189,7 +189,7 @@ namespace TmTest
       let (optimizedTm, time) ← benchmarkIOF tm (pipeline fullName)
       let fullTm := f optimizedTm
 
-      let _ ← writeTmpFile s!"{fullName}.polara" fullTm.toString
+      let _ ← writeTmpFile s!"{fullName}.polara" optimizedTm.toString
 
       let res ← runners.mapM (λ (name, run) => do
           let fullName := s!"{fullName}_{name}"
@@ -232,6 +232,9 @@ namespace TmTest
       return (s!"{Print.foldLines errors}\n{text}", false)
 
 
-  def print: IO Unit := TestCaseTree.print ⟨_, tmTree, TmTestCase.run⟩
+  def print: IO Unit := do
+    let res ← TestCaseTree.pretty ⟨_, tmTree, TmTestCase.run⟩
+    let _ ← writeTmpFile "TmTestCases/result.txt" res
+    IO.println res
 
 end TmTest
