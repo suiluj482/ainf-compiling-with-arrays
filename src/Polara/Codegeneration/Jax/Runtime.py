@@ -18,3 +18,8 @@ def to_py(x):
     if isinstance(x, tuple):
         return tuple(to_py(i) for i in x)
     return x
+
+
+#############################################################
+## Codegeneration to Jax
+#############################################################

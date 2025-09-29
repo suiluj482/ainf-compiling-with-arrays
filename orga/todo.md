@@ -6,7 +6,10 @@
 
 # Todo
 
-- idee, wie man am besten misst?
+- benchmark with multiple iterations
+- write benchmark terms
+- export as csv
+
 - found paper über dual number reverse aD
 
 ## Write -- top priority

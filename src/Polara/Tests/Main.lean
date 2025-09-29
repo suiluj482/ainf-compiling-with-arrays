@@ -1,6 +1,6 @@
-import Polara.Tests.TestCases.All
+import Polara.Tests.All
 
 def main: IO Unit :=
-  testCaseTree.print
+  TmTest.print
 
--- #eval main
+#eval main

@@ -9,6 +9,7 @@ import Polara.Optimizations.Dead
 import Polara.Optimizations.Convert.All
 import Polara.Optimizations.Analyse.All
 ---
+import Polara.Codegeneration.All
 
 abbrev Pipeline := {α: Ty} → String → Tm VPar α → IO (Tm VPar α)
 
@@ -23,15 +24,23 @@ def pipelines: List (String × Pipeline) := [
   ),
   (
     "ainf",
-    λ s t => return t.toAINF.toTm
+    λ n t => do
+      let ainf := t.toAINF
+      let _ ← writeTmpFile s!"{n}.ainf" ainf.toString
+      return ainf.toTm
   ),
   (
     "ainfOptimize",
-    λ s t => return t.toAINF
-      |>.cleanEnv
-      |>.cse
-      |>.vectorize
-      |>.dead
-    |>.toTm
+    λ n t => do
+    let s := t.toAINF
+    let s := s.cleanEnv
+    let _ ← writeTmpFile s!"{n}_cleanEnv.ainf" s.toString
+    let s := s.cse
+    let _ ← writeTmpFile s!"{n}_cse.ainf" s.toString
+    let s := s.vectorize
+    let _ ← writeTmpFile s!"{n}_vectorize.ainf" s.toString
+    let s := s.dead
+    let _ ← writeTmpFile s!"{n}_dead.ainf" s.toString
+    return s.toTm
   ),
 ]

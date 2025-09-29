@@ -1,5 +1,4 @@
 import Polara.Syntax.All
-import Polara.Optimizations.All
 
 @[reducible]
 def Ty.val: Ty → Type
@@ -65,6 +64,7 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | .ref _ => panic! "ref not supported in parsing"
 
 def Ty.parse (α: Ty)(s: String): Option α.val := do
+  let s := if s.startsWith "ok: " then s.drop 4 else s
   let (a, s) ← α.parse' s
   if s == "" then a else none
 

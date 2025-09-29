@@ -47,6 +47,12 @@ namespace List
     | true  => as.seperateBy f |>.map (a::·) id
     | false => as.seperateBy f |>.map id (a::·)
 
+  def seperateWith (f: α → β ⊕ γ): List α → List β × List γ
+  | [] => ([], [])
+  | a :: as => match f a with
+    | .inl a => as.seperateWith f |>.map (a::·) id
+    | .inr a => as.seperateWith f |>.map id (a::·)
+
   def getPrefix [BEq α]: List α → List α → List α
   | a :: as, b :: bs => if a==b then a :: List.getPrefix as bs else []
   | _, _ => []

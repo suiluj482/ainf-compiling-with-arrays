@@ -6,24 +6,22 @@ import Polara.Codegeneration.Python.All
 import Polara.Codegeneration.IO.All
 ---
 
+def run (lang)[c: Codegen lang][ext: FileExt lang][b: BuildCode lang][e: ExeCode lang]
+  {α: Ty}(term: Tm VPar α)(name: String) := do
+      let code := c.gen term
+      let file  ← writeCodeFile code lang s!"{name}"
+      let _     ← b.bld file
+      let (out, time) ← benchmarkIO (e.exe file)
+      let val  := α.parse out
+      return (out, val, time)
+
+abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → IO (String × α.val? × Float)
+
+
+abbrev BenchRes := Nat × Float -- iterations, time
+
 def runners: List (String × Run) := [
-
+    ("Lean", run "Lean"),
+    -- ("Python", run "Python"), -- Python doesn't support vector operations
+    ("Jax", run "Jax")
   ]
-
--- import Polara.Tests.Utils
-
--- def runners: List (String × (Tm VPar α → IO String)) := [
---   ("Lean", RunTmLean.run),
---   ⟨"Python", RunTmPy.run⟩,
---   ⟨"Jax", RunTmJax.run⟩
--- ]
-
--- def runner: Runner (Sigma (Tm VPar)) := λ ⟨α, tm⟩ => do
---   let results ← runners.mapM (λ (name, run) => do
---     let res ← run tm
---     return (name, res)
---   )
---   return (
---     "\n" ++ (results.map (λ (n, res) => s!"{n}: {res}") |>.foldl (λ acc x => s!"{acc}  | {x}") "" |>.dropRight 1),
---     α.allOkAndSimilar (results.map Prod.snd)
---   )

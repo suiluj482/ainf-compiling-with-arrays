@@ -1,6 +1,6 @@
 import Polara.Codegeneration.All
+import Polara.Optimizations.All
 import Polara.AD.All
-import Polara.Tests.Utils
 
 open Tree Ty
 
@@ -8,7 +8,8 @@ namespace TmTest
   -- only first part gets optimized,
   --   second part allows for example to apply functions to check them
   --   third part is the expected value (if given)
-  abbrev TmTestCase := TestCase ((α β: Ty) × Tm VPar α × (Tm VPar α → Tm VPar β) × β.val?)
+  abbrev TmTest := ((α β: Ty) × Tm VPar α × (Tm VPar α → Tm VPar β) × β.val?)
+  abbrev TmTestCase := TestCase TmTest
   abbrev TmTree := Tree String TmTestCase
 
   def tmTree: TmTree :=
@@ -178,16 +179,17 @@ namespace TmTest
       ],
     ]
 
-  abbrev TestResult := (Bool × String)
-
-  def TmTestCase.run (fullName: String)(tc: TmTestCase): IO TestResult := do
+  def TmTestCase.run (fullName: String)(tc: TmTestCase): IO Result := do
     let ⟨name, _, α, tm, f, expected⟩ := tc
     let fullName := s!"{fullName}/{name}"
 
+    -- run for pipelines and langs
     let res ← pipelines.mapM (λ (name, pipeline) => do
-      let fullName := s!"{fullName}_{name}"
-      let optimizedTm ← pipeline fullName tm
+      let fullName := s!"{fullName}/{name}"
+      let (optimizedTm, time) ← benchmarkIOF tm (pipeline fullName)
       let fullTm := f optimizedTm
+
+      let _ ← writeTmpFile s!"{fullName}.polara" fullTm.toString
 
       let res ← runners.mapM (λ (name, run) => do
           let fullName := s!"{fullName}_{name}"
@@ -195,44 +197,41 @@ namespace TmTest
           return Tree.leaf (name, mes, val, time)
         )
 
-      return Tree.node name res
+      return Tree.node s!"{name}({time})" res
     )
     let tree := Tree.node name res
 
     -- check vals
-    let T := String × α.val × String
-    let flat: List T ← tree.flatten.filterMapM (λ (names, (name, mes, val, _)) =>
+    let (flat, errors) := tree.flatten.seperateWith (λ (names, (name, mes, val, _)) =>
         let name := names.cons name |>.foldl (s!"{·}_{·}") ""
         match val with
-        | some val => return (name, val, mes)
-        | none => do
-          IO.println s!"{fullName}{name}: no value {mes}"
-          return none
+        | some val => .inl (name, val, mes)
+        | none => .inr s!"{fullName}{name}: no value {mes}"
       )
-    let ok ← match expected with
+    let errors := errors ++ match expected with
       | some expected =>
-        flat.allM (λ ((name, val, mes): T) =>
+        flat.filterMap (λ (name, val, mes) =>
             if α.similarVal expected val
-              then return true
-              else do
-                IO.println s!"{fullName}{name}: expected {expected}, got {mes}"
-                return false
+              then none
+              else some s!"{fullName}{name}: expected {expected}, got {mes}"
           )
       | none =>
-        flat.slidingPair.allM (λ (((n1, v1, m1), (n2, v2, m2)): T×T) =>
+        flat.slidingPair.filterMap (λ ((n1, v1, m1), (n2, v2, m2)) =>
           if α.similarVal v1 v2
-            then return true
-            else do
-              IO.println s!"{fullName}{n1} and {n2} differ: got {m1} vs {m2}"
-              return false
+            then none
+            else some s!"{fullName}{n1} and {n2} differ: got {m1} vs {m2}"
         )
 
     -- printable erg
-    let tree' := tree.map id (λ (n,_,_,t) => (n, t))
-    let text := tree'.pretty
+    let tree' := tree.map id (λ (n,_,_,t) => s!"{n}|{t}")
+    let text := tree'.prettyTable
 
-    return (ok, text)
+    if errors.isEmpty then
+      return (text, true)
+    else
+      return (s!"{Print.foldLines errors}\n{text}", false)
 
-  -- def run := tmTree
+
+  def print: IO Unit := TestCaseTree.print ⟨_, tmTree, TmTestCase.run⟩
 
 end TmTest

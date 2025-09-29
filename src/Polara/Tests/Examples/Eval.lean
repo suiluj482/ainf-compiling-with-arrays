@@ -1,5 +1,4 @@
-import Polara.Examples.Definitions
---import Polara.Embedding
+import Polara.Tests.Examples.Definitions
 
 open Tm Ty Const0 Const1 Const2
 
@@ -24,8 +23,6 @@ open Tm Ty Const0 Const1 Const2
 -- loop example
 #eval loop1 5 (Γ:=_).toAINF
 #eval (loop1 5 (Γ:=_).toAINF.cse)
-
-#eval IO.println <| (loop1 5 (Γ:=_).toAINF.cse) |>.codegen id
 
 -- foo example
 #eval foo (n:=3).toAINF

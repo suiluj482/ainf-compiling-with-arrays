@@ -61,3 +61,8 @@ instance [HDiv α β γ]: HDiv (Vector α n) (Vector β n) (Vector γ n) where
   hDiv := Vector.zipWith HDiv.hDiv
 instance [HDiv α β γ]: HDiv (Vector α n) β (Vector γ n) where
   hDiv := λ as b => as.map (λ a => a / b)
+
+set_option linter.unusedVariables false
+---------------------------------------------------------------------------
+-- Codegeneration to Lean
+---------------------------------------------------------------------------

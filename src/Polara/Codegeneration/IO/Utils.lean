@@ -14,9 +14,12 @@ def copyInRuntime (code: String)
     let runtime ← readFile (getRuntimePath lang i.ext)
     return s!"{runtime}\n{code}"
 
-def getTmpPath (file: String): FilePath := tmpDir.addExtension file
+def getTmpPath (file: String): FilePath := tmpDir.join file
 def writeTmpFile(file: String)(content: String): IO FilePath := do
   let path := getTmpPath file
+  match path.parent with
+  | some parent => IO.FS.createDirAll parent
+  | none        => pure ()
   IO.FS.writeFile path content
   return path
 
@@ -24,10 +27,10 @@ def writeCodeFile (code: String)
   (lang: String)[i: FileExt lang]
   (file: String): IO FilePath := do
     let content ← copyInRuntime code lang
-    writeTmpFile file content
+    writeTmpFile s!"{file}.{i.ext}" content
 
 def exeCom (args: IO.Process.SpawnArgs): IO String := do
   let output ← IO.Process.output args
   return if output.exitCode == 0
     then output.stdout
-    else s!"{output.stdout}\nstderr{output.stderr}"
+    else s!"(stdout{output.stdout}\nstderr{output.stderr})"

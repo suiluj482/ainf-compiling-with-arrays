@@ -40,7 +40,7 @@ partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
   | abs f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(lambda {v}: {(f v).codegenJax' (i,j+1)})"
+    return s!"(lambda {v}: let({v}:=jnp.array({v}), {(f v).codegenJax' (i,j+1)}))"
   | bld (n:=n) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)

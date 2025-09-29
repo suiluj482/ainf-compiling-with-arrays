@@ -1,5 +1,8 @@
-def String.indent (s: String): String := "\n  " ++ s.replace "\n" "\n  "
-def String.parens (s: String): String := s!"({s})"
+namespace String
+  def addToLines (s: String)(pre: String): String := pre ++ s.replace "\n" s!"\n{pre}"
+  def indent (s: String): String := addToLines s "  "
+  def parens (s: String): String := s!"({s})"
+end String
 
 def List.toStringSep [ToString α](sep: String): List α → String
   | [] => ""
@@ -7,6 +10,8 @@ def List.toStringSep [ToString α](sep: String): List α → String
   | x::xs => toString x ++ sep ++ xs.toStringSep sep
 
 namespace Print
+
+  def foldLines: List String → String | l => l.foldl (s!"{·}\n{·}") "" |>.drop 1
 
   def indentString (n: Nat): String :=
     match n with
@@ -23,12 +28,13 @@ namespace Print
             printLineWithIndent x indent
         ) (IO.print "")
 
-  def foldLine: List String → String := List.foldl (fun accu a => accu ++ " " ++ a ++ " |") "|"
+  def foldTableLine: List String → String := List.foldl (fun accu a => accu ++ " " ++ a ++ " |") "|"
+
 
   def printTableHeaderWithIndent (header: List String)(indent: Nat): IO Unit :=
     do
-      printLineWithIndent (foldLine header) indent
-      printLineWithIndent (foldLine <| header.map (fun _ => "---")) indent
+      printLineWithIndent (foldTableLine header) indent
+      printLineWithIndent (foldTableLine <| header.map (fun _ => "---")) indent
 
   structure IoFoldPrecedingSeperatorFormat where
   begin: String

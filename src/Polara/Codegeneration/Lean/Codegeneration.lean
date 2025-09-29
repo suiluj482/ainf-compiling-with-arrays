@@ -17,6 +17,7 @@ def Ty.gen (t: Ty): String := s!"Except String {t.gen'}"
 
 def Const0.tmgen (const0: Const0 α): String := match const0 with
 | mkRef => panic! "mkRef not supported in tmgen"
+| liti i (n:=n) => s!"(Fin.ofNat' {n+1} {i})"
 | _ => s!"{const0}"
 
 def Const1.tmgen: Const1 α₁ α → String
@@ -48,7 +49,7 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | refSet => panic! "refSet not supported in tmgen"
 
 def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
-  | err => return "Except.error"
+  | err => return "Except.error \"Tm.err\""
   | var i => return match i with
     | .v v => v.toString
     | .p p => s!"(return {p})"
@@ -70,7 +71,7 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | ite cond a b =>
     return s!"(if (←{← cond.codegen'}) != 0 then {<- a.codegen'} else {<- b.codegen'})"
 
-def Tm.codegen (t: Tm VPar α): String := s!"(do \n{Tm.codegen' t (0,0)})"
+def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| ((do\n{(Tm.codegen' t (0,0)).indent}\n): {α.gen})"
 
 instance genLean: Codegen "Lean" :=
   ⟨Tm.codegen⟩
