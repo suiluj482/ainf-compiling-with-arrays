@@ -10,6 +10,8 @@
 - write benchmark terms
 - export as csv
 
+- for benchmarks: jax compilation cach
+
 - found paper über dual number reverse aD
 
 ## Write -- top priority
