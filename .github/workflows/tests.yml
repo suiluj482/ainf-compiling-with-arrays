@@ -22,7 +22,9 @@ jobs:
 
       # 3. Run tests
       - name: Run tests
-        run: lake exe test
+        run: |
+          cd src
+          lake exe test
 
       # 4. Upload test results
       - name: Upload test results
