@@ -52,3 +52,9 @@
 - improve cleanEnv with loop unswitching
 - improve vectorize for multiple forc
 - dead code elimination
+22.09 - 29.09:
+- improving tests
+- more testcases
+- fixes
+- github workflow for tests
+- meassure times for tests
