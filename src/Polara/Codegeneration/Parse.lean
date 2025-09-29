@@ -36,10 +36,18 @@ private def Vector.ofStrm (seed: α)(f: α → Option (β × α))(n: Nat): Optio
       let (a, seed) ← f seed
       return (v.push a, seed)
 
+def toNat'? (s: String): Option Nat :=
+  if s == "True" then some 1
+  else if s == "False" then some 0
+  else if s.endsWith ".0" then
+    s.dropRight 2 |>.toNat?
+  else
+    s.toNat?
+
 def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   let s := s.trim
   match α with
-  | .nat => s.firstVal (·.toNat?)
+  | .nat => s.firstVal toNat'?
   | .flt => s.firstVal (·.toFloat?)
   | .lin => s.firstVal (·.toFloat?)
   | .unit => if s == "()" then some ((), s.drop 2) else none

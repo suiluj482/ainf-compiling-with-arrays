@@ -10,6 +10,7 @@
 - write benchmark terms
 - export as csv
 
+- tests for df and dr
 - for benchmarks: jax compilation cach
 
 - found paper über dual number reverse aD

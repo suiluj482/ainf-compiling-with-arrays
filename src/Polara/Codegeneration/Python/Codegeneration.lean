@@ -1,4 +1,5 @@
 import Polara.Codegeneration.Utils
+import Polara.Optimizations.Vectorization
 
 def Const0.tmgenPy (const0: Const0 α): String := match const0 with
 | mkRef => panic! "mkRef not supported in tmgen"
@@ -52,7 +53,8 @@ def Tm.codegenPy' : Tm VPar α → ReaderM (Nat × Nat) String
     return s!"({<- a.codegenPy'} if {<- cond.codegenPy'} else {<- b.codegenPy'})"
 
 -- generates a python expression
-def Tm.codegenPy (t: Tm VPar α): String := Tm.codegenPy' t (0,0)
+-- devectorize because python does not support vector operations
+def Tm.codegenPy (t: Tm VPar α): String := Tm.codegenPy' t.devectorize (0,0)
 
 instance genPython: Codegen "Python" :=
   ⟨(s!"print({Tm.codegenPy ·})")⟩
