@@ -67,7 +67,7 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | bnd (α:=β) e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)
-    return s!"let {x}: {β.gen} := {e.codegen' (i,j)}; \n{(f x).codegen' (i+1,j)}"
+    return s!"let {x}: {β.gen} := {e.codegen' (i,j)}; {(f x).codegen' (i+1,j)}"
   | ite cond a b =>
     return s!"(if ((←{← cond.codegen'}) != 0) then {<- a.codegen'} else {<- b.codegen'})"
 

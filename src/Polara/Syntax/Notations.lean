@@ -55,6 +55,14 @@ namespace Tm
   def linScale: Tm Γ lin → Tm Γ flt → Tm Γ lin := Tm.cst2 (.linScale .mul)
 end Tm
 
+def tupleBnd (term: Tm Γ (α××β))(rest: Tm Γ α → Tm Γ β → Tm Γ γ): Tm Γ γ :=
+  let' t := term;
+  let' f := t.fst;
+  let' s := t.snd;
+  rest f s
+
+notation:max "let't "f", "s" := "term";"res => tupleBnd term (λ f s => res)
+
 -- cst2
 infixl:65 " @@ " => Tm.cst2 Const2.app
 notation:max array"[["index"]]" => Tm.cst2 Const2.get array index

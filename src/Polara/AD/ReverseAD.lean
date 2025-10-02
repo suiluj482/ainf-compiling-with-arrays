@@ -172,8 +172,8 @@ def Const2.dr' (const2: Const2 α β γ)(a: Tm Γ α.dr)(b: Tm Γ β.dr)(y': Tm 
   | .eqi        => (()', ()')
   | .lt         => (tlitl 0, tlitl 0)
   | .maxf       => (
-      if' a <' b then y' else Tm.linZero _,
-      if' a <' b then Tm.linZero _ else y'
+      if' a <' b then Tm.linZero _ else y',
+      if' a <' b then y' else Tm.linZero _
     )
   | .get        => (for' i => (if' i ==' b then y' else Tm.linZero _), ()')
   | .tup        => (y'.fst, y'.snd)

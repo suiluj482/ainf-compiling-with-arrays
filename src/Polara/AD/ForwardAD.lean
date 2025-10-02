@@ -185,7 +185,7 @@ def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm 
 | .addi       => ()'
 | .eqi        => ()'
 | .lt         => ()'
-| .maxf       => if' a <' b then a' else b'
+| .maxf       => if' a <' b then b' else a'
 | .get        => a'[[b]]
 | .tup        => (a',, b')
 | .refSet     => panic! "refSet not supported in automatic differentiation"

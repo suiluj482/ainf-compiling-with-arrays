@@ -71,6 +71,16 @@ def VParM.par : VParM ((β: Ty) → Par β) :=
     λ _ => (.mk i.down.snd),
     ⟨i.down.map id (·+1)⟩
   )
+def VParM.varVPar : VParM ((β: Ty) → VPar β) :=
+  modifyGet fun i => (
+    λ _ => (.v (.mk i.down.fst)),
+    ⟨i.down.map (·+1) id⟩
+  )
+def VParM.parVPar : VParM ((β: Ty) → VPar β) :=
+  modifyGet fun i => (
+    λ _ => (.p (.mk i.down.snd)),
+    ⟨i.down.map id (·+1)⟩
+  )
 def VParM.vpar : VParM ((β: Ty) → VPar β) :=
   modifyGet fun i => (
     λ _ => (.v (.mk i.down.fst)),
@@ -90,6 +100,8 @@ def AINF.findFreshVars: AINF α → Nat × Nat
   ) (0, 0)
 def VParM.freshAINFVars (a: AINF α)(m: VParM β): β :=
   m ⟨a.findFreshVars⟩ |>.fst
+def VParM.startZero (m: VParM β): β :=
+  m ⟨(0,0)⟩ |>.fst
 
 ------
 def Tm.toVPar: Tm VPar α → Tm VPar α := id

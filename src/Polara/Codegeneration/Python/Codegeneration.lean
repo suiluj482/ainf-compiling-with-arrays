@@ -31,30 +31,27 @@ def Const2.tmgenPy (a: String) (b: String): Const2 α₁ α₂ α → String
   | get  => s!"{a}[{b}]"
   | refSet => panic! "refSet not supported in tmgen"
 
-def Tm.codegenPy' : Tm VPar α → ReaderM (Nat × Nat) String
+def Tm.codegenPy' : Tm VPar α → VParM String
   | var i => return i.toString
   | err => return "None"
   | cst0 k => return k.tmgenPy
   | cst1 k a => return k.tmgenPy s!"({(← a.codegenPy')})"
   | cst2 k a b => return k.tmgenPy s!"({← a.codegenPy'})" s!"({← b.codegenPy'})"
   | abs f => do
-    let (i,j) <- read
-    let v := VPar.p (.mk j)
-    return s!"(lambda {v}: {(f v).codegenPy' (i,j+1)})"
+    let v := (←VParM.parVPar) _
+    return s!"(lambda {v}: {←(f v).codegenPy'})"
   | bld (n:=n) f => do
-    let (i,j) <- read
-    let v := VPar.p (.mk j)
-    return s!"[{(f v).codegenPy' (i,j+1)} for {v} in range(0,{n})]"
+    let v := (←VParM.parVPar) _
+    return s!"[{←(f v).codegenPy'} for {v} in range(0,{n})]"
   | bnd e f => do
-    let (i,j) <- read
-    let x := VPar.v (.mk i)
-    return s!"let({x} := {e.codegenPy' (i,j)}, {(f x).codegenPy' (i+1,j)})"
+    let x := (←VParM.varVPar) _
+    return s!"let({x} := {←e.codegenPy'}, {←(f x).codegenPy'})"
   | ite cond a b =>
     return s!"({<- a.codegenPy'} if {<- cond.codegenPy'} else {<- b.codegenPy'})"
 
 -- generates a python expression
 -- devectorize because python does not support vector operations
-def Tm.codegenPy (t: Tm VPar α): String := Tm.codegenPy' t.devectorize (0,0)
+def Tm.codegenPy (t: Tm VPar α): String := Tm.codegenPy' t.devectorize |>.startZero
 
 instance genPython: Codegen "Python" :=
   ⟨(s!"print({Tm.codegenPy ·})")⟩
