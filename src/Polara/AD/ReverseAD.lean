@@ -162,23 +162,56 @@ def linScaleDr' [t: BiArrayC BiLF α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   | .array n (.lf) => (for'v _ => ()', for'v _ => Tm.linZero _) -- todo check
   | .base (.lf) => (()', Tm.linZero _)
 
-def Const2.dr' (const2: Const2 α β γ)(a: Tm Γ α.dr)(b: Tm Γ β.dr)(y': Tm Γ γ.dr')
-  (ok: (t: α=β~>γ) → const2 ≠ t▸Const2.app): (Tm Γ α.dr' × Tm Γ β.dr') :=
+def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
+  : Tm VPar (γ.drEnv env) := -- (Tm Γ α.dr' × Tm Γ β.dr') :=
   match const2 with
-  | Const2.arithOp op  => op.dr' a b y'
-  | Const2.linOp op    => @linOpDr' α β _ _ _
-  | Const2.linScale op => @linScaleDr' α β _ _ _
-  | .addi       => (()', ()')
-  | .eqi        => (()', ()')
-  | .lt         => (tlitl 0, tlitl 0)
-  | .maxf       => (
-      if' a <' b then Tm.linZero _ else y',
-      if' a <' b then y' else Tm.linZero _
-    )
-  | .get        => (for' i => (if' i ==' b then y' else Tm.linZero _), ()')
-  | .tup        => (y'.fst, y'.snd)
+  | Const2.arithOp op  =>
+      ((Const2.arithOp op).dr a.fst b.fst,,
+       fun' y' =>
+        let (a',b') := op.dr' a.fst b.fst y'
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+  | Const2.linOp op    =>
+      ((Const2.linOp op).dr a.fst b.fst,,
+       fun' y' =>
+        let (a',b') := @linOpDr' α β _ _ _
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+  | Const2.linScale op =>
+      ((Const2.linScale op).dr a.fst b.fst,,
+       fun' y' =>
+        let (a',b') := @linScaleDr' α β _ _ _
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+  | .addi       =>
+      (a.fst.addi b.fst,,
+       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+  | .eqi        =>
+      (a.fst.eqi b.fst,,
+       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+  | .lt         =>
+      (a.fst <' b.fst,,
+       fun' y' => Tm.sumLins (a.snd@@ tlitl 0) (b.snd@@ tlitl 0))
+  | .maxf       =>
+      (a.fst.maxf b.fst,,
+       fun' y' =>
+        let a' := if' a.fst <' b.fst then Tm.linZero _ else y'
+        let b' := if' a.fst <' b.fst then y' else Tm.linZero _
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+  | .get        =>
+      (a.fst[[b.fst]],,
+       fun' y' =>
+        let a' := for' i => (if' i ==' b.fst then y' else Tm.linZero _)
+        Tm.sumLins (a.snd@@ a') (b.snd@@ ()'))
+  | .tup        =>
+      ((a.fst,, b.fst),,
+       fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
   | .refSet     => panic! "refSet not supported in automatic differentiation"
-  | .app        => nomatch ((ok rfl) rfl) -- as special case handled in Tm.dr'
+  | .app => -- special case
+      let' f := a;
+      let' arg := b;
+      let' y := f.fst @@ arg.fst;
+      (
+        y.fst,,
+        fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
+      )
 
 ----------------------------------------------------------------------------------------------
 
@@ -200,29 +233,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
       const1.dr t.fst,,
       fun' y' => t.snd @@ (const1.dr' t.fst y')
     )
-| .cst2 const2 a b (α₁:=α) (α₂:=β) (α:=γ) =>
-    -- if h: α = β ~> γ then
-    --   if const2 = h▸Const2.app then sorry
-    -- else sorry else sorry
-
-    match h: const2 with
-    | Const2.app => -- special case
-      let' f := a.dr' env;
-      let' arg := b.dr' env;
-      let' y := f.fst @@ arg.fst;
-      (
-        y.fst,,
-        fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
-      )
-    | const2 =>
-      let' a := a.dr' env;
-      let' b := b.dr' env;
-      (
-        const2.dr a.fst b.fst,,
-        fun' y' =>
-          let (a', b') := const2.dr' a.fst b.fst y' (by  sorry)
-          Tm.sumLins (a.snd @@ a') (b.snd @@ b')
-    )
+| .cst2 const2 a b => const2.dr' env (a.dr' env) (b.dr' env)
 | .bld a              =>
   let' arr := for'v idx =>
     let'v idx := (.var idx,, fun' y' => Tm.linZero _);
@@ -236,7 +247,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
     let rec go (env': EnvDr)(f: Tm VPar env'.ty.dr' → Tm VPar (env.ty.dr')):
       Tm VPar (α.drEnv env) :=
         match env' with
-        | [] => .var (v.drEnv env) -- VPar not in env therefore allready changed by Tm.dr' rodo ??
+        | [] => .var (v.drEnv env)
         | ⟨α',x⟩ :: env'' => if t: α=α' then if x=t▸v
             then (.var v.dr,, fun' y' => f (t▸y',, Tm.linZero _)) -- in env, put dr in env
             else go env'' (f (Tm.linZero _,, ·)) else go env'' (f (Tm.linZero _,, ·))

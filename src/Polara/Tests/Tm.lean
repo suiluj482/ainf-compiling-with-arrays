@@ -318,148 +318,148 @@ namespace TmTest
           ⟩,
         ],
         node "dr" [
-          -- -- literals
-          -- leaf ⟨"litnat", _,_,
-          --   (tlitn 42).dr, id,
-          --   some 42
-          -- ⟩,
-          -- leaf ⟨"litflt", _,_,
-          --   (tlitf 3.14).dr, id,
-          --   some 3.14
-          -- ⟩,
-          -- -- func
-          -- leaf ⟨"id", _,_,
-          --   (fun' x:flt => x).dr, (let't v, d := ·@@ tlitf 3.14; (v,, d@@ tlitl 1.0)),
-          --   some (3.14, 1.0)
-          -- ⟩,
-          -- leaf ⟨"twoDfEval", _,_,
-          --   (fun' x:flt××flt => x.fst + x.snd).dr,
-          --   (let't v, d := ·@@ (tlitf 3.0,, tlitf 4.0);
-          --     (v,, d@@ tlitl 1.0)),
-          --   some (7.0, (1.0, 1.0))
-          -- ⟩,
-          -- -- cst1
-          -- leaf ⟨"exp", _,_,
-          --   (fun' x:flt => x.exp).dr,
-          --   (let't v, d := ·@@ tlitf 0.0; (v,, d@@ tlitl 1.0)),
-          --   some (1.0, 1.0)
-          -- ⟩,
-          -- leaf ⟨"log", _,_,
-          --   (fun' x:flt => x.log).dr,
-          --   (let't v, d := ·@@ tlitf 1.0; (v,, d@@ tlitl 1.0)),
-          --   some (0.0, 1.0)
-          -- ⟩,
-          -- leaf ⟨"sqrt", _,_,
-          --   (fun' x:flt => x.sqrt).dr,
-          --   (let't v, d := ·@@ tlitf 4.0; (v,, d@@ tlitl 1.0)),
-          --   some (2.0, 0.25)
-          -- ⟩,
-          -- leaf ⟨"normCdf", _,_,
-          --   (fun' x:flt => x.normCdf).dr,
-          --   (let't v, d := ·@@ tlitf 0.0; (v,, d@@ tlitl 1.0)),
-          --   some (0.5, 0.3989422804)
-          -- ⟩,
-          -- leaf ⟨"fst", _,_,
-          --   (fun' x:(flt ×× flt) => x.fst).dr,
-          --   (let't v, d := ·@@ (tlitf 4.2,, tlitf 3.14); (v,, d@@ tlitl 1.0)),
-          --   some (4.2, (1.0, 0.0))
-          -- ⟩,
-          -- leaf ⟨"snd", _,_,
-          --   (fun' x:(flt ×× flt) => x.snd).dr,
-          --   (let't v, d := ·@@ (tlitf 4.2,, tlitf 3.14); (v,, d@@ tlitl 1.0)),
-          --   some (3.14, (0.0, 1.0))
-          -- ⟩,
-          -- leaf ⟨"sumf", _,_,
-          --   (fun' x:(array 10 flt) => x.sumf).dr,
-          --   (let't v, d := ·@@ (for' i:10 => tlitf 4.2); (v,, d@@ tlitl 1.0)),
-          --   some (42.0, Vector.replicate 10 1.0)
-          -- ⟩,
-          -- leaf ⟨"n2f", _,_,
-          --   (fun' x:nat => x.n2f).dr,
-          --   (let't v, d := ·@@ tlitn 42; (v,, d@@ tlitl 1.0)),
-          --   some (42.0, ())
-          -- ⟩,
-          -- leaf ⟨"n2fRmUnits", _,_,
-          --   (fun' x:nat => x.n2f).dr.rmUnits,
-          --   (·@@ tlitn 42),
-          --   some (42.0)
-          -- ⟩,
-          -- -- cst2
-          -- leaf ⟨"add", _,_,
-          --   (fun' x:flt => fun' y:flt => x + y).dr,
-          --   (let't t, dx := ·@@ tlitf 40.0;
-          --    let' y := tlitf 2.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (42.0, (1.0, 1.0))
-          -- ⟩,
-          -- leaf ⟨"sub", _,_,
-          --   (fun' x:flt => fun' y:flt => x - y).dr,
-          --   (let't t, dx := ·@@ tlitf 44.0;
-          --    let' y := tlitf 2.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (42.0, (1.0, -1.0))
-          -- ⟩,
-          -- leaf ⟨"mul", _,_,
-          --   (fun' x:flt => fun' y:flt => x * y).dr,
-          --   (let't t, dx := ·@@ tlitf 44.0;
-          --    let' y := tlitf 2.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (88.0, (2.0, 44.0))
-          -- ⟩,
-          -- leaf ⟨"div", _,_,
-          --   (fun' x:flt => fun' y:flt => x / y).dr,
-          --   (let't t, dx := ·@@ tlitf 44.0;
-          --    let' y := tlitf 2.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (22.0, (0.5, -44.0))
-          -- ⟩,
-          -- leaf ⟨"adda", _,_,
-          --   (fun' x:(array 10 flt) => fun' y:(array 10 flt) => x + y).dr,
-          --   (let't t, dx := ·@@ (for' i:10 => tlitf 40.0);
-          --    let' y := (for' i:10 => tlitf 2.0);
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, (for' i:10 => tlitl 1.0)),, dy@@ (for' i:10 => tlitl 1.0)))),
-          --   some ((Vector.replicate 10 42.0), (Vector.replicate 10 1.0, Vector.replicate 10 1.0))
-          -- ⟩,
-          -- leaf ⟨"maxf", _,_,
-          --   (fun' x:flt => fun' y:flt => x.maxf y).dr,
-          --   (let't t, dx := ·@@ tlitf 40.0;
-          --    let' y := tlitf 42.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (42.0, (0.0, 1.0))
-          -- ⟩,
-          -- -- higher order functions
-          -- leaf ⟨"curried", _,_,
-          --   (fun' x:flt => fun' y:flt => x + y).dr,
-          --   (let't t, dx := ·@@ tlitf 4.0;
-          --    let' y := tlitf 2.0;
-          --    let't v, dy := t@@ y;
-          --    (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-          --   some (6.0, (1.0, 1.0))
-          -- ⟩,
-          -- leaf ⟨"curried2", _,_,
-          --   (fun' x:flt => fun' y:flt => fun' z:flt => x + y).dr,
-          --   (let't t, dx := ·@@ tlitf 4.0;
-          --    let' y := tlitf 2.0;
-          --    let't t, dy := t@@ y;
-          --    let' z := tlitf 100.0;
-          --    let't v, dz := t@@ z;
-          --    (v,, (dx@@ (y,, (z,, tlitl 1.0)),, (dy@@ (y,, tlitl 1.0),, dz@@ tlitl 1.0)))),
-          --   some (6.0, (1.0, 1.0, 0.0))
-          -- ⟩,
-          -- leaf ⟨"higherorder", _,_,
-          --   (fun' f:(flt ~> flt) => fun' x:flt => (tlitf 1.0) + (f @@ x)).dr,
-          --   (let't t, df := ·@@ (fun' y:flt => (y + tlitf 1.0,, fun' dy:lin => dy)); -- (·+1)
-          --    let' x := (tlitf 4.0);
-          --    let't v, dx := t@@ x;
-          --    (v,, dx@@ tlitl 1.0)),
-          --   some (6.0, 1.0)
-          -- ⟩,
+          -- literals
+          leaf ⟨"litnat", _,_,
+            (tlitn 42).dr, id,
+            some 42
+          ⟩,
+          leaf ⟨"litflt", _,_,
+            (tlitf 3.14).dr, id,
+            some 3.14
+          ⟩,
+          -- func
+          leaf ⟨"id", _,_,
+            (fun' x:flt => x).dr, (let't v, d := ·@@ tlitf 3.14; (v,, d@@ tlitl 1.0)),
+            some (3.14, 1.0)
+          ⟩,
+          leaf ⟨"twoDfEval", _,_,
+            (fun' x:flt××flt => x.fst + x.snd).dr,
+            (let't v, d := ·@@ (tlitf 3.0,, tlitf 4.0);
+              (v,, d@@ tlitl 1.0)),
+            some (7.0, (1.0, 1.0))
+          ⟩,
+          -- cst1
+          leaf ⟨"exp", _,_,
+            (fun' x:flt => x.exp).dr,
+            (let't v, d := ·@@ tlitf 0.0; (v,, d@@ tlitl 1.0)),
+            some (1.0, 1.0)
+          ⟩,
+          leaf ⟨"log", _,_,
+            (fun' x:flt => x.log).dr,
+            (let't v, d := ·@@ tlitf 1.0; (v,, d@@ tlitl 1.0)),
+            some (0.0, 1.0)
+          ⟩,
+          leaf ⟨"sqrt", _,_,
+            (fun' x:flt => x.sqrt).dr,
+            (let't v, d := ·@@ tlitf 4.0; (v,, d@@ tlitl 1.0)),
+            some (2.0, 0.25)
+          ⟩,
+          leaf ⟨"normCdf", _,_,
+            (fun' x:flt => x.normCdf).dr,
+            (let't v, d := ·@@ tlitf 0.0; (v,, d@@ tlitl 1.0)),
+            some (0.5, 0.3989422804)
+          ⟩,
+          leaf ⟨"fst", _,_,
+            (fun' x:(flt ×× flt) => x.fst).dr,
+            (let't v, d := ·@@ (tlitf 4.2,, tlitf 3.14); (v,, d@@ tlitl 1.0)),
+            some (4.2, (1.0, 0.0))
+          ⟩,
+          leaf ⟨"snd", _,_,
+            (fun' x:(flt ×× flt) => x.snd).dr,
+            (let't v, d := ·@@ (tlitf 4.2,, tlitf 3.14); (v,, d@@ tlitl 1.0)),
+            some (3.14, (0.0, 1.0))
+          ⟩,
+          leaf ⟨"sumf", _,_,
+            (fun' x:(array 10 flt) => x.sumf).dr,
+            (let't v, d := ·@@ (for' i:10 => tlitf 4.2); (v,, d@@ tlitl 1.0)),
+            some (42.0, Vector.replicate 10 1.0)
+          ⟩,
+          leaf ⟨"n2f", _,_,
+            (fun' x:nat => x.n2f).dr,
+            (let't v, d := ·@@ tlitn 42; (v,, d@@ tlitl 1.0)),
+            some (42.0, ())
+          ⟩,
+          leaf ⟨"n2fRmUnits", _,_,
+            (fun' x:nat => x.n2f).dr.rmUnits,
+            (·@@ tlitn 42),
+            some (42.0)
+          ⟩,
+          -- cst2
+          leaf ⟨"add", _,_,
+            (fun' x:flt => fun' y:flt => x + y).dr,
+            (let't t, dx := ·@@ tlitf 40.0;
+             let' y := tlitf 2.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (42.0, (1.0, 1.0))
+          ⟩,
+          leaf ⟨"sub", _,_,
+            (fun' x:flt => fun' y:flt => x - y).dr,
+            (let't t, dx := ·@@ tlitf 44.0;
+             let' y := tlitf 2.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (42.0, (1.0, -1.0))
+          ⟩,
+          leaf ⟨"mul", _,_,
+            (fun' x:flt => fun' y:flt => x * y).dr,
+            (let't t, dx := ·@@ tlitf 44.0;
+             let' y := tlitf 2.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (88.0, (2.0, 44.0))
+          ⟩,
+          leaf ⟨"div", _,_,
+            (fun' x:flt => fun' y:flt => x / y).dr,
+            (let't t, dx := ·@@ tlitf 44.0;
+             let' y := tlitf 2.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (22.0, (0.5, -44.0))
+          ⟩,
+          leaf ⟨"adda", _,_,
+            (fun' x:(array 10 flt) => fun' y:(array 10 flt) => x + y).dr,
+            (let't t, dx := ·@@ (for' i:10 => tlitf 40.0);
+             let' y := (for' i:10 => tlitf 2.0);
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, (for' i:10 => tlitl 1.0)),, dy@@ (for' i:10 => tlitl 1.0)))),
+            some ((Vector.replicate 10 42.0), (Vector.replicate 10 1.0, Vector.replicate 10 1.0))
+          ⟩,
+          leaf ⟨"maxf", _,_,
+            (fun' x:flt => fun' y:flt => x.maxf y).dr,
+            (let't t, dx := ·@@ tlitf 40.0;
+             let' y := tlitf 42.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (42.0, (0.0, 1.0))
+          ⟩,
+          -- higher order functions
+          leaf ⟨"curried", _,_,
+            (fun' x:flt => fun' y:flt => x + y).dr,
+            (let't t, dx := ·@@ tlitf 4.0;
+             let' y := tlitf 2.0;
+             let't v, dy := t@@ y;
+             (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
+            some (6.0, (1.0, 1.0))
+          ⟩,
+          leaf ⟨"curried2", _,_,
+            (fun' x:flt => fun' y:flt => fun' z:flt => x + y).dr,
+            (let't t, dx := ·@@ tlitf 4.0;
+             let' y := tlitf 2.0;
+             let't t, dy := t@@ y;
+             let' z := tlitf 100.0;
+             let't v, dz := t@@ z;
+             (v,, (dx@@ (y,, (z,, tlitl 1.0)),, (dy@@ (y,, tlitl 1.0),, dz@@ tlitl 1.0)))),
+            some (6.0, (1.0, 1.0, 0.0))
+          ⟩,
+          leaf ⟨"higherorder", _,_,
+            (fun' f:(flt ~> flt) => fun' x:flt => (tlitf 1.0) + (f @@ x)).dr,
+            (let't t, _ := ·@@ (fun' y:flt => (y + tlitf 1.0,, fun' dy:lin => dy)); -- (·+1)
+             let' x := (tlitf 4.0);
+             let't v, dx := t@@ x;
+             (v,, dx@@ tlitl 1.0)),
+            some (6.0, 1.0)
+          ⟩,
         ],
       ],
     ]
