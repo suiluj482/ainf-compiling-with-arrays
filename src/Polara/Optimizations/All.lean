@@ -21,13 +21,13 @@ def pipelines: List (String × Pipeline) := [
     "norm",
     λ _ t => return t.normVPar
   ),
-  (
-    "ainf",
-    λ n t => do
-      let ainf := t.toAINF
-      let _ ← writeTmpFile s!"{n}.ainf" ainf.toString
-      return ainf.toTm
-  ),
+  -- (
+  --   "ainf",
+  --   λ n t => do
+  --     let ainf := t.toAINF
+  --     let _ ← writeTmpFile s!"{n}.ainf" ainf.toString
+  --     return ainf.toTm
+  -- ),
   (
     "ainfOptimize",
     λ n t => do

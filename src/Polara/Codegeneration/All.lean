@@ -22,6 +22,6 @@ abbrev BenchRes := Nat × Float -- iterations, time
 
 def runners: List (String × Run) := [
     ("Lean", run "Lean"),
-    ("Python", run "Python"),
+    -- ("Python", run "Python"),
     -- ("Jax", run "Jax")
   ]

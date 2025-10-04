@@ -257,6 +257,48 @@ def Ty.linRet := Ty.linArg
 def Ty.linFun: Ty → Ty → Ty
 | α, β => α.linArg ~> β.linRet
 
+def Tm.zero (α: Ty): Tm Γ α :=
+  match α with
+  | .lin => Tm.cst0 (Const0.litl 0)
+  | _ ~> β => Tm.abs (λ _ => Tm.zero β)
+  | α ×× β => Tm.cst2 Const2.tup (Tm.zero α) (Tm.zero β)
+  | .array _ α => Tm.bld (λ _ => Tm.zero α)
+  | .unit => ()'
+  | .nat => tlitn 0
+  | .idx _ => tliti 0
+  | .flt => tlitf 0
+  | .ref _ => panic! "Tm.linZero does not support references"
+
+def Tm.sum (a b: Tm Γ α): Tm Γ α :=
+  match α with
+  | .lin => a + b
+  | .unit => ()'
+  | _ ×× _ => (
+      Tm.sum a.fst b.fst,,
+      Tm.sum a.snd b.snd
+    )
+  | .array _ _ => for' i => Tm.sum a[[i]] b[[i]]
+  | _ ~> _ => fun' p => Tm.sum (a @@ p) (b @@ p)
+  | .nat => a + b
+  | .flt => a + b
+  | .idx _ => panic! "Tm.sum doesn't support idx"
+  | .ref _ => panic! "sumArrayOfLins not supported for references"
+
+def Tm.sumArray (arr: Tm Γ (.array n α)): Tm Γ α :=
+  match α with
+  | .lin => arr.suml
+  | .unit => ()'
+  | _ ×× _ => (
+      (for' i => arr[[i]].fst).sumArray,,
+      (for' i => arr[[i]].snd).sumArray
+    )
+  | _ ~> _ => fun' a => (for' i => arr[[i]] @@ a).sumArray
+  | .array _ _ => for' j => (for' i => arr[[i]][[j]]).sumArray
+  | .flt => arr.sumf
+  | .nat => panic! "Tm.sumArray doesn't support nat"
+  | .idx _ => panic! "Tm.sumArray doesn't support idx"
+  | .ref _ => panic! "sumArrayOfLins not supported for references"
+
 def Tm.linZero (α: Ty): Tm Γ α :=
   match α with
   | .lin => Tm.cst0 (Const0.litl 0)
@@ -275,11 +317,11 @@ def Tm.sumLins (a b: Tm Γ α): Tm Γ α :=
       Tm.sumLins a.fst b.fst,,
       Tm.sumLins a.snd b.snd
     )
-  | .array _ _ => for' i => Tm.sumLins a[[i]] b[[i]]
   | _ ~> _ => fun' p => Tm.sumLins (a @@ p) (b @@ p)
+  | .array _ _ => for' i => Tm.sumLins a[[i]] b[[i]]
   | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
-  | .ref _ => panic! "sumArrayOfLins not supported for references"
 
+  | .ref _ => panic! "sumArrayOfLins not supported for references"
 def Tm.sumArrayOfLins (arr: Tm Γ (.array n α)): Tm Γ α :=
   match α with
   | .lin => arr.suml

@@ -17,7 +17,7 @@ mutual
   | α ×× β     => α.dr' ×× β.dr'
   | .array n α => .array n α.dr'
   | .ref _     => panic! "ref not supported in automatic differentiation"
-  | α ~> β     => Ty.copower α.dr β.dr'
+  | α ~> β     => Ty.copower α.dr β.dr' -- todo not α.dr'?
 
   @[reducible]
   def Ty.dr: Ty → Ty
@@ -130,8 +130,8 @@ def Const1.dr' (x: Tm Γ α.dr)(y': Tm Γ β.dr'):
 | .normCdf =>                          -- (normCdr x)' = (1/sqrt(2*pi)) * e^(-x^2/2) * dx
     (y' / (tlitf 2 * Tm.π).sqrt) * (tlitf 0 - (x * x / (tlitf 2))).exp
 | .log     => y' / x                   -- (log x)' = 1/x
-| .fst     => (y',, Tm.linZero _)
-| .snd     => (Tm.linZero _,, y')
+| .fst     => (y',, Tm.zero _)
+| .snd     => (Tm.zero _,, y')
 | .sumf    => for'v _ => y'
 | .suml    => for'v _ => y'
 | .i2n     => ()'
@@ -152,15 +152,15 @@ def ArithOp.dr' [t: BiArraysC BiArith α β γ](op: ArithOp)
         | .add => (y', y')                     -- (a + b)' = a' + b'
         | .sub => (y', tlitl 0 - y')           -- (a - b)' = a' - b'
         | .mul => (y' * b, y' * a)             -- (a * b)' = a' * b + a * b'
-        | .div => (y' / b, y' * a / (b*b))     -- (a / b)' = (a' * b - a * b') / (b^2)
+        | .div => (y' / b, (tlitl 0) - y' * a / (b*b))     -- (a / b)' = (a' * b - a * b') / (b^2)
 def linOpDr' [t: BiArraysC BiLin α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   match t.t with
   | .array n t' => (@linOpDr' _ _ _ _ ⟨t'⟩).map (for'v _ => ·) (for'v _ => ·)
   | .base (.lins) => (()', ()')
 def linScaleDr' [t: BiArrayC BiLF α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   match t.t with
-  | .array n (.lf) => (for'v _ => ()', for'v _ => Tm.linZero _) -- todo check
-  | .base (.lf) => (()', Tm.linZero _)
+  | .array n (.lf) => (for'v _ => ()', for'v _ => Tm.zero _) -- todo check
+  | .base (.lf) => (()', Tm.zero _)
 
 def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
   : Tm VPar (γ.drEnv env) := -- (Tm Γ α.dr' × Tm Γ β.dr') :=
@@ -169,40 +169,40 @@ def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(
       ((Const2.arithOp op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := op.dr' a.fst b.fst y'
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+        Tm.sum (a.snd@@ a') (b.snd@@ b'))
   | Const2.linOp op    =>
       ((Const2.linOp op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := @linOpDr' α β _ _ _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+        Tm.sum (a.snd@@ a') (b.snd@@ b'))
   | Const2.linScale op =>
       ((Const2.linScale op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := @linScaleDr' α β _ _ _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+        Tm.sum (a.snd@@ a') (b.snd@@ b'))
   | .addi       =>
       (a.fst.addi b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+       fun' y' => Tm.sum (a.snd@@ ()') (b.snd@@ ()'))
   | .eqi        =>
       (a.fst.eqi b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+       fun' y' => Tm.sum (a.snd@@ ()') (b.snd@@ ()'))
   | .lt         =>
       (a.fst <' b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ tlitl 0) (b.snd@@ tlitl 0))
+       fun' y' => Tm.sum (a.snd@@ tlitl 0) (b.snd@@ tlitl 0))
   | .maxf       =>
       (a.fst.maxf b.fst,,
        fun' y' =>
-        let a' := if' a.fst <' b.fst then Tm.linZero _ else y'
-        let b' := if' a.fst <' b.fst then y' else Tm.linZero _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+        let a' := if' a.fst <' b.fst then Tm.zero _ else y'
+        let b' := if' a.fst <' b.fst then y' else Tm.zero _
+        Tm.sum (a.snd@@ a') (b.snd@@ b'))
   | .get        =>
       (a.fst[[b.fst]],,
        fun' y' =>
-        let a' := for' i => (if' i ==' b.fst then y' else Tm.linZero _)
-        Tm.sumLins (a.snd@@ a') (b.snd@@ ()'))
+        let a' := for' i => (if' i ==' b.fst then y' else Tm.zero _)
+        Tm.sum (a.snd@@ a') (b.snd@@ ()'))
   | .tup        =>
       ((a.fst,, b.fst),,
-       fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+       fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
   | .refSet     => panic! "refSet not supported in automatic differentiation"
   | .app => -- special case
       let' f := a;
@@ -210,7 +210,7 @@ def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(
       let' y := f.fst @@ arg.fst;
       (
         y.fst,,
-        fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
+        fun' y' => Tm.sum (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
       )
 
 ----------------------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
 | .err => (.err,, fun' y' => .err)
 | .cst0 const0        => (
       const0.dr,,
-      fun' y' => Tm.linZero _
+      fun' y' => Tm.zero _
     )
 | .cst1 const1 t      =>
     let' t := t.dr' env;
@@ -236,11 +236,11 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
 | .cst2 const2 a b => const2.dr' env (a.dr' env) (b.dr' env)
 | .bld a              =>
   let' arr := for'v idx =>
-    let'v idx := (.var idx,, fun' y' => Tm.linZero _);
+    let'v idx := (.var idx,, fun' y' => Tm.zero _);
     (a (idx.idrEnv env)).dr' env;
   (
     for' idx => arr[[idx]].fst,,
-    fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArrayOfLins
+    fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArray
   )
 | .ite cond a b       => .ite cond (a.dr' env) (b.dr' env)
 | .var v (α:=α)       =>
@@ -249,8 +249,8 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
         match env' with
         | [] => .var (v.drEnv env)
         | ⟨α',x⟩ :: env'' => if t: α=α' then if x=t▸v
-            then (.var v.dr,, fun' y' => f (t▸y',, Tm.linZero _)) -- in env, put dr in env
-            else go env'' (f (Tm.linZero _,, ·)) else go env'' (f (Tm.linZero _,, ·))
+            then (.var v.dr,, fun' y' => f (t▸y',, Tm.zero _)) -- in env, put dr in env
+            else go env'' (f (Tm.zero _,, ·)) else go env'' (f (Tm.zero _,, ·))
     go env id
 | .bnd t f            => let'v v := t.dr' env; (f (v.idrEnv env)).dr' env
 | .abs f (α:=α) (β:=β)            =>
@@ -272,6 +272,14 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
 def Tm.dr (t: Tm VPar α): Tm VPar α.dr :=
   t.dr' [] |>.fst -- remove derivation of empty env
 
+-- open Ty
+
+-- #eval (fun' f:(flt ~> flt) => fun' x:flt => (tlitf 1.0) + (f @@ x)).dr
+
+-- #eval (unit).drEnv [⟨flt ~> unit, .v (.mk 0)⟩]
+
+-- #eval (fun' f:(flt ~> unit) => ()').dr' []
+-- #eval (()').dr' [⟨flt ~> unit, .v (.mk 0)⟩]
 
 -- f(x)(y) = x+y
 -- [1,2,3].map (·+1)

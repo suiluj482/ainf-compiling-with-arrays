@@ -56,14 +56,14 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | cst0 k => return s!"return {k.tmgen}"
   | cst1 k a => return s!"return {k.tmgen} (←{(← a.codegen')})"
   | cst2 k a b => return "return " ++ k.tmgen s!"(←{<- a.codegen'})" s!"(←{<- b.codegen'})"
-  | abs (α:=γ) f => do
+  | abs (α:=γ) (β:=β) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return s!"(return fun {v}:{γ.gen'} => do {(f v).codegen' (i,j+1)})"
-  | bld (n:=n) f => do
+    return s!"(return fun {v}:{γ.gen'} => do (({(f v).codegen' (i,j+1)}): {β.gen}))"
+  | bld (n:=n) (α:=β) f => do
     let (i,j) <- read
     let v := VPar.p (.mk j)
-    return  s!"(Vector.ebuild {n} fun {v} => do {(f v).codegen' (i, j+1)})"
+    return  s!"(Vector.ebuild {n} fun {v} => do (({(f v).codegen' (i, j+1)}): {β.gen}))"
   | bnd (α:=β) e f => do
     let (i,j) <- read
     let x := VPar.v (.mk i)

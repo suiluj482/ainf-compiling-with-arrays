@@ -50,7 +50,7 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | .nat => s.firstVal toNat'?
   | .flt => s.firstVal (·.toFloat?)
   | .lin => s.firstVal (·.toFloat?)
-  | .unit => if s == "()" then some ((), s.drop 2) else none
+  | .unit => if s.startsWith "()" then some ((), s.drop 2) else none
   | .idx _ => s.firstVal (·.toFin?)
   | α ×× β => do
       let s ← s.accept "("
@@ -75,7 +75,6 @@ def Ty.parse (α: Ty)(s: String): Option α.val := do
   let s := if s.startsWith "ok: " then s.drop 4 else s
   let (a, s) ← α.parse' s
   if s == "" then a else none
-
 
 ----
 

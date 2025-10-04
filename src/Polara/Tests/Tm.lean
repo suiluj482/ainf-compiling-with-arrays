@@ -415,7 +415,7 @@ namespace TmTest
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
              (v,, (dx@@ (y,, tlitl 1.0),, dy@@ tlitl 1.0))),
-            some (22.0, (0.5, -44.0))
+            some (22.0, (0.5, -11.0))
           ⟩,
           leaf ⟨"adda", _,_,
             (fun' x:(array 10 flt) => fun' y:(array 10 flt) => x + y).dr,
@@ -491,14 +491,14 @@ namespace TmTest
         let name := names.cons name |>.foldl (s!"{·}_{·}") ""
         match val with
         | some val => .inl (name, val, mes)
-        | none => .inr s!"{fullName}{name}: no value {mes}"
+        | none => .inr s!"{fullName}{name}: no value: {mes}"
       )
     let errors := errors ++ match expected with
       | some expected =>
         flat.filterMap (λ (name, val, mes) =>
             if α.similarVal expected val
               then none
-              else some s!"{fullName}{name}: expected {expected}, got {mes}"
+              else some s!"{fullName}{name}: expected: {expected}, got: {mes}"
           )
       | none =>
         flat.slidingPair.filterMap (λ ((n1, v1, m1), (n2, v2, m2)) =>
