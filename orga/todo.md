@@ -1,3 +1,6 @@
+# Notes
+- AD functions only work when they dont use external vars
+
 # Goal
 - automatic differentiation 
     - remove overhead, optimierung code generierung jax

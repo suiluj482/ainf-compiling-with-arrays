@@ -58,3 +58,7 @@
 - fixes
 - github workflow for tests
 - meassure times for tests
+29.09 - 06.10:
+- primitive df, dr tests
+- fix: python no ending scope
+- fix: dr removed sorry in a proof
