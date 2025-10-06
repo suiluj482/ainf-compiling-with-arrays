@@ -1,4 +1,4 @@
-def Vector.ebuild (n: Nat) (f: Fin n → Except String α): Except String (Vector α n) :=
+def Vector.ebuild (n: Nat) (f: Fin n → Option α): Option (Vector α n) :=
   Vector.ofFn f |>.mapM id
 
 instance [ToString α]: ToString (Vector α n) where

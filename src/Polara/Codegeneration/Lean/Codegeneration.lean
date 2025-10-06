@@ -7,13 +7,13 @@ def Ty.gen': Ty → String
   | lin => "Float"
   | Ty.idx i => s!"(Fin ({i}+1))"
   -- necessary because lazy
-  | a~>b => s!"({a.gen'} → Except String {b.gen'})"
+  | a~>b => s!"({a.gen'} → Option {b.gen'})"
   | a××b => s!"({a.gen'} × {b.gen'})"
   | array n b => s!"(Vector {b.gen'} {n})"
   | .unit => "Unit"
   | .ref _ => panic! "ref not supported in gen"
 -- for Tm.err
-def Ty.gen (t: Ty): String := s!"Except String {t.gen'}"
+def Ty.gen (t: Ty): String := s!"Option {t.gen'}"
 
 def Const0.tmgen (const0: Const0 α): String := match const0 with
 | mkRef => panic! "mkRef not supported in tmgen"
@@ -49,7 +49,7 @@ def Const2.tmgen (a: String) (b: String): Const2 α₁ α₂ α → String
   | refSet => panic! "refSet not supported in tmgen"
 
 def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
-  | err => return "Except.error \"Tm.err\""
+  | err => return "none"
   | var i => return match i with
     | .v v => s!"{v}"
     | .p p => s!"(return {p})"
@@ -71,7 +71,12 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   | ite cond a b =>
     return s!"(if ((←{← cond.codegen'}) != 0) then {<- a.codegen'} else {<- b.codegen'})"
 
-def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| ((do\n{(Tm.codegen' t (0,0)).indent}\n): {α.gen})"
+def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| match ((do\n{
+    (Tm.codegen' t (0,0)).indent.replace "←return" ""
+  }\n): {α.gen}) with
+| some x => ToString.toString x
+| none => \"Error\"
+"
 
 instance genLean: Codegen "Lean" :=
   ⟨Tm.codegen⟩
