@@ -17,10 +17,16 @@ private def String.toFloat'? (s: String): Option Float :=
   | _ => none
 
 def String.toFloat? (s: String): Option Float :=
-  if s.startsWith "-" then
-    s.drop 1 |>.toFloat'? |>.map (· * -1)
-  else
-    s.toFloat'?
+  let exp (c: String → Option Float)(s: String) :=
+    match s.split (·=='e') with
+    | [s] => c s
+    | [s, e] => return (←c s) * (10 ^ (←c e))
+    | _ => none
+  let min (c: String → Option Float)(s: String) :=
+    if s.startsWith "-"
+      then s.drop 1 |> c |>.map (· * -1)
+      else c s
+  (exp (min (·.toFloat'?))) s
 
 def String.toFin? (s: String): Option (Fin n) :=
   match s.toNat? with
