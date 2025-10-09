@@ -520,6 +520,11 @@ namespace TmTest
           none
         ⟩,
       ],
+      node "examplesThesis" [
+        node "cse" [
+
+        ],
+      ],
     ]
 
   def TmTestCase.run (fullName: String)(tc: TmTestCase): IO Result := do

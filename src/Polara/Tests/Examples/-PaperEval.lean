@@ -1,4 +1,4 @@
-import Polara.Tests.Examples.Definitions
+import Polara.Tests.Examples.PaperCompilingWithArrays
 
 open Tm Ty Const0 Const1 Const2
 

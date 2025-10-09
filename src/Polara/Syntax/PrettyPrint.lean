@@ -34,8 +34,8 @@ def Const1.toString : Const1 α₁ α → String
   | snd => "snd"
   | sumf => "sum"
   | suml => "sum"
-  | i2n => "val"
-  | n2f => "ofNat"
+  | i2n => "i2n"
+  | n2f => "n2f"
   | refGet => "refGet"
 instance: ToString (Const1 α₁ α) := ⟨Const1.toString⟩
 
