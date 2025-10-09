@@ -7,9 +7,8 @@ open Std
 private def Bnds.dead(marked: HashMap (Sigma Var) Unit): Bnds → Bnds
 | [] => []
 | bnd :: bnds =>
-    let ⟨v,_,prim⟩ := bnd
-    if marked.contains v then
-      let marked := marked.insertMany (prim.vars |>.map (·,()))
+    if marked.contains (Bnd.var bnd) then
+      let marked := marked.insertMany (Bnd.vars bnd |>.map (·,()))
       bnd :: dead marked bnds
     else dead marked bnds
 

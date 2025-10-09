@@ -1,6 +1,7 @@
 import Polara.Codegeneration.All
 import Polara.Optimizations.All
 import Polara.AD.All
+import Polara.Tests.Examples.All
 
 open Tree Ty
 
@@ -461,6 +462,63 @@ namespace TmTest
             some (6.0, 1.0)
           ⟩,
         ],
+      ],
+      node "examplesCompilingWithArrays" [
+        leaf ⟨"mainBlackScholes10", _,_,
+          mainBlackScholes,
+          (· @@ (for' i:10 => i.i2n.n2f)),
+          none
+        ⟩,
+        leaf ⟨"mainBlackScholes100", _,_,
+          mainBlackScholes,
+          (· @@ (for' i:100 => i.i2n.n2f)),
+          none
+        ⟩,
+        leaf ⟨"dense", _,_,
+          dense 10 20,
+          (· @@ (for' i => i.i2n.n2f)
+             @@ (for' i => for' j => i.i2n.n2f + j.i2n.n2f)
+             @@ (for' j => j.i2n.n2f)
+          ),
+          none
+        ⟩,
+        leaf ⟨"conv", _,_,
+          conv 10 20,
+          (· @@ (for' i => i.i2n.n2f)
+             @@ (for' i => i.i2n.n2f)
+          ),
+          none
+        ⟩,
+        leaf ⟨"loop1", _,_,
+          loop1 10,
+          id,
+          none
+        ⟩,
+        leaf ⟨"foo", _,_,
+          foo,
+          (· @@ (for' i:10 => i.i2n)),
+          none
+        ⟩,
+        leaf ⟨"cseTest1", _,_,
+          cseTest1,
+          (· @@ (tlitn 0)),
+          none
+        ⟩,
+        leaf ⟨"cseTest2", _,_,
+          cseTest2,
+          (· @@ (tlitn 0)),
+          none
+        ⟩,
+        leaf ⟨"cseTest3", _,_,
+          cseTest3,
+          (· @@ (tlitn 0)),
+          none
+        ⟩,
+        leaf ⟨"egypt5", _,_,
+          egypt 5,
+          (· @@ (tlitn 0)),
+          none
+        ⟩,
       ],
     ]
 

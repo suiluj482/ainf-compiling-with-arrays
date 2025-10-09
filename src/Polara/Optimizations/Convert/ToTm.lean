@@ -6,7 +6,6 @@ def EnvPart.tygenTm (t: Ty) (env: EnvPart): Ty := match env with
   | .func α _i  => (α ~> t)
   | .forc n _i  => (Ty.array n t)
   | .itec _i _m => t
-
 def Env.tygenTm (env: Env): Ty → Ty :=
   env.foldl EnvPart.tygenTm
 

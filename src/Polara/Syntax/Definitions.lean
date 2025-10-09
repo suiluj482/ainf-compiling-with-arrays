@@ -276,5 +276,6 @@ def filterVars (l: List (Sigma VPar)): List (Sigma Var) :=
   l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
 def filterPars (l: List (Sigma VPar)): List (Sigma Par) :=
   l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
+def Bnd.var: Bnd → Sigma Var := (λ ⟨v,_,_⟩ => v)
 def Bnd.vars := filterVars ∘ Bnd.vpars
 def Bnd.pars := filterPars ∘ Bnd.vpars
