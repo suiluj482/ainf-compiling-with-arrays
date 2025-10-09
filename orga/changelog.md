@@ -62,3 +62,8 @@
 - primitive df, dr tests
 - fix: python no ending scope
 - fix: dr removed sorry in a proof
+06.10 - 13.10:
+- line breaks in lean codegen
+- toAinf resets parameter at new binding again
+- original examples as test cases
+- fix String.toFloat? for pythons exponent notation
