@@ -59,3 +59,5 @@ def cseBreakFor2 := (
 #eval cseBreakFor2.toAINF
 #eval cseBreakFor2.toAINF.cse -- envs not compatible????
 #eval cseBreakFor2.toAINF.cse.toTm.normVPar
+
+-- Conclusion: Cse capabilities of CSE have more to do with accidental fusion than fission

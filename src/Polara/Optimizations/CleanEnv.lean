@@ -6,7 +6,7 @@ import Polara.Optimizations.Convert.All
 -- - loop invariant codemotion
 -- - loop unswitching
 
-private def Env.clean (pars: List (Sigma Par))(reqEnvs: List EnvPart)(ites: List (VPar .nat × Bool × (Par .nat ⊕ Env)))(env: Env): ReaderM Bnds Env :=
+private def Env.clean (reqPars: List (Sigma Par))(reqEnvParts: List EnvPart)(ites: List (VPar .nat × Bool × (Par .nat ⊕ Env)))(env: Env): ReaderM Bnds Env :=
   match env with
   | [] => return ites.map (λ (c,b,_) => .itec c b)
   | envPart :: env' => do match envPart with
@@ -18,21 +18,21 @@ private def Env.clean (pars: List (Sigma Par))(reqEnvs: List EnvPart)(ites: List
           )
         if -- envPart is required (loop&func invariant code motion)
           !reqItes.isEmpty           -- needed for an ites
-          ∨ pars.contains ⟨_,p⟩      -- paramter bound by envPart is needed
-          ∨ reqEnvs.contains envPart -- needed for the env of a used var
+          ∨ reqPars.contains ⟨_,p⟩      -- paramter bound by envPart is needed
+          ∨ reqEnvParts.contains envPart -- needed for the env of a used var
         then
           let itecs := reqItes.map (λ (c,b,_) => EnvPart.itec c b)
-          let pars'    := reqItes.filterMap (λ | (_,_, .inl p) => some ⟨_,p⟩ | _ => none) |>.foldl (·.addToSet ·) pars
-          let reqEnvs' := reqItes.filterMap (λ | (_,_, .inr e) => some e     | _ => none) |>.foldl (·.combineSets ·) reqEnvs
+          let pars'    := reqItes.filterMap (λ | (_,_, .inl p) => some ⟨_,p⟩ | _ => none) |>.foldl (·.addToSet ·) reqPars
+          let reqEnvs' := reqItes.filterMap (λ | (_,_, .inr e) => some e     | _ => none) |>.foldl (·.combineSets ·) reqEnvParts
           return itecs.append (envPart :: (←clean pars' reqEnvs' ites env'))
-        else clean pars reqEnvs ites env'
+        else clean reqPars reqEnvParts ites env'
     | .itec c b => -- buffer in ites until end or required (loop&func unswitching)
         match c with
         | .v v =>
             let env := (←v.lookupEnvRB).get!
-            clean pars reqEnvs (ites.concat (c,b, .inr env)) env'
+            clean reqPars reqEnvParts (ites.concat (c,b, .inr env)) env'
         | .p p =>
-            clean pars reqEnvs (ites.concat (c,b, .inl p  )) env'
+            clean reqPars reqEnvParts (ites.concat (c,b, .inl p  )) env'
 
 private def Bnds.cleanEnv (res: Bnds): Bnds → Bnds
 | [] => res
