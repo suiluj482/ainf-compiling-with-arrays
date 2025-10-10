@@ -13,7 +13,7 @@ private def Env.clean (reqPars: List (Sigma Par))(reqEnvParts: List EnvPart)(ite
     | .func _ p
     | .forc _ p =>
         let (reqItes, ites) := ites.seperateBy (λ -- seperate if itec is required to be in envPart
-            | (_,_, .inl p  ) => if t: p.type = .nat then t▸p == p else false
+            | (_,_, .inl par) => if t: p.type = .nat then t▸p == par else false
             | (_,_, .inr env) => env.contains envPart
           )
         if -- envPart is required (loop&func invariant code motion)
