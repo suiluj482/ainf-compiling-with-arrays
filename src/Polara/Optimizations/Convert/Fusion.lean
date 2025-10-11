@@ -1,21 +1,67 @@
 import Polara.Syntax.All
+-- import Polara.Optimizations.Convert.ToTm
 
-abbrev BndPrim := @Sigma (Sigma Var) (λ ⟨α,_⟩ => Prim α)
-abbrev BndTree := LTree EnvPart BndPrim
+------
+def SBnd := ((β: Ty) × Var β × Prim β)
+
+@[reducible]
+def Ty.envPart: EnvPart → Ty → Ty
+| .itec _ _ => id
+| .forc _ (n:=n) => Ty.array n
+| .func _ (α:=α) => Ty.arrow α
+
+abbrev EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
+
+def BndTree := List (Tree ((e: EnvPart) × List e.EscapingVar) SBnd)
 def AINFTree (α: Ty) := BndTree × VPar α
 
 partial def BndTree.toString: BndTree → String
-| [] => ""
-| node :: tree =>
-    let nodeS := match node with
-    | Tree.leaf ⟨⟨_,v⟩,prim⟩ => s!"let {v} := {prim}"
-    | Tree.node envPart tree' =>
-        let treeS := BndTree.toString tree' |>.indent.dropRight 2
-        s!"{envPart}:\n{treeS}"
-    s!"{nodeS}\n{BndTree.toString tree}"
+| bndTree => bndTree.map (λ node =>
+    match node with
+    | Tree.leaf ⟨_,v,prim⟩ => s!"let {v} := {prim}\n"
+    | Tree.node ⟨envPart, escVars⟩ tree' =>
+        let (tVars, sVars) := escVars
+          |>.map (λ (⟨_,y,x⟩: envPart.EscapingVar) => (s!"{y}",s!"{x}"))
+          |>.unzip
+        let treeS := BndTree.toString tree' |>.indent
+        s!"let {tVars} := {envPart}\n{treeS}{sVars}"
+  ) |> Print.foldLines
+
 def AINFTree.toString: AINFTree α → String
 | (tree, v) => s!"{tree.toString}{v}"
 instance: ToString (AINFTree α) := ⟨AINFTree.toString⟩
+
+open Std
+abbrev Ren := ListMap VPar VPar
+def Ren.apply: Ren → VPar α → Term α
+| r, v => Tm.var (r.lookup! v)
+
+def Prim.toTm (ren: Ren): Prim α → Term α
+| err           => Tm.err
+| var v         => ren.apply v
+| cst0 c        => Tm.cst0 c
+| cst1 c v      => Tm.cst1 c (ren.apply v)
+| cst2 c v1 v2  => Tm.cst2 c (ren.apply v1) (ren.apply v2)
+| ite cond a b  => Tm.ite (ren.apply cond) (ren.apply a) (ren.apply b)
+| abs _ _
+| bld _ _ => panic! "Fusion Prim.toTm"
+
+
+def BndTree.toTm (e: Env)(r: Ren): BndTree → (Term α → Term α × Ren)
+| [] => (λ t => (t, r))
+| node :: bndTree' => match node with
+  | .leaf ⟨_,v,prim⟩ =>
+      λ t => (let'v v' := prim.toTm r; t, ⟨_,.v v,.v v'⟩ :: r)
+  | .node ⟨envPart, escVars⟩ tree' => sorry
+
+def AINFTree.toTm: AINFTree α → Term α
+| (tree, v) => Tm.var v
+
+
+-- abbrev BndPrim := @Sigma (Sigma Var) (λ ⟨α,_⟩ => Prim α)
+-- abbrev BndTree := LTree EnvPart BndPrim
+-- def AINFTree (α: Ty) := BndTree × VPar α
+
 
 
 -- Operation deckt eine Env?

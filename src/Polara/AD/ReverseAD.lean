@@ -192,9 +192,14 @@ def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(
   | .maxf       =>
       (a.fst.maxf b.fst,,
        fun' y' =>
-        let a' := if' a.fst <' b.fst then Tm.zero _ else y'
-        let b' := if' a.fst <' b.fst then y' else Tm.zero _
-        Tm.sum (a.snd@@ a') (b.snd@@ b'))
+        -- if' a.fst <' b.fst
+        --   then Tm.sum (a.snd @@ (Tm.zero _)) (b.snd @@ y')
+        --   else Tm.sum (a.snd @@ y') (b.snd @@ (Tm.zero _))
+        let' c := a.fst <' b.fst;
+        let a' := if' c then Tm.zero _ else y'
+        let b' := if' c then y' else Tm.zero _
+        Tm.sum (a.snd@@ a') (b.snd@@ b')
+      )
   | .get        =>
       (a.fst[[b.fst]],,
        fun' y' =>

@@ -2,14 +2,17 @@ import Polara.Syntax.All
 import Polara.Optimizations.NbE
 -- import Polara.Examples.Definitions
 
-def Bnd := ((β: Ty) × Var β × Prim β)
-def EnvBnd := (List EnvPart) × Bnd
--- keine Liste sondern Set da reihenfolge durch topologische sortierung wieder herstellen, aber sets als listen definiert
-def AINF.toList: AINF α →  (List EnvBnd) × (VPar α)
-  | .ret v => ([], v)
-  | .bnd env v prim rest => rest.toList.map (⟨env.toList, _, v, prim⟩ :: ·) id
+def SBnd := ((β: Ty) × Var β × Prim β)
 
-def BndTree := List (Tree EnvPart Bnd)
+@[reducible]
+def Ty.envPart: EnvPart → Ty → Ty
+| .itec _ _ => id
+| .forc _ (n:=n) => Ty.array n
+| .func _ (α:=α) => Ty.arrow α
+
+def EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
+
+def BndTree := LTree ((e: EnvPart) × List e.EscapingVar) SBnd
 def AINFTree (α: Ty) := BndTree × VPar α
 
 -- todo optimize by allowing reorderings, diffrent order to prevent all the accesss to last element maybe also better for reordering

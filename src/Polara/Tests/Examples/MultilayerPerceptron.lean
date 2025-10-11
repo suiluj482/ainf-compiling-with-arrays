@@ -8,7 +8,9 @@ def Ty.matrix: Nat → Nat → Ty → Ty := (Ty.array · <| Ty.array · ·)
 notation:max ty"[["n"]]" => Ty.array n ty
 notation:max ty"[["n","m"]]" => Ty.matrix n m ty
 
-def Tm.relu (x: Term flt): Term flt := x.maxf (tlitf 0)
+-- if' makes no norm faster norm slow, maxf makes no norm impossible
+def Tm.relu (x: Term flt): Term flt := if' x <' tlitf 0 then tlitf 0 else x
+-- def Tm.relu (x: Term flt): Term flt := x.maxf (tlitf 0)
 
 def neuron {n: Nat} :=
   fun' x: flt[[n]] => fun' b: flt => fun' w: flt[[n]] =>
@@ -41,7 +43,8 @@ def learnStep :=
         (multilayerPerceptron.dr.le.normVPar @@ x).fst @@ ws
       ).snd @@ y
 
-#eval multilayerPerceptron.dr.le.normVPar
+#eval multilayerPerceptron
+#eval multilayerPerceptron.dr.le --.normVPar
 #eval learnStep @@ (for' x => tlitf 0) @@ (for' y => tlitf 1) @@ (Tm.zero _) |>.toVPar
 
 

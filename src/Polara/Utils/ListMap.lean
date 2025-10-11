@@ -28,3 +28,5 @@ def ListMap.lookup [DecidableEq I][∀ x:I, BEq (K x)] : ListMap K V → K α �
   | [],          _ => none
   | ⟨β,k,v⟩::ys, i => if h: β=α then if h▸ k == i then some (h▸v)
                       else lookup ys i else lookup ys i
+def ListMap.lookup! [DecidableEq I][∀ x:I, BEq (K x)][∀ x:I, Inhabited (V x)] : ListMap K V → K α → V α :=
+  (λ l k => ListMap.lookup l k |>.get!)
