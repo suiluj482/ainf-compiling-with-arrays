@@ -3,6 +3,11 @@ import Polara.Syntax.PrettyPrint
 
 open Tm Ty Const0 Const1 ArithOp AddOp MulOp Const2
 
+-- Ty
+def Ty.matrix: Nat → Nat → Ty → Ty := (Ty.array · <| Ty.array · ·)
+notation:max ty"[["n"]]" => Ty.array n ty
+notation:max ty"[["n","m"]]" => Ty.matrix n m ty
+
 -- Tm
 notation:max "let' "x" := "term";"res => Tm.bnd term (λ x => let x := Tm.var x; res)
 notation:max "let' "x":"α" := "term";"res => @Tm.bnd _ α _ term (λ x => let x := Tm.var x; res)
