@@ -67,3 +67,4 @@
 - toAinf resets parameter at new binding again
 - original examples as test cases
 - fix String.toFloat? for pythons exponent notation
+- fix aD, df, dr handling of outside or previous environments variables, incl tests for this

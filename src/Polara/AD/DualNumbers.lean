@@ -24,7 +24,7 @@ def Ty.aD: Ty → Ty :=
 -- [f] : flt × flt → fl × flt
 -- [f] (x, dx) := (f x, dx * f' x)
 
-def Const0.aD: Const0 α → Tm Γ α.aD
+private def Const0.aD: Const0 α → Tm Γ α.aD
 | .litn n => tlitn n
 | .litf f => (tlitf f,, tlitl 0) -- selector, gewicht der Ableitungsrichtung
 | .liti i => tliti i
@@ -32,7 +32,7 @@ def Const0.aD: Const0 α → Tm Γ α.aD
 | .litu => tlitu
 | mkRef => panic! "ref not supported in automatic differentiation"
 
-def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
+private def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
 | .exp     => (x.fst.exp ,, x.snd * x.fst.exp)              -- (e^x)'    = e^x
 | .log     => (x.fst.log,,  x.snd / x.fst)                  -- (log x)'  = 1/x
 | .sqrt    => (x.fst.sqrt,, x.snd / (tlitf 2 * x.fst.sqrt)) -- (sqrt x)' = 1/(2*sqrt x)
@@ -51,7 +51,7 @@ def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
 | .n2f     => (x.n2f,, tlitl 0)
 | refGet => panic! "ref not supported in automatic differentiation"
 
-def ArithOp.aD [t: BiArraysC BiArith α β γ](op: ArithOp)
+private def ArithOp.aD [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.aD)(b: Tm Γ β.aD): Tm Γ γ.aD :=
    match t.t with
   | .array n t' =>
@@ -72,7 +72,7 @@ def ArithOp.aD [t: BiArraysC BiArith α β γ](op: ArithOp)
           | .div => -- (a / b)' = (a' * b - a * b') / (b^2)
              (a.snd * b.fst - b.snd * a.fst) / (b.fst * b.fst)
         )
-def linOpAD [t: BiArraysC BiLin α β γ](op: AddOp)
+private def linOpAD [t: BiArraysC BiLin α β γ](op: AddOp)
   (a: Tm Γ α.aD)(b: Tm Γ β.aD): Tm Γ γ.aD :=
   match t.t with
   | .array n t' =>
@@ -80,7 +80,7 @@ def linOpAD [t: BiArraysC BiLin α β γ](op: AddOp)
       for' i => (linOpAD op a[[i]] b[[i]])
   | .base t' => match t' with
     | .lins => Tm.cst2 (.linOp op) a b
-def linScaleAD [t: BiArrayC BiLF α β γ](op: MulOp)
+private def linScaleAD [t: BiArrayC BiLF α β γ](op: MulOp)
   (a: Tm Γ α.aD)(b: Tm Γ β.aD): Tm Γ γ.aD :=
   let go {α' β' γ'}[t: BiLFC α' β' γ'](a: Tm Γ α'.aD)(b: Tm Γ β'.aD): Tm Γ γ'.aD :=
     match t.t with
@@ -94,7 +94,7 @@ def linScaleAD [t: BiArrayC BiLF α β γ](op: MulOp)
       have: BiLFC _ _ _ := ⟨t'⟩
       go a b
 
-def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
+private def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | arithOp op => op.aD a b
 | linOp op => linOpAD op a b
 | linScale op => linScaleAD op a b
@@ -109,19 +109,31 @@ def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm Γ γ.aD
 | .app  => a @@ b
 | .refSet => panic! "refSet not supported in automatic differentiation"
 
-def VPar.aD:  VPar α    → VPar α.aD := VPar.changeType
-def VPar.iaD: VPar α.aD → VPar α    := VPar.changeType
+private def VPar.aD:  VPar α    → VPar α.aD := VPar.changeType
+private def VPar.iaD: VPar α.aD → VPar α    := VPar.changeType
 
-def Tm.aD: Tm VPar α → Tm VPar α.aD
+private def DVars := List (Sigma VPar)
+private def Tm.liftIntoAD (t: Tm VPar α): Tm VPar α.aD :=
+  match α with
+  | .nat | .idx _ | .lin | .unit => t
+  | .flt => (t,, tlitl 0)
+  | _ ×× _ => (t.fst.liftIntoAD,, t.snd.liftIntoAD)
+  | .array _ _ => for' i => t[[i]].liftIntoAD
+  | _ ~> _ => panic! "Can not lift a function into the scope of dual numbers"
+  | .ref _ => panic! "Tm.liftIntoAD doesnt support ref"
+
+private def Tm.aD' (dv: DVars): Tm VPar α → Tm VPar α.aD
 | .err => .err
 | .cst0 const0 => const0.aD
-| .cst1 const1 t => const1.aD t.aD
-| .cst2 const2 a b => const2.aD a.aD b.aD
-| .abs f => fun'v x   => (f x.iaD).aD
-| .bld a => for'v idx => (a idx).aD
-| .ite cond a b => if' cond then a.aD else b.aD
-| .var v => .var v.aD
-| .bnd rest l => let'v v := rest.aD; (l v.iaD).aD
+| .cst1 const1 t => const1.aD (t.aD' dv)
+| .cst2 const2 a b => const2.aD (a.aD' dv) (b.aD' dv)
+| .abs f => fun'v x   => (f x.iaD).aD' (⟨_,x.iaD⟩ :: dv)
+| .bld a => for'v idx => (a idx).aD' (⟨_,idx⟩ :: dv)
+| .ite cond a b => if' cond then a.aD' dv else b.aD' dv
+| .var v => if dv.contains ⟨_,v⟩ then .var v.aD else (Tm.var v).liftIntoAD
+| .bnd rest l => let'v v := rest.aD' dv; (l v.iaD).aD' (⟨_,v.iaD⟩ :: dv)
+
+def Tm.aD: Tm VPar α → Tm VPar α.aD := Tm.aD' []
 
 -- #eval (fun' j: Ty.flt => for'v i:10 => (Tm.n2f (Tm.i2n (Tm.var i))) + j).aD.normVPar
 -- #eval (fun' i: Ty.flt => fun' j: Ty.flt => i + j).aD.normVPar.toAINF

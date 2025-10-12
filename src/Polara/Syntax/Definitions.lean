@@ -248,6 +248,8 @@ instance: BEq Bnd := ⟨λ ⟨⟨α,v⟩,e,p⟩ ⟨⟨α',v'⟩,e',p'⟩ =>
 -- + faster lookup
 -- - no order (renaming harder)
 deriving instance Hashable for Var
+deriving instance Hashable for Par
+deriving instance Hashable for VPar
 abbrev BndsH := Std.DHashMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev AINFH α := BndsH × VPar α
 

@@ -1,4 +1,5 @@
 import Polara.Optimizations.All
+import Polara.AD.All
 
 open Ty
 
@@ -61,3 +62,33 @@ def cseBreakFor2 := (
 #eval cseBreakFor2.toAINF.cse.toTm.normVPar
 
 -- Conclusion: Cse capabilities of CSE have more to do with accidental fusion than fission
+
+---- Test referential integrity
+namespace RefIn
+
+  def notDefined: Term flt :=
+    (Tm.var (.v (.mk 0)))
+
+  #eval notDefined.normVPar
+
+  def wrongType: Term flt :=
+    (let'v v := tlitn 0; Tm.var (v.changeType))
+  -- type is "part of variable name"
+  #eval wrongType.normVPar
+
+  def dfInEnv :=
+    (fun' x:flt => x).df
+
+  #eval dfInEnv.normVPar
+
+  def dfDiffEnvs :=
+    (let' v := tlitf 0; fun'v _:nat => v).df
+
+  #eval dfDiffEnvs.normVPar
+
+  def dfOutside :=
+    let' v := tlitf 0; (fun'v _:nat => v).df
+
+  #eval dfOutside.normVPar
+
+end RefIn

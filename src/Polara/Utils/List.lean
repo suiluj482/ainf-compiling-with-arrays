@@ -32,6 +32,9 @@ namespace List
       then l
       else a :: l
 
+  def keepRight (l: List α)(n: Nat): List α :=
+    l.drop (l.length-n)
+
   def combineSets [BEq α](l: List α): List α → List α
   | [] => l
   | a :: as => (l.addToSet a).combineSets as

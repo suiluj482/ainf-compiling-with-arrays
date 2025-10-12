@@ -34,18 +34,17 @@ end
 
 
 @[reducible]
-def EnvDr := List (Sigma VPar)
+private def EnvDr := List (Sigma VPar)
 @[reducible]
-def EnvDr.ty: EnvDr → Ty
+private def EnvDr.ty: EnvDr → Ty
 | [] => .unit
 | ⟨α,_⟩ :: env' => α ×× EnvDr.ty env'
 @[reducible]
-def Ty.drEnv (env: EnvDr): Ty → Ty
+private def Ty.drEnv (env: EnvDr): Ty → Ty
 | α => (α.dr ×× (α.dr' ~> (EnvDr.ty env).dr')) -- α ~> env
 
--- open Ty in
+-- open Ty
 -- #eval flt ~> flt |>.dr
--- open Ty in
 -- #eval flt ~> flt ~> flt |>.dr
 
 
@@ -53,7 +52,7 @@ def Ty.drEnv (env: EnvDr): Ty → Ty
 -- except Const2.app functions only changing type
 ----
 
-def Const0.dr: Const0 α → Tm Γ α.dr
+private def Const0.dr: Const0 α → Tm Γ α.dr
 | .litn n => tlitn n
 | .litf f => tlitf f
 | .liti i => tliti i
@@ -61,7 +60,7 @@ def Const0.dr: Const0 α → Tm Γ α.dr
 | .litu => tlitu
 | mkRef => panic! "ref not supported in automatic differentiation"
 
-def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
+private def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
 | .exp     => Tm.cst1 Const1.exp x
 | .sqrt    => Tm.cst1 Const1.sqrt x
 | .normCdf => Tm.cst1 Const1.normCdf x
@@ -74,7 +73,7 @@ def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
 | .n2f     => Tm.cst1 Const1.n2f x
 | refGet => panic! "ref not supported in automatic differentiation"
 
-def ArithOp.dr [t: BiArraysC BiArith α β γ](op: ArithOp)
+private def ArithOp.dr [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.dr)(b: Tm Γ β.dr): Tm Γ γ.dr :=
    match t.t with
   | .array n t' =>
@@ -83,7 +82,7 @@ def ArithOp.dr [t: BiArraysC BiArith α β γ](op: ArithOp)
   | .base t' => match t' with
     | .nats => Tm.cst2 (.arithOp op) a b
     | .flts => Tm.cst2 (.arithOp op) a b
-def linOpDr [t: BiArraysC BiLin α β γ](op: AddOp)
+private def linOpDr [t: BiArraysC BiLin α β γ](op: AddOp)
   (a: Tm Γ α.dr)(b: Tm Γ β.dr): Tm Γ γ.dr :=
   match t.t with
   | .array n t' =>
@@ -91,7 +90,7 @@ def linOpDr [t: BiArraysC BiLin α β γ](op: AddOp)
       for' i => (linOpDr op a[[i]] b[[i]])
   | .base t' => match t' with
     | .lins => Tm.cst2 (.linOp op) a b
-def linScaleDr [t: BiArrayC BiLF α β γ](op: MulOp)
+private def linScaleDr [t: BiArrayC BiLF α β γ](op: MulOp)
   (a: Tm Γ α.dr)(b: Tm Γ β.dr): Tm Γ γ.dr :=
   let go {α' β' γ'}[t: BiLFC α' β' γ'](a: Tm Γ α'.dr)(b: Tm Γ β'.dr): Tm Γ γ'.dr :=
     match t.t with
@@ -105,7 +104,7 @@ def linScaleDr [t: BiArrayC BiLF α β γ](op: MulOp)
       have: BiLFC _ _ _ := ⟨t'⟩
       go a b
 
-def Const2.dr (a: Tm Γ α.dr)(b: Tm Γ β.dr): Const2 α β γ → Tm Γ γ.dr
+private def Const2.dr (a: Tm Γ α.dr)(b: Tm Γ β.dr): Const2 α β γ → Tm Γ γ.dr
 | arithOp op => op.dr a b
 | linOp op => linOpDr op a b
 | linScale op => linScaleDr op a b
@@ -123,7 +122,7 @@ def Const2.dr (a: Tm Γ α.dr)(b: Tm Γ β.dr): Const2 α β γ → Tm Γ γ.dr
 -- derivation rules
 ----
 
-def Const1.dr' (x: Tm Γ α.dr)(y': Tm Γ β.dr'):
+private def Const1.dr' (x: Tm Γ α.dr)(y': Tm Γ β.dr'):
   Const1 α β → Tm Γ α.dr'
 | .exp     => y' * x.exp               -- (e^x)' = e^x
 | .sqrt    => y' / (tlitf 2 * x.sqrt)  -- (sqrt x)' = 1/(2*sqrt x)
@@ -138,7 +137,7 @@ def Const1.dr' (x: Tm Γ α.dr)(y': Tm Γ β.dr'):
 | .n2f     => ()'
 | refGet => panic! "ref not supported in automatic differentiation"
 
-def ArithOp.dr' [t: BiArraysC BiArith α β γ](op: ArithOp)
+private def ArithOp.dr' [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.dr)(b: Tm Γ β.dr)(y': Tm Γ γ.dr'): (Tm Γ α.dr' × Tm Γ β.dr') :=
    match t.t with
   | .array n t' =>
@@ -153,16 +152,16 @@ def ArithOp.dr' [t: BiArraysC BiArith α β γ](op: ArithOp)
         | .sub => (y', tlitl 0 - y')           -- (a - b)' = a' - b'
         | .mul => (y' * b, y' * a)             -- (a * b)' = a' * b + a * b'
         | .div => (y' / b, (tlitl 0) - y' * a / (b*b))     -- (a / b)' = (a' * b - a * b') / (b^2)
-def linOpDr' [t: BiArraysC BiLin α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
+private def linOpDr' [t: BiArraysC BiLin α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   match t.t with
   | .array n t' => (@linOpDr' _ _ _ _ ⟨t'⟩).map (for'v _ => ·) (for'v _ => ·)
   | .base (.lins) => (()', ()')
-def linScaleDr' [t: BiArrayC BiLF α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
+private def linScaleDr' [t: BiArrayC BiLF α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   match t.t with
   | .array n (.lf) => (for'v _ => ()', for'v _ => Tm.zero _) -- todo check
   | .base (.lf) => (()', Tm.zero _)
 
-def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
+private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
   : Tm VPar (γ.drEnv env) := -- (Tm Γ α.dr' × Tm Γ β.dr') :=
   match const2 with
   | Const2.arithOp op  =>
@@ -220,46 +219,68 @@ def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(
 
 ----------------------------------------------------------------------------------------------
 
-def VPar.drEnv (env: EnvDr): VPar α → VPar (α.drEnv env) := VPar.changeType
-def VPar.idrEnv (env: EnvDr): VPar (α.drEnv env) → VPar α := VPar.changeType
+private def VPar.drEnv (env: EnvDr): VPar α → VPar (α.drEnv env) := VPar.changeType
+private def VPar.idrEnv (env: EnvDr): VPar (α.drEnv env) → VPar α := VPar.changeType
 
-def VPar.dr: VPar α → VPar α.dr := VPar.changeType
-def VPar.idr: VPar α.dr → VPar α := VPar.changeType
+private def VPar.dr: VPar α → VPar α.dr := VPar.changeType
+private def VPar.idr: VPar α.dr → VPar α := VPar.changeType
 
-def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
+-- Var -> Definitionstiefe in Bezug auf env
+private def Ren := List (Sigma VPar × Nat)
+
+private def Tm.dr'(env: EnvDr)(ren: Ren): Tm VPar α → Tm VPar (α.drEnv env)
 | .err => (.err,, fun' y' => .err)
 | .cst0 const0        => (
       const0.dr,,
       fun' y' => Tm.zero _
     )
 | .cst1 const1 t      =>
-    let' t := t.dr' env;
+    let' t := t.dr' env ren;
     (
       const1.dr t.fst,,
       fun' y' => t.snd @@ (const1.dr' t.fst y')
     )
-| .cst2 const2 a b => const2.dr' env (a.dr' env) (b.dr' env)
-| .bld a              =>
+| .cst2 const2 a b => const2.dr' env (a.dr' env ren) (b.dr' env ren)
+| .bld a (n:=n)       =>
   let' arr := for'v idx =>
     let'v idx := (.var idx,, fun' y' => Tm.zero _);
-    (a (idx.idrEnv env)).dr' env;
+    let origIdx: VPar (.idx n) := idx.idrEnv env
+    (a origIdx).dr' env ((⟨_,origIdx⟩,env.length) :: ren);
   (
     for' idx => arr[[idx]].fst,,
     fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArray
   )
-| .ite cond a b       => .ite cond (a.dr' env) (b.dr' env)
+| .ite cond a b       => .ite cond (a.dr' env ren) (b.dr' env ren)
 | .var v (α:=α)       =>
     let rec go (env': EnvDr)(f: Tm VPar env'.ty.dr' → Tm VPar (env.ty.dr')):
       Tm VPar (α.drEnv env) :=
         match env' with
-        | [] => .var (v.drEnv env)
+        | [] =>
+          match ren.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
+          | some depth =>
+            -- dbg_trace s!"{v} defined with depth {depth}"
+            let rec go' (env): Term α.dr × (Term α.dr' → Term ((EnvDr.ty env).dr')) :=
+              if env.length ≤ depth
+                then let t := Tm.var (v.drEnv env); (t.fst, λ y' => t.snd @@ y')
+                else match env with
+                  | [] => panic! "Tm.dr' Tm.var depth in ren cant be right"
+                  | _ :: env => go' env |>.map id (λ y' => (Tm.zero _,, · y'))
+            let (v, d) := go' env; (v,, fun' y' => d y')
+          | none =>
+            -- dbg_trace s!"{v} defined outside"
+            if α.contains (λ | _ ~> _ => true | _ => false)
+              then panic! "Tm.df' outside vpar contains function"
+              else (Tm.var v.dr,, fun' y' => Tm.zero _)
         | ⟨α',x⟩ :: env'' => if t: α=α' then if x=t▸v
             then (.var v.dr,, fun' y' => f (t▸y',, Tm.zero _)) -- in env, put dr in env
             else go env'' (f (Tm.zero _,, ·)) else go env'' (f (Tm.zero _,, ·))
     go env id
-| .bnd t f            => let'v v := t.dr' env; (f (v.idrEnv env)).dr' env
+| .bnd t f            =>
+    let'v v := t.dr' env ren;
+    let origV := v.idrEnv env
+    (f origV).dr' env ((⟨_,origV⟩,env.length) :: ren)
 | .abs f (α:=α) (β:=β)            =>
-    let' f := fun'v x => (f x.idr).dr' (⟨_,x.idr⟩ :: env);
+    let' f := fun'v x => (f x.idr).dr' (⟨_,x.idr⟩ :: env) ren;
     (
       fun' x =>
         let' body := f @@ x;
@@ -275,7 +296,7 @@ def Tm.dr'(env: EnvDr): Tm VPar α → Tm VPar (α.drEnv env)
     )
 
 def Tm.dr (t: Tm VPar α): Tm VPar α.dr :=
-  t.dr' [] |>.fst -- remove derivation of empty env
+  t.dr' [] [] |>.fst -- remove derivation of empty env
 
 -- open Ty
 

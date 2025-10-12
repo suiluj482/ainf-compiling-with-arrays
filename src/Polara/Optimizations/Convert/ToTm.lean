@@ -2,31 +2,31 @@ import Polara.Syntax.All
 
 -- variable type in target language needs to consider environment
 @[reducible]
-def EnvPart.tygenTm (t: Ty) (env: EnvPart): Ty := match env with
+private def EnvPart.tygenTm (t: Ty) (env: EnvPart): Ty := match env with
   | .func α _i  => (α ~> t)
   | .forc n _i  => (Ty.array n t)
   | .itec _i _m => t
-def Env.tygenTm (env: Env): Ty → Ty :=
+private def Env.tygenTm (env: Env): Ty → Ty :=
   env.foldl EnvPart.tygenTm
 
-def RenParTm (Γ: Ty → Type) := ListMap Par Γ
-def RenParTm.apply (ren: RenParTm Γ) (x: Par α): Tm Γ α :=
+private def RenParTm (Γ: Ty → Type) := ListMap Par Γ
+private def RenParTm.apply (ren: RenParTm Γ) (x: Par α): Tm Γ α :=
   match ren.lookup x with
   | some x' => Tm.var x'
   | none    => Tm.err
 
-def EnvVar (Γ: Ty → Type)(α: Ty) := (env: Env) × Γ (env.tygenTm α)
-def RenVarTm (Γ: Ty → Type) := ListMap Var (EnvVar Γ)
+private def EnvVar (Γ: Ty → Type)(α: Ty) := (env: Env) × Γ (env.tygenTm α)
+private def RenVarTm (Γ: Ty → Type) := ListMap Var (EnvVar Γ)
 
 structure RenTm (Γ: Ty → Type) where
  par: RenParTm Γ
  var: RenVarTm Γ
-def RenTm.addPar (ren: RenTm Γ) (x: Par α) (y: Γ α): RenTm Γ :=
+private def RenTm.addPar (ren: RenTm Γ) (x: Par α) (y: Γ α): RenTm Γ :=
   { ren with par := ⟨_, x, y⟩ :: ren.par }
-def RenTm.addVar (ren: RenTm Γ) (x: Var α) (y: EnvVar Γ α): RenTm Γ :=
+private def RenTm.addVar (ren: RenTm Γ) (x: Var α) (y: EnvVar Γ α): RenTm Γ :=
   { ren with var := ⟨_, x, y⟩ :: ren.var }
 
-def Env.withargsTm (env: Env)(ren: RenParTm Γ)(x: Tm Γ (env.tygenTm α)): Tm Γ α :=
+private def Env.withargsTm (env: Env)(ren: RenParTm Γ)(x: Tm Γ (env.tygenTm α)): Tm Γ α :=
   match env with
   | []           => x
   | .func _α i :: env' =>
@@ -35,14 +35,14 @@ def Env.withargsTm (env: Env)(ren: RenParTm Γ)(x: Tm Γ (env.tygenTm α)): Tm �
       Tm.cst2 Const2.get (Env.withargsTm env' ren x) (ren.apply i)
   | .itec _i _b :: env' => Env.withargsTm env' ren x
 
-def RenTm.apply (ren: RenTm Γ) (x: VPar α): Tm Γ α :=
+private def RenTm.apply (ren: RenTm Γ) (x: VPar α): Tm Γ α :=
   match x with
   | .v v => match ren.var.lookup v with
     | some ⟨env, x'⟩ => env.withargsTm ren.par (Tm.var x')
     | none           => Tm.err
   | .p p => ren.par.apply p
 
-def Prim.toTm (_env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
+private def Prim.toTm (_env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
 | err           => Tm.err
 | var v         => ren.apply v
 | cst0 c        => Tm.cst0 c
@@ -59,7 +59,7 @@ def Prim.toTm (_env: Env)(ren: RenTm Γ): Prim α → Tm Γ α
   )
 
 -- wrap environment around term depending on done renamings
-def Env.wrapTm (ren: RenTm Γ)(k: RenTm Γ → Tm Γ α)(env: Env): (Tm Γ (env.tygenTm α)) :=
+private def Env.wrapTm (ren: RenTm Γ)(k: RenTm Γ → Tm Γ α)(env: Env): (Tm Γ (env.tygenTm α)) :=
   match env with
   | [] => k ren
   | .func _ i :: env =>
@@ -75,16 +75,16 @@ def Env.wrapTm (ren: RenTm Γ)(k: RenTm Γ → Tm Γ α)(env: Env): (Tm Γ (env.
   | .itec cond true :: env =>
       Env.wrapTm ren (λ ren =>
         let cond' := ren.apply cond
-        if' cond' then k ren else Tm.err -- undefined instead?
+        if' cond' then k ren else Tm.err -- unprivate defined instead?
       ) env
   | .itec cond false :: env =>
       Env.wrapTm ren (λ ren =>
         let cond' := ren.apply cond
-        if' cond' then Tm.err else k ren -- undefined instead?
+        if' cond' then Tm.err else k ren -- unprivate defined instead?
       ) env
 
 -- todo zeta reduction for env to prim
-def AINF.toTm'(a: AINF α)(ren: RenTm Γ): Tm Γ α :=
+private def AINF.toTm'(a: AINF α)(ren: RenTm Γ): Tm Γ α :=
   match a with
   | ([], v) => match v with
     | .v v => match ren.var.lookup v with

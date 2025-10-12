@@ -1,6 +1,5 @@
 import Polara.Optimizations.NbE
 import Polara.Optimizations.CSE
-import Polara.Optimizations.Defunc
 import Polara.Optimizations.Vectorization
 import Polara.Optimizations.CleanEnv
 import Polara.Optimizations.Basics

@@ -125,7 +125,7 @@ private def Tm.generalize' [DecidableEq Ty][∀ x:Ty, BEq (γ x)]
       let (ren, _, _) ← read
       return match ren.lookup v with
       | some x => Tm.var x
-      | none   => Tm.err
+      | none   => panic! "Tm.generalize' expr no ref. integrity"
   | .bnd t f => do
       let (ren, n, vars) ← read
       let v := vars n _
