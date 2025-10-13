@@ -189,7 +189,7 @@ private def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)
 | .get        => a'[[b]]
 | .tup        => (a',, b')
 | .refSet     => panic! "refSet not supported in automatic differentiation"
-| .app        => (a @@ b).snd @@ b'
+| .app        => Tm.sum ((a @@ b).snd @@ b') (a' @@ b)
 
 
 ----------------------------------------------------------------------------------------------
@@ -222,7 +222,7 @@ private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
     (
       const2.df a.fst b.fst,,
       env.wrap (λ e => const2.df' a.fst b.fst (env.unwrap e a.snd) (env.unwrap e b.snd))
-      -- fun' e => const2.df' a.fst b.fst (a.snd @@ e) (b.snd @@ e)
+      -- sonderfall app, do something with env???
     )
 | .bld a (n:=n)       =>
   let' arr := for'v idx =>

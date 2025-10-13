@@ -35,7 +35,7 @@ def cseBreakFun := (
   ).toVPar
 
 #eval cseBreakFun
-#eval cseBreakFun.toAINF
+#eval cseBreakFun.toAINF.cleanEnv
 #eval cseBreakFun.toAINF.cse
 #eval cseBreakFun.toAINF.cse.toTm.normVPar
 
@@ -92,3 +92,15 @@ namespace RefIn
   #eval dfOutside.normVPar
 
 end RefIn
+
+namespace AD
+
+  def higherOrderDF :=
+    (fun' g:(flt ~> flt) => fun' x => (g @@ x) * (g @@ x) + tlitf 10 ).df
+
+  #eval higherOrderDF.normVPar
+
+  def higherOrderDF' :=
+    (fun' g:(flt ~> flt) => g @@ tlitf 0 ).df
+
+end AD
