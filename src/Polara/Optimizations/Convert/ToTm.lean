@@ -86,11 +86,9 @@ private def Env.wrapTm (ren: RenTm Γ)(k: RenTm Γ → Tm Γ α)(env: Env): (Tm 
 -- todo zeta reduction for env to prim
 private def AINF.toTm'(a: AINF α)(ren: RenTm Γ): Tm Γ α :=
   match a with
-  | ([], v) => match v with
-    | .v v => match ren.var.lookup v with
+  | ([], v) => match ren.var.lookup v with
       | some ⟨.nil, x'⟩ => Tm.var x'
       | _               => Tm.err
-    | .p p => ren.par.apply p
   | (⟨⟨_,v⟩, env, prim⟩ :: rest, ret) =>
     let'v v' := env.wrapTm ren (λ ren' => prim.toTm env ren');
     AINF.toTm' (rest, ret) (ren.addVar v ⟨env, v'⟩)

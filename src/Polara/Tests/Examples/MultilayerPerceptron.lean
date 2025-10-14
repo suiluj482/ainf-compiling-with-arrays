@@ -44,4 +44,4 @@ def learnStep {n k m: Nat} :=
       ).snd @@ y
 
 #eval @multilayerPerceptron 10 5 1 |>.normVPar.dr.le.normVPar
-#eval (@learnStep 5 2 1) @@ (for' x => tlitf 0) @@ (for' y => tlitf 1) @@ (Tm.zero _) |>.normVPar
+#eval (@learnStep 5 2 1) @@ (for' x => tlitf 0) @@ (for' y => tlitf 1) @@ (Tm.zero _) --|>.normVPar

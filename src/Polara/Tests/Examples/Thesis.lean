@@ -35,7 +35,7 @@ def cseBreakFun := (
   ).toVPar
 
 #eval cseBreakFun
-#eval cseBreakFun.toAINF.cleanEnv
+#eval cseBreakFun.toAINF
 #eval cseBreakFun.toAINF.cse
 #eval cseBreakFun.toAINF.cse.toTm.normVPar
 
@@ -95,12 +95,49 @@ end RefIn
 
 namespace AD
 
-  def higherOrderDF :=
-    (fun' g:(flt ~> flt) => fun' x => (g @@ x) * (g @@ x) + tlitf 10 ).df
+  def fp :=
+    (fun' g:(flt ~> flt) => (for' i:3 => (g @@ i.i2n.n2f)).sumf).toVPar
+  #eval fp.getTy
 
-  #eval higherOrderDF.normVPar
+  def fr :=
+    (fun' x:flt => (fun' y:flt => x+y)).toVPar
+  #eval fr.getTy
 
-  def higherOrderDF' :=
-    (fun' g:(flt ~> flt) => g @@ tlitf 0 ).df
+  def f :=
+    (fun' g:(flt ~> flt) => fun' x => (g @@ x) * (g @@ x) + tlitf 10).toVPar
+  #eval f.getTy
+
+  namespace DN
+
+    #eval fp.getTy.aD
+    #eval fp.aD.normVPar
+    #eval fr.getTy.aD
+    #eval fr.df.normVPar
+    #eval f.getTy.aD
+    #eval f.aD.normVPar
+
+  end DN
+
+  namespace DF
+
+    #eval fp.getTy.df
+    #eval fp.df.normVPar
+    #eval fr.getTy.df
+    #eval fr.df.normVPar
+    #eval f.getTy.df
+    #eval f.df.normVPar
+
+  end DF
+
+  namespace DR
+
+    #eval fp.getTy.dr
+    #eval fp.dr.normVPar
+    #eval fr.getTy.dr
+    #eval fr.dr.normVPar
+    #eval f.getTy.dr
+    #eval f.dr.normVPar
+
+  end DR
 
 end AD

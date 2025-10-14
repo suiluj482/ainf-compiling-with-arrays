@@ -86,7 +86,7 @@ private def RAINF.upgrade : RAINF → Var b → Env → Option RAINF
     else return ⟨γ,k,(v,Γ)⟩                 :: (<- RAINF.upgrade ys i Δ)
 
 -- Renaming and RAINF to be initallized with []
-private def AINF.cse' (r: Ren) (σ: RAINF): AINF α → (RAINF × VPar α)
+private def AINF.cse' (r: Ren) (σ: RAINF): AINF α → (RAINF × Var α)
   | ([], v)       => (σ, v.rename r)
   | (⟨⟨_,v⟩, Γ, prim⟩ :: rest, ret) =>
     let Γ' := Γ.rename r
@@ -105,7 +105,7 @@ private def AINF.cse' (r: Ren) (σ: RAINF): AINF α → (RAINF × VPar α)
     -- identical variable RAINF found => rename to it, update RAINF with new env
     | some (v',σ') => cse' (⟨_,v,v'⟩::r)  σ'                    (rest, ret)
 
-private def RAINF.merge (rainf: RAINF) (v: VPar α): AINF α :=
+private def RAINF.merge (rainf: RAINF) (v: Var α): AINF α :=
   rainf.foldl (λ (acc, ret) ⟨_,x,(v,Γ)⟩ => (⟨⟨_,v⟩,Γ,x⟩ :: acc, ret)) ([], v)
 
 def AINF.cse (a: AINF α): AINF α :=
@@ -113,7 +113,7 @@ def AINF.cse (a: AINF α): AINF α :=
   rainf.merge v
 
 -- invers of AINF.merge
-private def AINF.list: AINF α → RAINF × VPar α :=
+private def AINF.list: AINF α → RAINF × Var α :=
   λ
   | ([],i)       => ([], i)
   | (⟨⟨β, v⟩, Γ, prim⟩ :: rest, ret) => AINF.list (rest, ret)|>.map (⟨β ,prim, (v, Γ)⟩ :: ·) id

@@ -4,41 +4,41 @@ import Polara.Syntax.All
 @[reducible] def Counter := ReaderM Nat
 
 -- smart bnd prevents new variables for Prim.var
-def AINF.smart_bnd (env: Env) (p: Prim α) (k: VPar α → Counter (AINF β)): Counter (AINF β) :=
+def AINF.smart_bnd (env: Env) (p: Prim α) (k: Var α → Counter (AINF β)): Counter (AINF β) :=
   match env, p with
-  | _, .var x => k x
+  | _, .var (.v x) => k x
   | env, p    => λ counter =>
     let x := Var.mk counter
-    ((k (.v x)) (counter+1)).map (⟨⟨_,x⟩, env, p⟩ ::·) id -- +1 counter
+    ((k x) (counter+1)).map (⟨⟨_,x⟩, env, p⟩ ::·) id -- +1 counter
 
 def Tm.toAINF' {α β} (j: Nat)(env : Env) (e : Tm VPar α)
-           (reti : VPar α → Counter (AINF β)): Counter (AINF β) := match e with
+           (reti : Var α → Counter (AINF β)): Counter (AINF β) := match e with
   | err => AINF.smart_bnd env .err reti
   | var x => AINF.smart_bnd env (.var x) reti
   | cst0 c => AINF.smart_bnd env (.cst0 c) reti
   | cst1 c e₁ =>
     toAINF' j env e₁ fun v₁ =>
-    AINF.smart_bnd env (.cst1 c v₁) reti
+    AINF.smart_bnd env (.cst1 c (.v v₁)) reti
   | cst2 c e₁ e₂ =>
     toAINF' j env e₁ fun v₁ =>
     toAINF' j env e₂ fun v₂ =>
-    AINF.smart_bnd env (.cst2 c v₁ v₂) reti
+    AINF.smart_bnd env (.cst2 c (.v v₁) (.v v₂)) reti
   | abs e =>
     let xx := Par.mk j
     toAINF' (j+1) (.func _ xx :: env) (e (.p xx)) fun v =>
-    AINF.smart_bnd env (.abs xx v) reti
+    AINF.smart_bnd env (.abs xx (.v v)) reti
   | bld (n:=n) e =>
     let xx := Par.mk j
     toAINF' (j+1) (.forc n xx :: env) (e (.p xx)) fun v =>
-    AINF.smart_bnd env (.bld xx v) reti
+    AINF.smart_bnd env (.bld xx (.v v)) reti
   | ite e₁ e₂ e₃ =>
     toAINF' j env e₁ fun v₁ =>
-    toAINF' j (.itec v₁ true :: env) e₂ fun v₂ =>
-    toAINF' j (.itec v₁ false :: env) e₃ fun v₃ =>
-    AINF.smart_bnd env (.ite v₁ v₂ v₃) reti
+    toAINF' j (.itec (.v v₁) true :: env) e₂ fun v₂ =>
+    toAINF' j (.itec (.v v₁) false :: env) e₃ fun v₃ =>
+    AINF.smart_bnd env (.ite (.v v₁) (.v v₂) (.v v₃)) reti
   | bnd e f =>
     toAINF' j env e fun v =>
-    toAINF' j env (f v) reti
+    toAINF' j env (f (.v v)) reti
 
 def Tm.toAINFC (e: Tm VPar α): Counter (AINF α) :=
   (toAINF' 0 .nil e fun v => pure ([], v))

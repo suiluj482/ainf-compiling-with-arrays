@@ -5,45 +5,45 @@ import Polara.Syntax.Definitions
 ------------------------------------------------------------------------------------------
 
 def Ty.toString : Ty → String
-  | flt  => "Float"
-  | nat  => "Nat"
-  | lin => "Lin"
-  | idx i => s!"Idx {i}"
-  | a~>b => s!"({a.toString} ~> {b.toString})"
-  | a××b => s!"({a.toString} ×× {b.toString})"
-  | array n b => s!"(array {n} {b.toString})"
-  | ref b => s!"(ref {b.toString})"
-  | unit => "Unit"
+| flt  => "Float"
+| nat  => "Nat"
+| lin => "Lin"
+| idx i => s!"Idx {i}"
+| a~>b => s!"({a.toString} ~> {b.toString})"
+| a××b => s!"({a.toString} ×× {b.toString})"
+| array n b => s!"(array {n} {b.toString})"
+| unit => "Unit"
+| list α => s!"(list {α.toString})"
 instance: ToString Ty := ⟨Ty.toString⟩
 
 def Const0.toString : Const0 α → String
-  | litn n => ToString.toString n
-  | litf f => ToString.toString f
-  | liti i => ToString.toString i.val
-  | litl l => ToString.toString l
-  | litu => "()"
-  | mkRef => "mkRef"
+| litn n => ToString.toString n
+| litf f => ToString.toString f
+| liti i => ToString.toString i.val
+| litlZ => "0"
+| litu => "()"
+| litE => "[]"
 instance: ToString (Const0 α) := ⟨Const0.toString⟩
 
 def Const1.toString : Const1 α₁ α → String
-  | exp => "exp"
-  | sqrt => "sqrt"
-  | log => "log"
-  | normCdf => "normCdf"
-  | fst => "fst"
-  | snd => "snd"
-  | sumf => "sum"
-  | suml => "sum"
-  | i2n => "i2n"
-  | n2f => "n2f"
-  | refGet => "refGet"
+| exp => "exp"
+| sqrt => "sqrt"
+| log => "log"
+| normCdf => "normCdf"
+| fst => "fst"
+| snd => "snd"
+| sumf => "sum"
+| suml => "sum"
+| i2n => "i2n"
+| n2f => "n2f"
+| arr2list => "toList"
 instance: ToString (Const1 α₁ α) := ⟨Const1.toString⟩
 
 def ArithOp.toString : ArithOp → String
-  | add => "+"
-  | sub => "-"
-  | mul => "*"
-  | div => "/"
+| add => "+"
+| sub => "-"
+| mul => "*"
+| div => "/"
 instance: ToString ArithOp := ⟨ArithOp.toString⟩
 
 def AddOp.toString : AddOp → String
@@ -57,18 +57,23 @@ def MulOp.toString : MulOp → String
 instance: ToString MulOp := ⟨MulOp.toString⟩
 
 def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op => s!"{a} {op.toString} {b}"
-  | linOp op => s!"{a} {op.toString} {b}"
-  | linScale op => s!"{a} {op.toString} {b}"
-  | addi => s!"{a} + {b}"
-  | eqi => s!"{a} == {b}"
-  -- | fori => s!"foldi {a} {b}"
-  | lt => s!"{a} < {b}"
-  | maxf => s!"max {a} {b}"
-  | tup  => s!"({a}, {b})"
-  | app  => s!"{a} {b}"
-  | get  => s!"{a}[{b}]"
-  | refSet => s!"refSet {a} {b}"
+| arithOp op => s!"{a} {op.toString} {b}"
+| linOp op => s!"{a} {op.toString} {b}"
+| linScale op => s!"{a} {op.toString} {b}"
+| addi => s!"{a} + {b}"
+| eqi => s!"{a} == {b}"
+-- | fori => s!"foldi {a} {b}"
+| lt => s!"{a} < {b}"
+| maxf => s!"max {a} {b}"
+| tup  => s!"({a}, {b})"
+| app  => s!"{a} {b}"
+| get  => s!"{a}[{b}]"
+| cons => s!"{a} :: {b}"
+| append => s!"{a} ++ {b}"
+| zipL => s!"{a}.zip {b}"
+| mapL => s!"{a}.map {b}"
+| aFoldL => s!"{a}.fold {b}"
+| aFoldA => s!"{a}.fold {b}"
 
 def Par.toString : Par α → String
   | mk x => "i" ++ x.repr

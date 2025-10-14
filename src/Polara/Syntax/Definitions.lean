@@ -3,50 +3,46 @@ import Std
 
 -- Type
 inductive Ty
-  | nat : Ty                  -- natural number
-  | idx : Nat → Ty            -- index
-  | flt : Ty                  -- float
-  | lin : Ty                  -- linear (aD)
-  | arrow : Ty → Ty → Ty      -- function
-  | product : Ty → Ty → Ty    -- tupple
-  -- | sum: Ty → Ty → Ty         -- sum
-  | array : Nat → Ty → Ty     -- array
-  -- | list: Ty → Ty             -- list
-  | ref : Ty → Ty             -- reference
-  | unit: Ty
-  deriving DecidableEq, Inhabited, Hashable
-  open Ty
-  infixr : 80 " ~> " => Ty.arrow
-  infixr : 70 " ×× " => Ty.product
+| nat : Ty                  -- natural number
+| idx : Pos → Ty            -- index
+| flt : Ty                  -- float
+| lin : Ty                  -- linear (aD)
+| arrow : Ty → Ty → Ty      -- function
+| product : Ty → Ty → Ty    -- tupple
+| array : Pos → Ty → Ty     -- array
+| list: Ty → Ty             -- list
+| unit: Ty
+deriving DecidableEq, Inhabited, Hashable
+open Ty
+infixr : 80 " ~> " => Ty.arrow
+infixr : 70 " ×× " => Ty.product
 
 -- literals
 inductive Const0 : Ty → Type
-  | litn : Nat → Const0 nat           -- natural number
-  | litf : Float → Const0 flt         -- float
-  | litl : Float → Const0 lin         -- float| litf : Float → Const0 flt         -- float
-  | liti : Fin (n+1) → Const0 (idx n) -- index
-  | litu : Const0 unit                -- unit
-  | mkRef: Const0 (ref α)
-  deriving BEq
-  open Const0
+| litn : Nat → Const0 nat           -- natural number
+| litf : Float → Const0 flt         -- float
+| litlZ : Const0 lin                -- lin 0
+| liti {n: Pos}: Fin n → Const0 (idx n) -- index
+| litu : Const0 unit                -- unit
+| litlE : Const0 (list α)       -- empty list []
+deriving BEq
+open Const0
 
 -- unary functions
 inductive Const1 : Ty → Ty → Type
-  | exp  : Const1 flt flt         -- exponentation
-  | sqrt : Const1 flt flt         -- square root
-  | log  : Const1 flt flt         -- log
-  | normCdf : Const1 flt flt      -- normal cumulative distribution function
-  | fst : Const1 (α ×× β) α       -- first of tupple
-  | snd : Const1 (α ×× β) β       -- second of tupple
-  | sumf : Const1 (array n flt) flt    -- sum of array Monoide fordern
-  | suml : Const1 (array n lin) lin
-  -- | mul
-  -- | arr2list : Const1 (array n α) (list α) -- array to list
-  | i2n  : Const1 (idx n) nat     -- indices -> nat
-  | n2f  : Const1 nat flt         -- nat -> float
-  | refGet: Const1 (ref α) α
-  deriving BEq
-  open Const1
+| exp  : Const1 flt flt         -- exponentation
+| sqrt : Const1 flt flt         -- square root
+| log  : Const1 flt flt         -- log
+| normCdf : Const1 flt flt      -- normal cumulative distribution function
+| fst : Const1 (α ×× β) α       -- first of tupple
+| snd : Const1 (α ×× β) β       -- second of tupple
+| sumf : Const1 (array n flt) flt    -- sum of array
+| suml : Const1 (array n lin) lin
+| i2n: Const1 (idx n) nat     -- indices -> nat
+| n2f  : Const1 nat flt         -- nat -> float
+| arr2list : Const1 (array n α) (list α) -- array to list
+deriving BEq
+open Const1
 
 def BiOpT := Ty → Ty → Ty → Type
 
@@ -81,7 +77,7 @@ macro "∀3BR" t:term : term => `(∀ α' β' γ', BEqRepr ($t α' β' γ'))
 
 inductive BiArrays (T: BiOpT)[∀3BR T]: BiOpT
 | base: T α β γ → BiArrays T α β γ
-| array (n: Nat): BiArrays T α β γ → BiArrays T (array n α) (array n β) (array n γ)
+| array (n: Pos): BiArrays T α β γ → BiArrays T (array n α) (array n β) (array n γ)
 deriving BEq, Repr
 class BiArraysC (T: BiOpT)[∀3BR T](α β: Ty)(γ: outParam Ty) where
   t: BiArrays T α β γ
@@ -93,7 +89,7 @@ deriving BEq, Repr
 
 inductive BiArray (T: BiOpT)[∀3BR T]: BiOpT
 | base: T α β γ → BiArray T α β γ
-| array (n: Nat): T α β γ → BiArray T (array n α) (array n β) (array n γ)
+| array (n: Pos): T α β γ → BiArray T (array n α) (array n β) (array n γ)
 deriving BEq, Repr
 class BiArrayC (T: BiOpT)[∀3BR T](α β: Ty)(γ: outParam Ty) where
   t: BiArray T α β γ
@@ -129,49 +125,46 @@ def MulOp.toArith: MulOp → ArithOp
 
 -- binary functions
 inductive Const2 : Ty → Ty → Ty → Type
-  | arithOp [type: BiArraysC BiArith α β γ] (op: ArithOp): Const2 α β γ
-  | linOp [type: BiArraysC BiLin α β γ] (op: AddOp): Const2 α β γ
+| arithOp [type: BiArraysC BiArith α β γ] (op: ArithOp): Const2 α β γ
+| linOp [type: BiArraysC BiLin α β γ] (op: AddOp): Const2 α β γ
+| linScale [type: BiArrayC BiLF α β γ] (op: MulOp): Const2 α β γ
+| addi: Const2 (idx n) (idx m) (idx (n.addMinOne m))
+| eqi: Const2 (idx n) (idx n) nat
+| maxf : Const2 flt flt flt
+| lt : Const2 flt flt nat                           -- lower than
+| get : Const2 (array n α) (idx n) α          -- array access
+| tup : Const2 α β (α ×× β)                   -- tupple constructor
+| app : Const2 (α~>β) α β                     -- function application
 
-  -- matrixmultiplikation?
-  | linScale [type: BiArrayC BiLF α β γ] (op: MulOp): Const2 α β γ
-
-  -- matrix multiplication
-
-  -- | fori: Const2 ((idx n ×× α) ~> α) α α        -- body_fun, init
-  | addi: Const2 (idx n) (idx m) (idx (n+m))
-  | eqi: Const2 (idx n) (idx n) nat
-  | maxf : Const2 flt flt flt
-  | lt : Const2 flt flt nat                           -- lower than
-  | get : Const2 (array n α) (idx n) α          -- array access
-  | tup : Const2 α β (α ×× β)                   -- tupple constructor
-  | app : Const2 (α~>β) α β                     -- function application
-
-  | refSet: Const2 (ref α) α unit -- set reference
--- kinda missing: zip, reduce?
-  deriving BEq
-  open Const2
+| cons: Const2 α (list α) (list α)
+| append: Const2 (list α) (list α) (list α)
+| zipL: Const2 (list α) (list β) (list (α××β))
+| mapL: Const2 (list α) (α~>β) (list β)
+| aFoldL: Const2 (list α) ((α ~> α ~> α) ×× α) α -- fold list with assosiativ function
+| aFoldA: Const2  (array n α) ((α ~> α ~> α) ×× α) α -- fold array with associativ function
+deriving BEq
+open Const2
 
 -- Variable symbols: α is Polara Type of Variable
 inductive Var : Ty → Type
-  | mk : Nat → Var α
-  deriving DecidableEq, Inhabited
+| mk : Nat → Var α
+deriving DecidableEq, Inhabited
 -- Parameter symbols: argument overall functions, loop index
 inductive Par : Ty → Type
-  | mk : Nat → Par α
-  deriving DecidableEq, Inhabited
+| mk : Nat → Par α
+deriving DecidableEq, Inhabited
 -- Var or Par symbols
 inductive VPar α
-  | v : Var α → VPar α
-  | p : Par α → VPar α
-  deriving DecidableEq, Inhabited
+| v : Var α → VPar α
+| p : Par α → VPar α
+deriving DecidableEq, Inhabited
+
 def VPar.var?: VPar α → Option (Var α)
 | .v var => var
 | .p _ => none
 def VPar.par?: VPar α → Option (Par α)
 | .v _ => none
 | .p par => par
--- #check VPar
--- #check ((VPar.v (Var.mk 0)): VPar Ty.nat)
 
 ------------------------------------------------------------------------------------------
 -- Polara
@@ -182,61 +175,58 @@ def VPar.par?: VPar α → Option (Par α)
 --      Γ α is a Variable Symbol of a Variable of Ty α z.B. Var 0 ~ x0
 --    α is Ty of Term
 inductive Tm (Γ: Ty → Type): Ty → Type
-  | err : Tm Γ α                                            -- error
-  | cst0 : Const0          α →                     Tm Γ α   -- constants
-  | cst1 : Const1 α₁       α → Tm Γ α₁ →           Tm Γ α   --    incl. func. application
-  | cst2 : Const2 α₁ α₂    α → Tm Γ α₁ → Tm Γ α₂ → Tm Γ α   --    because else Const2.app would be needed
-  | abs : (Γ α → Tm Γ β) → Tm Γ (α ~> β)                    -- lambda, abstraktion, function definition
-  | bld : (Γ (idx n) → Tm Γ α) → Tm Γ (array n α)           -- build, construct array
-  | ite : Tm Γ nat → Tm Γ β → Tm Γ β → Tm Γ β               -- if (·: nat neq 0) then · else ·
-  | var : Γ α → Tm Γ α                                      -- variable of type α
-  | bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β
-  open Tm
-instance : Inhabited (Tm Γ α) := ⟨Tm.err⟩
+| err : Tm Γ α -- error
+| cst0 : Const0 α → Tm Γ α -- cst0 takes no arguments
+| cst1 : Const1 α₁ α → Tm Γ α₁ → Tm Γ α -- cst1 takes one argument
+| cst2 : Const2 α₁ α₂ α → Tm Γ α₁ → Tm Γ α₂ → Tm Γ α -- cst2 takes two arguments
+| abs : (Γ α → Tm Γ β) → Tm Γ (α ~> β)          -- abstraktion / lambda function
+| bld : (Γ (idx n) → Tm Γ α) → Tm Γ (array n α) -- build / array constructor
+| ite : Tm Γ nat → Tm Γ β → Tm Γ β → Tm Γ β       -- if (·: nat neq 0) then · else ·
+| var : Γ α → Tm Γ α                              -- variable of type α
+| bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β        -- bind tm to variable / let
+open Tm
 
 abbrev Term: Ty → Type := Tm VPar
+
+instance : Inhabited (Tm Γ α) := ⟨Tm.err⟩
 
 ------------------------------------------------------------------------------------------
 -- AINF
 ------------------------------------------------------------------------------------------
 
-inductive EnvPart : Type                    --
-  | func : (α:Ty) → Par α → EnvPart         -- function control flow
-  | forc : (n:Nat) → Par (idx n) → EnvPart  -- for
-  | itec : VPar nat → Bool → EnvPart        -- if then else
-  deriving DecidableEq
+inductive EnvPart : Type -- envPart modeling control flow
+| func : (α:Ty) → Par α → EnvPart         -- function control flow
+| forc : (n:Pos) → Par (idx n) → EnvPart  -- for
+| itec : VPar nat → Bool → EnvPart        -- if then else
+deriving DecidableEq
 abbrev Env := List EnvPart
 
 -- primitive operations (could maybe be unified with Tm)
 inductive Prim : Ty → Type
-  | cst0 : Const0 α → Prim α
-  | cst1 : Const1 α₁ α → VPar α₁ → Prim α
-  | cst2 : Const2 α₁ α₂ α → VPar α₁ → VPar α₂ → Prim α
-  | err : Prim α
-  | var : VPar α → Prim α
-  | abs : Par α → VPar β → Prim (α ~> β)
-  | ite : VPar nat → VPar α → VPar α → Prim α
-  | bld : Par (idx n) → VPar α → Prim (array n α)
-  deriving BEq
+| cst0 : Const0 α → Prim α
+| cst1 : Const1 α₁ α → VPar α₁ → Prim α
+| cst2 : Const2 α₁ α₂ α → VPar α₁ → VPar α₂ → Prim α
+| err : Prim α
+| var : VPar α → Prim α
+| abs : Par α → VPar β → Prim (α ~> β)
+| ite : VPar nat → VPar α → VPar α → Prim α
+| bld : Par (idx n) → VPar α → Prim (array n α)
+deriving BEq
 instance: Inhabited (Prim α) := ⟨Prim.err⟩
 
 def Prim.vpars: Prim α → List (Sigma VPar)
-  | cst0 _ => []
-  | cst1 _ v => [⟨_,v⟩]
-  | cst2 _ v1 v2 => [⟨_,v1⟩, ⟨_,v2⟩]
-  | err => []
-  | var v => [⟨_,v⟩]
-  | abs _ v => [⟨_,v⟩]
-  | ite v1 v2 v3 => [⟨_,v1⟩, ⟨_,v2⟩, ⟨_,v3⟩]
-  | bld _ v => [⟨_,v⟩]
-def Prim.vars (p: Prim α): List (Sigma Var) :=
-  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
-def Prim.pars (p: Prim α): List (Sigma Par) :=
-  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
+| cst0 _ => []
+| cst1 _ v => [⟨_,v⟩]
+| cst2 _ v1 v2 => [⟨_,v1⟩, ⟨_,v2⟩]
+| err => []
+| var v => [⟨_,v⟩]
+| abs _ v => [⟨_,v⟩]
+| ite v1 v2 v3 => [⟨_,v1⟩, ⟨_,v2⟩, ⟨_,v3⟩]
+| bld _ v => [⟨_,v⟩]
 
 abbrev Bnd := DListMap.eT (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
 abbrev Bnds := DListMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
-abbrev AINF α := Bnds × (VPar α) -- return variable
+abbrev AINF α := Bnds × (Var α) -- return variable
 
 instance: BEq Bnd := ⟨λ ⟨⟨α,v⟩,e,p⟩ ⟨⟨α',v'⟩,e',p'⟩ =>
     if t: α=α' then
@@ -244,27 +234,10 @@ instance: BEq Bnd := ⟨λ ⟨⟨α,v⟩,e,p⟩ ⟨⟨α',v'⟩,e',p'⟩ =>
     else false
   ⟩
 
--- HashMap
--- + faster lookup
--- - no order (renaming harder)
-deriving instance Hashable for Var
-deriving instance Hashable for Par
-deriving instance Hashable for VPar
-abbrev BndsH := Std.DHashMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
-abbrev AINFH α := BndsH × VPar α
-
-def AINF.toHashMap: AINF α → AINFH α
-| (bnds, ret) => (
-    Std.DHashMap.ofList bnds,
-    ret
-  )
-def AINFH.toList: AINFH α → AINF α
-| (bnds, ret) => (
-  bnds.topologicalSort (λ _ ⟨_, p⟩ => p.vars),
-  ret
-)
-
-----
+def Prim.vars (p: Prim α): List (Sigma Var) :=
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
+def Prim.pars (p: Prim α): List (Sigma Par) :=
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
 def EnvPar.vpar?: EnvPart → Option (Sigma VPar)
 | .itec cond _ => some ⟨_,cond⟩
 | .forc _ _ => none
@@ -281,3 +254,23 @@ def filterPars (l: List (Sigma VPar)): List (Sigma Par) :=
 def Bnd.var: Bnd → Sigma Var := (λ ⟨v,_,_⟩ => v)
 def Bnd.vars := filterVars ∘ Bnd.vpars
 def Bnd.pars := filterPars ∘ Bnd.vpars
+
+-- HashMap
+-- + faster lookup
+-- - no order (renaming harder)
+deriving instance Hashable for Var
+deriving instance Hashable for Par
+deriving instance Hashable for VPar
+abbrev BndsH := Std.DHashMap (Sigma Var) (λ ⟨α,_⟩ => Env × Prim α)
+abbrev AINFH α := BndsH × Var α
+
+def AINF.toHashMap: AINF α → AINFH α
+| (bnds, ret) => (
+    Std.DHashMap.ofList bnds,
+    ret
+  )
+def AINFH.toList: AINFH α → AINF α
+| (bnds, ret) => (
+  bnds.topologicalSort (λ _ ⟨_, p⟩ => p.vars),
+  ret
+)

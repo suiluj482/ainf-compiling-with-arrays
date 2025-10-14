@@ -2,6 +2,8 @@ import Polara.Syntax.Definitions
 import Polara.Syntax.PrettyPrint
 import Polara.Syntax.Notations
 
+def Tm.getTy: Tm Γ α → Ty := λ _ => α
+
 @[reducible]
 def Ty.transform (f: Ty → Ty) : Ty → Ty
 | .nat => f .nat
@@ -11,7 +13,7 @@ def Ty.transform (f: Ty → Ty) : Ty → Ty
 | α ~> β => f (α.transform f ~> β.transform f)
 | α ×× β => f (α.transform f ×× β.transform f)
 | array n α => f (array n (α.transform f))
-| ref α => f (ref (α.transform f))
+| list α => f (list (α.transform f))
 | unit => f .unit
 
 @[reducible]
@@ -21,7 +23,7 @@ def Ty.contains (t: Ty)(f: Ty → Bool): Bool :=
   | .flt => f flt
   | .lin => f lin
   | .idx n => f (idx n)
-  | .ref α => f (ref α) ∨ α.contains f
+  | .list α => f (list α) ∨ α.contains f
   | .unit => f unit
   | α ×× β => f t ∨ α.contains f ∨ β.contains f
   | .array _ α => f t ∨ α.contains f
@@ -31,14 +33,14 @@ theorem Ty.contains_product_a (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ×× β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
 theorem Ty.contains_product_b (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ×× β) f = false → Ty.contains β f = false := by simp[Ty.contains]
-theorem Ty.contains_array (n: Nat)(α: Ty)(f: Ty → Bool):
+theorem Ty.contains_array (n: Pos)(α: Ty)(f: Ty → Bool):
   Ty.contains (array n α) f = false → Ty.contains α f = false := by simp[Ty.contains]
 theorem Ty.contains_arrow_a (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ~> β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
 theorem Ty.contains_arrow_b (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ~> β) f = false → Ty.contains β f = false := by simp[Ty.contains]
-theorem Ty.contains_ref (α: Ty)(f: Ty → Bool):
-  Ty.contains (α.ref) f = false → Ty.contains α f = false := by simp[Ty.contains]
+theorem Ty.contains_list (α: Ty)(f: Ty → Bool):
+  Ty.contains (α.list) f = false → Ty.contains α f = false := by simp[Ty.contains]
 
 def VPar.type(_: VPar α): Ty := α
 def Par.type(_: Par α): Ty := α
@@ -214,7 +216,7 @@ def AINF.valid' (vars: ListMap Var (λ _ => Env)) (a: AINF α): Bool :=
     | .itec cond _ :: env' => checkVPar env' cond
 
   match a with
-  | ([], ret) => match lookup ret  with
+  | ([], ret) => match lookup (.v ret)  with
     | some .nil => true -- return var needs to have empty env
     | _ => false
   | (⟨⟨β,v⟩, env, prim⟩ :: rest, ret)  =>
@@ -246,7 +248,7 @@ def Ty.linArg: Ty → Ty
 | .lin       => .unit
 | α ×× β     => α.linArg ×× β.linArg
 | .array n α => .array n α.linArg
-| .ref _     => panic! "ref not supported in automatic differentiation"
+| .list α    => .list α.linArg
 | .flt       => .lin
 | α ~> β     => α ~> β.linArg
 
@@ -259,15 +261,15 @@ def Ty.linFun: Ty → Ty → Ty
 
 def Tm.zero (α: Ty): Tm Γ α :=
   match α with
-  | .lin => Tm.cst0 (Const0.litl 0)
+  | .lin => tlitlZ
   | _ ~> β => Tm.abs (λ _ => Tm.zero β)
   | α ×× β => Tm.cst2 Const2.tup (Tm.zero α) (Tm.zero β)
   | .array _ α => Tm.bld (λ _ => Tm.zero α)
   | .unit => ()'
   | .nat => tlitn 0
-  | .idx _ => tliti 0
+  | .idx _ => tlitiZ
   | .flt => tlitf 0
-  | .ref _ => panic! "Tm.linZero does not support references"
+  | .list _ => tlitlE
 
 def Tm.sum (a b: Tm Γ α): Tm Γ α :=
   match α with
@@ -282,7 +284,7 @@ def Tm.sum (a b: Tm Γ α): Tm Γ α :=
   | .nat => a + b
   | .flt => a + b
   | .idx _ => panic! "Tm.sum doesn't support idx"
-  | .ref _ => panic! "sumArrayOfLins not supported for references"
+  | .list _ => a ++ b
 
 def Tm.sumArray (arr: Tm Γ (.array n α)): Tm Γ α :=
   match α with
@@ -297,17 +299,17 @@ def Tm.sumArray (arr: Tm Γ (.array n α)): Tm Γ α :=
   | .flt => arr.sumf
   | .nat => panic! "Tm.sumArray doesn't support nat"
   | .idx _ => panic! "Tm.sumArray doesn't support idx"
-  | .ref _ => panic! "sumArrayOfLins not supported for references"
+  | .list _ => arr.aFoldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
 
 def Tm.linZero (α: Ty): Tm Γ α :=
   match α with
-  | .lin => Tm.cst0 (Const0.litl 0)
+  | .lin => tlitlZ
   | _ ~> β => Tm.abs (λ _ => Tm.linZero β)
   | α ×× β => Tm.cst2 Const2.tup (Tm.linZero α) (Tm.linZero β)
   | .array _ α => Tm.bld (λ _ => Tm.linZero α)
   | .unit => ()'
   | .nat | .idx _ | .flt => panic! "Tm.linZero does not support this type"
-  | .ref _ => panic! "Tm.linZero does not support references"
+  | .list _ => tlitlE -- because of copower dr
 
 def Tm.sumLins (a b: Tm Γ α): Tm Γ α :=
   match α with
@@ -320,8 +322,8 @@ def Tm.sumLins (a b: Tm Γ α): Tm Γ α :=
   | _ ~> _ => fun' p => Tm.sumLins (a @@ p) (b @@ p)
   | .array _ _ => for' i => Tm.sumLins a[[i]] b[[i]]
   | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
+  | .list _ => a ++ b
 
-  | .ref _ => panic! "sumArrayOfLins not supported for references"
 def Tm.sumArrayOfLins (arr: Tm Γ (.array n α)): Tm Γ α :=
   match α with
   | .lin => arr.suml
@@ -333,4 +335,39 @@ def Tm.sumArrayOfLins (arr: Tm Γ (.array n α)): Tm Γ α :=
   | .array _ _ => for' j => (for' i => arr[[i]][[j]]).sumArrayOfLins
   | _ ~> _ => fun' a => (for' i => arr[[i]] @@ a).sumArrayOfLins
   | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
-  | .ref _ => panic! "sumArrayOfLins not supported for references"
+  | .list _ => arr.aFoldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
+
+def Tm.synBEq': {α: Ty} → Tm VPar α → Tm VPar α → VParM Bool
+| _, .err, .err => return true
+| _, .cst0 c, .cst0 c' => return c == c'
+| _, .cst1 c a (α₁:=α₁), .cst1 c' a' (α₁:=α₁')=>
+    if t:α₁=α₁'
+      then return c==t▸c' ∧ (←a.synBEq' (t▸a'))
+      else return false
+| _, .cst2 c a b (α₁:=α₁) (α₂:=α₂), .cst2 c' a' b' (α₁:=α₁') (α₂:=α₂')=>
+    if ta:α₁=α₁' then if tb:α₂=α₂'
+      then return c==tb▸ta▸c' ∧ (←a.synBEq' (ta▸a')) ∧ (←b.synBEq' (tb▸b'))
+      else return false else return  false
+| _, .abs f (α:=α) (β:=β), .abs f' => do
+    let v := (←VParM.parVPar) α
+    (f v).synBEq' (f' v)
+| _, .bld f (n:=n) (α:=α), .bld f' => do
+    let v := (←VParM.parVPar) (Ty.idx n)
+    (f v).synBEq' (f' v)
+| _, .ite cond a b, .ite cond' a' b' =>
+    return (← cond.synBEq' cond')
+    ∧ (← a.synBEq' a')
+    ∧ (← b.synBEq' b')
+| _, .var v, .var v' => return v == v'
+| _, .bnd t f (α:=α), .bnd t' f' (α:=α') => do
+    if h: α=α' then
+      if ←t.synBEq' (h▸t')
+        then
+          let v := (←VParM.varVPar) α
+          (f v).synBEq' (f' (h▸v))
+        else return false
+    else return false
+| _, _,  _ => return false
+
+def Tm.synBEq: {α: Ty} → Tm VPar α → Tm VPar α → Bool
+| _, a, b => (VParM.startZero (a.synBEq' b))

@@ -90,7 +90,11 @@ private def Const2.devec (a: Tm VPar α)(b: Tm VPar β): Const2 α β γ → Tm 
 | .get  => a[[b]]
 | .tup  => (a,, b)
 | .app  => a @@ b
-| .refSet => panic! "refSet not supported in automatic differentiation"
+| .cons => a.cons b
+| .append => a.append b
+| .mapL => a.map b
+| .aFoldL => Tm.cst2 .aFoldL a b
+| .aFoldA => Tm.cst2 .aFoldA a b
 
 def Tm.devectorize: Tm VPar α → Tm VPar α
 | .err => .err

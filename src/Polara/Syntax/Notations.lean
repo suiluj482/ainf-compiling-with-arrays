@@ -4,7 +4,7 @@ import Polara.Syntax.PrettyPrint
 open Tm Ty Const0 Const1 ArithOp AddOp MulOp Const2
 
 -- Ty
-def Ty.matrix: Nat → Nat → Ty → Ty := (Ty.array · <| Ty.array · ·)
+def Ty.matrix: Pos → Pos → Ty → Ty := (Ty.array · <| Ty.array · ·)
 notation:max ty"[["n"]]" => Ty.array n ty
 notation:max ty"[["n","m"]]" => Ty.matrix n m ty
 
@@ -27,8 +27,10 @@ notation:max "for'v "i":"n" => "term => @Tm.bld _ n _ (λ i => term)
 def tlitu: Tm Γ unit := Tm.cst0 Const0.litu
 def tlitn: Nat → Tm Γ nat := Tm.cst0 ∘ Const0.litn
 def tlitf: Float → Tm Γ flt := Tm.cst0 ∘ Const0.litf
-def tlitl: Float → Tm Γ lin := Tm.cst0 ∘ Const0.litl
-def tliti: (Fin (n+1)) → Tm Γ (Ty.idx (n)) := Tm.cst0 ∘ Const0.liti
+def tlitlZ: Tm Γ lin := Tm.cst0 Const0.litlZ
+def tliti {n: Pos}: (Fin n) → Tm Γ (Ty.idx (n)) := Tm.cst0 ∘ Const0.liti
+def tlitiZ: Tm Γ (idx n) := tliti n.finZero
+def tlitlE: Tm Γ (list α) := Tm.cst0 Const0.litlE
 
 def Par.tm: Par α → Tm VPar α := Tm.var ∘ VPar.p
 def Var.tm: Var α → Tm VPar α := Tm.var ∘ VPar.v
@@ -47,13 +49,17 @@ namespace Tm
   def i2n     : Tm Γ (idx n) → Tm Γ nat := Tm.cst1 Const1.i2n
   def n2f     : Tm Γ nat → Tm Γ flt := Tm.cst1 Const1.n2f
   def maxf    : Tm Γ flt → Tm Γ flt → Tm Γ flt := Tm.cst2 Const2.maxf
-  def addi  : Tm Γ (idx n) → Tm Γ (idx m) → Tm Γ (idx (n+m)) := Tm.cst2 Const2.addi
+  def addi  : Tm Γ (idx n) → Tm Γ (idx m) → Tm Γ (idx (n.addMinOne m)) := Tm.cst2 Const2.addi
   def eqi   : Tm Γ (idx n) → Tm Γ (idx n) → Tm Γ nat := Tm.cst2 Const2.eqi
-  -- def fori  : Tm Γ ((idx n ×× α) ~> α) → Tm Γ α → Tm Γ α := Tm.cst2 Const2.fori
+  def tup: Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
+  def arr2list: Tm Γ (array n α) → Tm Γ (list α) := Tm.cst1 Const1.arr2list
 
-  def mkRef: Tm Γ (ref α) := Tm.cst0 Const0.mkRef
-  def refGet: Tm Γ (ref α) → Tm Γ α := Tm.cst1 Const1.refGet
-  def refSet: Tm Γ (ref α) → Tm Γ α → Tm Γ unit := Tm.cst2 Const2.refSet
+  def cons: Tm Γ α → Tm Γ (list α) → Tm Γ (list α) := Tm.cst2 Const2.cons
+  def append: Tm Γ (list α) → Tm Γ (list α) → Tm Γ (list α) := Tm.cst2 Const2.append
+  def zip: Tm Γ (list α) → Tm Γ (list β) → Tm Γ (list (α××β)) := Tm.cst2 Const2.zipL
+  def map: Tm Γ (list α) → Tm Γ (α~>β) → Tm Γ (list β) := Tm.cst2 Const2.mapL
+  def aFoldL: Tm Γ (list α) → Tm Γ (α ~> α ~> α) → Tm Γ α → Tm Γ α := λ l f n => Tm.cst2 Const2.aFoldL l (f.tup n)
+  def aFoldA: Tm Γ (array n α) → Tm Γ (α ~> α ~> α) → Tm Γ α → Tm Γ α := λ l f n => Tm.cst2 Const2.aFoldA l (f.tup n)
 
   def π: Tm Γ flt := tlitf 3.14159265358979323846
 
@@ -74,23 +80,9 @@ notation:max array"[["index"]]" => Tm.cst2 Const2.get array index
 def tupple': Tm Γ α → Tm Γ β → Tm Γ (α ×× β) := Tm.cst2 Const2.tup
 notation:max "("a",,"b")" => tupple' a b
 notation:max "()'" => tlitu
+notation:max "[]'" => tlitlE
 
--- refs
-def Tm.dumpFor (a: Tm Γ α)(b: Tm Γ β): Tm Γ β := -- otherwise reducible construct to keep ref in tm
-  (a,,b) |>.snd
-notation:max ref" *:= "term => Tm.refSet ref term
-notation:max ref" *:= "term";"k => Tm.dumpFor (Tm.refSet ref term) k
-notation:max "let' "xr" :=& "x";"res =>
-  let' xr := Tm.mkRef;
-  let' x := Tm.refGet xr;
-  res
-def Tm.useForRef(a: Tm Γ α)
-    (refT: (Tm Γ α → Tm Γ β)): Tm Γ α :=
-    let' tmp := a;
-    refT tmp |>.dumpFor tmp
-def Tm.aF (t: Tm Γ α)(f: Tm Γ α → Tm Γ β): Tm Γ β := f t -- apply to function
-def Tm.valFromRef (f: Tm Γ α → Tm Γ β): Tm Γ (α.ref) :=
-  let' rx :=& x; Tm.dumpFor (f x) rx
+@[default_instance] instance: Append (Tm Γ (list α)) := ⟨Tm.append⟩
 
 @[default_instance] instance [BiArraysC BiLin α β γ]:
   HAdd (Tm Γ α) (Tm Γ β) (Tm Γ γ) := ⟨Tm.cst2 (Const2.linOp add)⟩
@@ -119,15 +111,15 @@ notation a"=='"b => Tm.cst2 Const2.eqi a b
 
 def Tm.inst (α: Ty): Tm Γ α :=
   match α with
-  | .nat => Tm.cst0 (Const0.litn 0)
-  | .idx _ => Tm.cst0 (Const0.liti 0)
+  | .nat => tlitn 0
+  | .idx _ => tlitiZ
   | .flt => Tm.cst0 (Const0.litf 0)
-  | .lin => Tm.cst0 (Const0.litl 0)
+  | .lin => tlitlZ
   | _ ~> β => Tm.abs (λ _ => Tm.inst β)
   | α ×× β => Tm.cst2 Const2.tup (Tm.inst α) (Tm.inst β)
   | .array _ α => Tm.bld (λ _ => Tm.inst α)
-  | .unit => Tm.cst0 Const0.litu
-  | .ref _ => panic! "Tm.inst does not support references"
+  | .unit => tlitu
+  | .list _ => tlitlE
 
 ------------------------------------------------------------------------------------------
 -- AINF
@@ -142,7 +134,7 @@ notation:max "let'' "env" in "var" := "prim => (⟨⟨_, var⟩, env, prim⟩: B
 notation:max "let'' "env" in "var":"α" := "prim => (⟨⟨α, var⟩, env, prim⟩: Bnd)
 
 notation:max "let''' "env" in "var" := "prim"; "rest => ((⟨⟨_, var⟩, env, prim⟩: Bnd) :: Prod.fst rest, Prod.snd rest)
-notation:max ".ret "v => ([],(v: VPar _))
+notation:max ".ret "v => ([],(v: Var _))
 
 -- cst0
 def plitn: Nat → Prim nat := Prim.cst0 ∘ Const0.litn

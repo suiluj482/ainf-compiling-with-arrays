@@ -26,11 +26,11 @@ def Ty.aD: Ty → Ty :=
 
 private def Const0.aD: Const0 α → Tm Γ α.aD
 | .litn n => tlitn n
-| .litf f => (tlitf f,, tlitl 0) -- selector, gewicht der Ableitungsrichtung
+| .litf f => (tlitf f,, tlitlZ) -- f + 0ε selector
 | .liti i => tliti i
-| .litl l => tlitl l
+| .litlZ => tlitlZ
 | .litu => tlitu
-| mkRef => panic! "ref not supported in automatic differentiation"
+| .litlE => tlitlE
 
 private def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
 | .exp     => (x.fst.exp ,, x.snd * x.fst.exp)              -- (e^x)'    = e^x
@@ -48,8 +48,8 @@ private def Const1.aD (x: Tm Γ α.aD): Const1 α β → Tm Γ β.aD
     )
 | .suml    => x.suml
 | .i2n     => x.i2n
-| .n2f     => (x.n2f,, tlitl 0)
-| refGet => panic! "ref not supported in automatic differentiation"
+| .n2f     => (x.n2f,, tlitlZ)
+| .arr2list => x.arr2list
 
 private def ArithOp.aD [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.aD)(b: Tm Γ β.aD): Tm Γ γ.aD :=
@@ -107,7 +107,12 @@ private def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm �
 | .get  => a[[b]]
 | .tup  => (a,, b)
 | .app  => a @@ b
-| .refSet => panic! "refSet not supported in automatic differentiation"
+| .cons => a.cons b
+| .append => a.append b
+| .zipL => a.zipL b
+| .mapL => a.map b
+| .aFoldL => Tm.cst2 .aFoldL a b
+| .aFoldA => Tm.cst2 .aFoldA a b
 
 private def VPar.aD:  VPar α    → VPar α.aD := VPar.changeType
 private def VPar.iaD: VPar α.aD → VPar α    := VPar.changeType
@@ -116,11 +121,11 @@ private def DVars := List (Sigma VPar)
 private def Tm.liftIntoAD (t: Tm VPar α): Tm VPar α.aD :=
   match α with
   | .nat | .idx _ | .lin | .unit => t
-  | .flt => (t,, tlitl 0)
+  | .flt => (t,, tlitlZ)
   | _ ×× _ => (t.fst.liftIntoAD,, t.snd.liftIntoAD)
   | .array _ _ => for' i => t[[i]].liftIntoAD
+  | .list _ => t.map (fun' x => x.liftIntoAD)
   | _ ~> _ => panic! "Can not lift a function into the scope of dual numbers"
-  | .ref _ => panic! "Tm.liftIntoAD doesnt support ref"
 
 private def Tm.aD' (dv: DVars): Tm VPar α → Tm VPar α.aD
 | .err => .err

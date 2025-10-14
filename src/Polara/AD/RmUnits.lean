@@ -19,22 +19,16 @@ def Ty.rmUnits: Ty → Ty
   | _, .unit     => .unit
   | .unit, β'    => β'
   | α', β'       => α' ~> β'
-| .ref α => match α.rmUnits with
-  | .unit => .unit
-  | α'    => .ref α'
+| .list α => .list α.rmUnits
 
 def Const0.rmUnits: Const0 α → Tm Γ α.rmUnits
 | .litn n => tlitn n
 | .litf f => tlitf f
 | .liti i => tliti i
-| .litl l => tlitl l
+| .litlZ => tlitlZ
 | .litu => tlitu
-| mkRef (α:=α') => if h: α'.rmUnits = .unit then
-    have t: α'.ref.rmUnits = .unit := by simp[Ty.rmUnits, h]
-    t▸()'
-  else
-    have t: α'.ref.rmUnits = α'.rmUnits.ref := by simp[Ty.rmUnits, h]
-    t▸Tm.cst0 .mkRef
+| .litlE (α:=α) =>
+    tlitlE
 
 def Const1.rmUnits (x: Tm Γ α.rmUnits): Const1 α β → Tm Γ β.rmUnits
 | .exp     => Tm.cst1 Const1.exp x
@@ -63,11 +57,14 @@ def Const1.rmUnits (x: Tm Γ α.rmUnits): Const1 α β → Tm Γ β.rmUnits
 | .suml    => Tm.cst1 Const1.suml x
 | .i2n     => Tm.cst1 Const1.i2n x
 | .n2f     => Tm.cst1 Const1.n2f x
-| refGet (α:=α') => if h: α'.rmUnits = .unit then
-    h▸()'
+| .arr2list (n:=n) (α:=α) =>
+  if h: α.rmUnits = .unit then
+    have t: α.list.rmUnits = Ty.unit.list := by simp[Ty.rmUnits, h]
+    t▸(for'v _:n => ()').arr2list
   else
-    have t: α'.ref.rmUnits = α'.rmUnits.ref := by simp[Ty.rmUnits, h]
-    Tm.cst1 Const1.refGet (t▸x)
+    have t: (α.array n).rmUnits = (α.rmUnits).array n := by simp[Ty.rmUnits, h]
+    have t': α.list.rmUnits = α.rmUnits.list := by simp[Ty.rmUnits, h]
+    t'▸(t▸x).arr2list
 
 def ArithOp.rmUnits [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.rmUnits)(b: Tm Γ β.rmUnits): Tm Γ γ.rmUnits :=
@@ -175,7 +172,6 @@ def Const2.rmUnits (a: Tm Γ α.rmUnits)(b: Tm Γ β.rmUnits): Const2 α β γ �
     else
       have t: (α××β).rmUnits = α.rmUnits××β.rmUnits := by simp[Ty.rmUnits, h, h']
       t▸(a,, b)
-| .refSet => panic! "refSet not supported in rmUnit"
 | .app (α:=α') (β:=β') => if h: β'.rmUnits = .unit then
     h▸()'
   else
@@ -185,6 +181,34 @@ def Const2.rmUnits (a: Tm Γ α.rmUnits)(b: Tm Γ β.rmUnits): Const2 α β γ �
     else
       have t: (α'~>β').rmUnits = α'.rmUnits~>β'.rmUnits := by simp[Ty.rmUnits, h, h']
       t▸a @@ b
+| .cons (α:=α) => a.cons b
+| .append (α:=α) => a.append b
+| .mapL (α:=α) (β:=β) =>
+    if h: β.rmUnits = .unit then
+      have t: (α~>β).rmUnits = β.rmUnits := by simp[Ty.rmUnits, h]
+      a.map (fun'v _ => t▸b)
+    else
+      if h' : α.rmUnits = .unit then
+        have t: (α ~> β).rmUnits = β.rmUnits := by simp[Ty.rmUnits, h,h']
+        a.map (fun'v _ => t▸b)
+      else
+        have t: (α ~> β).rmUnits = (α.rmUnits ~> β.rmUnits) := by simp[Ty.rmUnits, h,h']
+        a.map (t▸b)
+| .aFoldL (α:=α) =>
+    if h: α.rmUnits = .unit then
+      h▸()'
+    else
+      have t: (α.list).rmUnits = (α.rmUnits).list := by simp[Ty.rmUnits, h]
+      have t': (α ~> α ~> α ×× α).rmUnits = (α.rmUnits ~> α.rmUnits ~> α.rmUnits ×× α.rmUnits) := by simp[Ty.rmUnits, h]
+      Tm.cst2 .aFoldL (t▸a) (t'▸b)
+| .aFoldA (n:=n) (α:=α) =>
+    if h: α.rmUnits = .unit then
+      h▸()'
+    else
+      have t: (α.array n).rmUnits = (α.rmUnits).array n := by simp[Ty.rmUnits, h]
+      have t': (α ~> α ~> α ×× α).rmUnits = (α.rmUnits ~> α.rmUnits ~> α.rmUnits ×× α.rmUnits) := by simp[Ty.rmUnits, h]
+      Tm.cst2 .aFoldA (t▸a) (t'▸b)
+
 def VPar.rmUnits: VPar α → VPar α.rmUnits := VPar.changeType
 def VPar.irmUnits: VPar α.rmUnits → VPar α := VPar.changeType
 
@@ -218,6 +242,6 @@ match α, t with
 | _, .cst1 c a   => c.rmUnits a.rmUnits
 | _, .cst2 c a b => c.rmUnits a.rmUnits b.rmUnits
 
-#eval (()',, ()') |>.rmUnits
-#eval (fun' x:Ty.flt => for' i:42 => ()',, ()') |>.rmUnits
-#eval (fun' x:Ty.unit => tlitf 1) |>.rmUnits
+-- #eval (()',, ()') |>.rmUnits
+-- #eval (fun' x:Ty.flt => for' i:42 => ()',, ()') |>.rmUnits
+-- #eval (fun' x:Ty.unit => tlitf 1) |>.rmUnits

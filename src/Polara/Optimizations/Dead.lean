@@ -14,10 +14,7 @@ private def Bnds.dead(marked: HashMap (Sigma Var) Unit): Bnds → Bnds
 
 def AINF.dead: AINF α → AINF α
 | (bnds, ret) => (
-    match ret with
-    | .p _ => panic! "return of AINF can't be param"
-    | .v ret =>
-      let marked := Singleton.singleton (⟨_,ret⟩,())
-      (Bnds.dead marked bnds.reverse).reverse,
+    let marked := Singleton.singleton (⟨_,ret⟩,())
+    (Bnds.dead marked bnds.reverse).reverse,
     ret
   )

@@ -12,11 +12,11 @@ mutual
   | α ×× β     => α.df' ×× β.df'
   | .array n α => .array n α.df'
   | .lin       => .lin
-  | .ref _     => panic! "ref not supported in automatic differentiation"
   | α ~> β     => α.df ~> β.df'
+  | .list α => .list α.df'
 
   @[reducible]
-  private def Ty.df: Ty → Ty
+  def Ty.df: Ty → Ty
   | .unit      => .unit
   | .nat       => .nat
   | .flt       => .flt
@@ -25,7 +25,7 @@ mutual
   | α ×× β     => α.df ×× β.df
   | .array n α => .array n α.df
   | .lin       => .lin
-  | .ref _     => panic! "ref not supported in automatic differentiation"
+  | .list α => .list α.df
 end
 
 @[reducible]
@@ -68,9 +68,9 @@ private def Const0.df: Const0 α → Tm Γ α.df
 | .litn n => tlitn n
 | .litf f => tlitf f
 | .liti i => tliti i
-| .litl l => tlitl l
+| .litlZ => tlitlZ
 | .litu => tlitu
-| mkRef => panic! "ref not supported in automatic differentiation"
+| .litlE => tlitlE
 
 private def Const1.df (x: Tm Γ α.df): Const1 α β → Tm Γ β.df
 | .exp     => Tm.cst1 Const1.exp x
@@ -126,8 +126,11 @@ private def Const2.df (a: Tm Γ α.df)(b: Tm Γ β.df): Const2 α β γ → Tm �
 | .maxf => Max.max a b
 | .get  => a[[b]]
 | .tup  => (a,, b)
-| .refSet => panic! "refSet not supported in automatic differentiation"
--- | .fori => (fun' t => (a @@ t).fst).fori b
+| .cons => a.cons b
+| .append => a.append b
+| .mapL => a.map (fun' x => (b@@x).fst)
+| .aFoldL => Tm.cst2 .aFoldL a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
+| .aFoldA => Tm.cst2 .aFoldA a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
 | .app  => (a @@ b).fst -- derivation no longer needed
 
 
@@ -136,9 +139,9 @@ private def Const2.df (a: Tm Γ α.df)(b: Tm Γ β.df): Const2 α β γ → Tm �
 ----
 
 private def Const0.df': Const0 α → Tm Γ α.df'.linRet
-| .litn n | .liti i | .litl l | .litu => ()'
-| mkRef => panic! "ref not supported in automatic differentiation"
-| .litf f => tlitl 0
+| .litn n | .liti i | .litlZ | .litu => ()'
+| .litf f => tlitlZ
+| .litlE => tlitlE
 
 private def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
   Const1 α β → Tm Γ β.df'.linRet
@@ -152,8 +155,8 @@ private def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
 | .sumf    => x'.suml
 | .suml    => ()'
 | .i2n     => ()'
-| .n2f     => tlitl 0
-| refGet => panic! "ref not supported in automatic differentiation"
+| .n2f     => tlitlZ
+| .arr2list => x'.arr2list
 
 private def ArithOp.df' [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm Γ β.df'.linRet): Tm Γ γ.df'.linRet :=
@@ -188,9 +191,10 @@ private def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)
 | .maxf       => if' a <' b then b' else a'
 | .get        => a'[[b]]
 | .tup        => (a',, b')
-| .refSet     => panic! "refSet not supported in automatic differentiation"
 | .app        => Tm.sum ((a @@ b).snd @@ b') (a' @@ b)
-
+| .cons       => a'.cons b'
+| .append     => a'.append b'
+| .mapL       => a'.map (fun' x => (b@@x).fst)
 
 ----------------------------------------------------------------------------------------------
 
@@ -222,7 +226,6 @@ private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
     (
       const2.df a.fst b.fst,,
       env.wrap (λ e => const2.df' a.fst b.fst (env.unwrap e a.snd) (env.unwrap e b.snd))
-      -- sonderfall app, do something with env???
     )
 | .bld a (n:=n)       =>
   let' arr := for'v idx =>
