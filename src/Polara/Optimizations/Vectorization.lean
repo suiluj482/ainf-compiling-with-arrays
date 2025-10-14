@@ -92,9 +92,10 @@ private def Const2.devec (a: Tm VPar α)(b: Tm VPar β): Const2 α β γ → Tm 
 | .app  => a @@ b
 | .cons => a.cons b
 | .append => a.append b
-| .mapL => a.map b
-| .aFoldL => Tm.cst2 .aFoldL a b
-| .aFoldA => Tm.cst2 .aFoldA a b
+| .mapL => a.mapL b
+| .zipL => a.zipL b
+| .foldL => Tm.cst2 .foldL a b
+| .foldA => Tm.cst2 .foldA a b
 
 def Tm.devectorize: Tm VPar α → Tm VPar α
 | .err => .err

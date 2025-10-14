@@ -8,12 +8,12 @@ def Ty.le: Ty → Ty :=
   | .lin => .flt
   | α => α)
 def Const0.le: Const0 α → Const0 α.le
-| .litl l => .litf l
+| .litlZ => .litf 0
 | .litn n => .litn n
 | .litf f => .litf f
 | .liti i => .liti i
 | .litu => .litu
-| .mkRef => .mkRef
+| .litlE => .litlE
 
 def Const1.le: Const1 α β → Const1 α.le β.le
 | .suml => .sumf
@@ -26,7 +26,7 @@ def Const1.le: Const1 α β → Const1 α.le β.le
 | .sumf => .sumf
 | .i2n => .i2n
 | .n2f => .n2f
-| .refGet => .refGet
+| .arr2list => .arr2list
 
 def Const2.le: Const2 α β γ → Const2 α.le β.le γ.le
 | linOp (type:=t) op =>
@@ -58,7 +58,12 @@ def Const2.le: Const2 α β γ → Const2 α.le β.le γ.le
 | .get => .get
 | .tup => .tup
 | .app => .app
-| .refSet => .refSet
+| .cons => .cons
+| .append => .append
+| .zipL => .zipL
+| .mapL => .mapL
+| .foldL => .foldL
+| .foldA => .foldA
 
 def Tm.le : Tm VPar α → Tm VPar α.le
 | .err => .err

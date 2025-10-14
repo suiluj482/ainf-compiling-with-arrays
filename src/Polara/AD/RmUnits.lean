@@ -183,31 +183,54 @@ def Const2.rmUnits (a: Tm Γ α.rmUnits)(b: Tm Γ β.rmUnits): Const2 α β γ �
       t▸a @@ b
 | .cons (α:=α) => a.cons b
 | .append (α:=α) => a.append b
+| .zipL (α:=α) (β:=β) =>
+    if h: β.rmUnits = .unit then
+      if h' : α.rmUnits = .unit then
+        have t: α.list.rmUnits = (α ×× β).list.rmUnits := by simp[Ty.rmUnits, h, h']
+        t▸a
+      else
+        have t: α.list.rmUnits = (α ×× β).list.rmUnits := by simp[Ty.rmUnits, h]
+        t▸a
+    else
+      if h' : α.rmUnits = .unit then
+        have t: β.list.rmUnits = (α ×× β).list.rmUnits := by simp[Ty.rmUnits, h,h']
+        t▸b
+      else
+        have t: (α ×× β).list.rmUnits = (α.rmUnits ×× β.rmUnits).list := by simp[Ty.rmUnits, h,h']
+        t▸(a.zipL b)
 | .mapL (α:=α) (β:=β) =>
     if h: β.rmUnits = .unit then
       have t: (α~>β).rmUnits = β.rmUnits := by simp[Ty.rmUnits, h]
-      a.map (fun'v _ => t▸b)
+      a.mapL (fun'v _ => t▸b)
     else
       if h' : α.rmUnits = .unit then
         have t: (α ~> β).rmUnits = β.rmUnits := by simp[Ty.rmUnits, h,h']
-        a.map (fun'v _ => t▸b)
+        a.mapL (fun'v _ => t▸b)
       else
         have t: (α ~> β).rmUnits = (α.rmUnits ~> β.rmUnits) := by simp[Ty.rmUnits, h,h']
-        a.map (t▸b)
-| .aFoldL (α:=α) =>
-    if h: α.rmUnits = .unit then
+        a.mapL (t▸b)
+| .foldL (α:=α) (β:=β) =>
+    if h: β.rmUnits = .unit then
       h▸()'
     else
       have t: (α.list).rmUnits = (α.rmUnits).list := by simp[Ty.rmUnits, h]
-      have t': (α ~> α ~> α ×× α).rmUnits = (α.rmUnits ~> α.rmUnits ~> α.rmUnits ×× α.rmUnits) := by simp[Ty.rmUnits, h]
-      Tm.cst2 .aFoldL (t▸a) (t'▸b)
-| .aFoldA (n:=n) (α:=α) =>
-    if h: α.rmUnits = .unit then
+      if h': α.rmUnits = .unit then
+        have t': (α ~> β ~> β ×× β).rmUnits = (β.rmUnits ~> β.rmUnits ×× β.rmUnits) := by simp[Ty.rmUnits, h, h']
+        Tm.cst2 .foldL (t▸a) ((fun'v _ => ((t'▸b).fst)),, (t'▸b).snd)
+      else
+        have t': (α ~> β ~> β ×× β).rmUnits = (α.rmUnits ~> β.rmUnits ~> β.rmUnits ×× β.rmUnits) := by simp[Ty.rmUnits, h, h']
+        Tm.cst2 .foldL (t▸a) (t'▸b)
+| .foldA (n:=n) (α:=α) (β:=β) =>
+    if h: β.rmUnits = .unit then
       h▸()'
     else
-      have t: (α.array n).rmUnits = (α.rmUnits).array n := by simp[Ty.rmUnits, h]
-      have t': (α ~> α ~> α ×× α).rmUnits = (α.rmUnits ~> α.rmUnits ~> α.rmUnits ×× α.rmUnits) := by simp[Ty.rmUnits, h]
-      Tm.cst2 .aFoldA (t▸a) (t'▸b)
+      if h': α.rmUnits = .unit then
+        have t': (α ~> β ~> β ×× β).rmUnits = (β.rmUnits ~> β.rmUnits ×× β.rmUnits) := by simp[Ty.rmUnits, h, h']
+        Tm.cst2 .foldA (for'v _:n => a) ((fun'v _ => ((t'▸b).fst)),, (t'▸b).snd)
+      else
+        have t: (α.array n).rmUnits = (α.rmUnits).array n := by simp[Ty.rmUnits, h]
+        have t': (α ~> β ~> β ×× β).rmUnits = (α.rmUnits ~> β.rmUnits ~> β.rmUnits ×× β.rmUnits) := by simp[Ty.rmUnits, h, h']
+        Tm.cst2 .foldA (t▸a) (t'▸b)
 
 def VPar.rmUnits: VPar α → VPar α.rmUnits := VPar.changeType
 def VPar.irmUnits: VPar α.rmUnits → VPar α := VPar.changeType

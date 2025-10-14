@@ -6,11 +6,11 @@ def Ty.val: Ty → Type
 | .flt => Float
 | .lin => Float
 | .unit => Unit
-| .idx n => Fin (n+1)
+| .idx n => Fin n
 | α ×× β => α.val × β.val
 | .array n α => Vector α.val n
 | _ ~> _ => Unit
-| ref _ => panic! "ref not supported"
+| .list α => List α.val
 
 def Ty.val? (α: Ty) := Option α.val
 
@@ -44,6 +44,14 @@ def toNat'? (s: String): Option Nat :=
   else
     s.toNat?
 
+private partial def List.ofStrm (seed: α)(f: α → Option (Option β × α)): Option ((List β) × α) :=
+  match f seed with
+  | none => none
+  | some (none, seed) => some ([], seed)
+  | some (some a, seed) => do
+      let (l, seed) ← ofStrm seed f
+      return (a::l, seed)
+
 def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   let s := s.trim
   match α with
@@ -69,7 +77,20 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
       let s ← s.accept "]"
       return (v, s)
   | _ ~> _ => ((), s)
-  | .ref _ => panic! "ref not supported in parsing"
+  | .list α => do
+      let s ← s.accept "["
+      let (v, s) ← List.ofStrm (","++s) (λ s => do
+        if s.startsWith "," then
+          let s := s.drop 1 |>.trim
+          let (a, s) ← α.parse' s
+          return (some a, s)
+        else if s.startsWith "]" then
+          let s := s.drop 1 |>.trim
+          return (none, s)
+        else
+          none
+      )
+      return (v, s)
 
 def Ty.parse (α: Ty)(s: String): Option α.val := do
   let s := if s.startsWith "ok: " then s.drop 4 else s
@@ -88,7 +109,7 @@ def Parsed.toString {α: Ty}: α.val → String :=
   | _ ~> _ => λ _ => "<fun>"
   | α ×× β => λ (a, b) => s!"({@toString α a}, {@toString β b})"
   | .array _ α => λ v => s!"[{(v.toList.map (@toString α ·) |>.foldl (s!"{·}, {·}") "").drop 2}]"
-  | .ref _ => panic! "ref not supported in ToString"
+  | .list α => λ l => s!"[{(l.map (@toString α ·) |>.foldl (s!"{·}, {·}") "").drop 2}]"
 
 instance {α: Ty}: ToString α.val := ⟨Parsed.toString⟩
 
@@ -108,7 +129,7 @@ def Ty.similarVal (α: Ty)(a b: α.val): Bool :=
       β.similarVal a.snd b.snd
   | array _ α => a.zipWith (α.similarVal · ·) b |>.all id
   | _ ~> _ => true
-  | .ref _ => panic! "ref not supported in similarity check"
+  | .list α => a.zipWith (α.similarVal · ·) b |>.all id
 
 def Ty.allSimilarVal (α: Ty)(l: List α.val): Bool :=
   match l with

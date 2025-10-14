@@ -1,56 +1,61 @@
 import Polara.Codegeneration.Utils
 
 def Const0.tmgenJax (const0: Const0 α): String := match const0 with
-| mkRef => panic! "mkRef not supported in tmgen"
+| .litlZ => "0"
+| .litlE => "[]"
 | _ => s!"jnp.array({const0})"
 
 def Const1.tmgenJax (a: String): Const1 α₁ α → String
-  | normCdf => "normCdf" ++ s!"({a})"
-  | sqrt => "jnp.sqrt"         ++ s!"({a})"
-  | log => "jnp.log"           ++ s!"({a})"
-  | exp => "jnp.exp"           ++ s!"({a})"
-  | fst => s!"{a}[0]"
-  | snd => s!"{a}[1]"
-  | i2n => "idx2int"            ++ s!"({a})"
-  | n2f => s!"{a}.astype(float)"
-  | sumf
-  | suml => "jnp.sum"            ++ s!"({a})"
-  | refGet => panic! "ref not supported in tmgen"
+| normCdf => "normCdf" ++ s!"({a})"
+| sqrt => "jnp.sqrt"         ++ s!"({a})"
+| log => "jnp.log"           ++ s!"({a})"
+| exp => "jnp.exp"           ++ s!"({a})"
+| fst => s!"{a}[0]"
+| snd => s!"{a}[1]"
+| i2n => "idx2int"            ++ s!"({a})"
+| n2f => s!"{a}.astype(float)"
+| sumf
+| suml => "jnp.sum"            ++ s!"({a})"
+| .arr2list => s!"{a}"
 
 def Const2.tmgenJax (a: String) (b: String): Const2 α₁ α₂ α → String
-  | arithOp op => s!"{a} {op} {b}"
-  | linOp op => s!"{a} {op} {b}"
-  | linScale op => s!"{a} {op} {b}"
-  | lt => s!"{a} < {b}"
-  | maxf => s!"max({a}, {b})"
-  | addi => s!"{a} + {b}"
-  | eqi  => s!"{a} == {b}"
-  | tup  => s!"({a}, {b})"
-  | app  => s!"{a}({b})"
-  | get  => s!"{a}[{b}]"
-  | refSet => panic! "refSet not supported in tmgen"
+| arithOp op => s!"{a} {op} {b}"
+| linOp op => s!"{a} {op} {b}"
+| linScale op => s!"{a} {op} {b}"
+| lt => s!"{a} < {b}"
+| maxf => s!"max({a}, {b})"
+| addi => s!"{a} + {b}"
+| eqi  => s!"{a} == {b}"
+| tup  => s!"({a}, {b})"
+| app  => s!"{a}({b})"
+| get  => s!"{a}[{b}]"
+| cons => s!"[{a}] + {b}"
+| append => s!"{a} + {b}"
+| zipL => s!"list(zip({a}, {b}))"
+| mapL => s!"list(map({b}, {a}))"
+| foldL => s!"reduce(lambda acc, x: {b}[0](x)(acc), {a}, {b}[1])"
+| foldA => s!"reduce(lambda acc, x: {b}[0](x)(acc), {a}, {b}[1])"
 
 partial def Tm.codegenJax' : Tm VPar α → ReaderM (Nat × Nat) String
-  -- | err => return "None"
-  | err => (Tm.inst α).codegenJax' -- guranteed termination because inst has no error but how to prove this?
-  | var i => return i.toString
-  | cst0 k => return k.tmgenJax
-  | cst1 k a => return k.tmgenJax s!"({(← a.codegenJax')})"
-  | cst2 k a b => return k.tmgenJax s!"({← a.codegenJax'})" s!"({← b.codegenJax'})"
-  | abs f => do
-    let (i,j) <- read
-    let v := VPar.p (.mk j)
-    return s!"(lambda {v}: let({v}:=jnp.array({v}), {(f v).codegenJax' (i,j+1)}))"
-  | bld (n:=n) f => do
-    let (i,j) <- read
-    let v := VPar.p (.mk j)
-    return s!"(jax.vmap(lambda {v}: {(f v).codegenJax' (i, j+1)})(jnp.arange({n})))"
-  | bnd e f => do
-    let (i,j) <- read
-    let x := VPar.v (.mk i)
-    return s!"let({x} := {e.codegenJax' (i,j)}, \n{(f x).codegenJax' (i+1,j)})"
-  | ite cond a b =>
-    return s!"(lax.cond({← cond.codegenJax'} != 0, lambda: {<- a.codegenJax'}, lambda: {<- b.codegenJax'}))"
+| err => (Tm.inst α).codegenJax' -- guranteed termination because inst has no error but how to prove this?
+| var i => return i.toString
+| cst0 k => return k.tmgenJax
+| cst1 k a => return k.tmgenJax s!"({(← a.codegenJax')})"
+| cst2 k a b => return k.tmgenJax s!"({← a.codegenJax'})" s!"({← b.codegenJax'})"
+| abs f => do
+  let (i,j) <- read
+  let v := VPar.p (.mk j)
+  return s!"(lambda {v}: let({v}:=jnp.array({v}), {(f v).codegenJax' (i,j+1)}))"
+| bld (n:=n) f => do
+  let (i,j) <- read
+  let v := VPar.p (.mk j)
+  return s!"(jax.vmap(lambda {v}: {(f v).codegenJax' (i, j+1)})(jnp.arange({n})))"
+| bnd e f => do
+  let (i,j) <- read
+  let x := VPar.v (.mk i)
+  return s!"let({x} := {e.codegenJax' (i,j)}, \n{(f x).codegenJax' (i+1,j)})"
+| ite cond a b =>
+  return s!"(lax.cond({← cond.codegenJax'} != 0, lambda: {<- a.codegenJax'}, lambda: {<- b.codegenJax'}))"
 
 -- generates a python expression
 def Tm.codegenJax (t: Tm VPar α): String := Tm.codegenJax' t (0,0)

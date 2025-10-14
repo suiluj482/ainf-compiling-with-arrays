@@ -2,9 +2,8 @@ import Polara.Syntax.All
 
 @[reducible]
 def Ty.copower: Ty → Ty → Ty
-| α, β => (α ×× β) -- todo [(a, b)]
--- erlaubt quasi mehrfachanwendung innerer funktion ohne mehrfaches auswerten
--- aber list hätte keine statische Größe, Probleme mit jax (vllt parametriesierte funktionen? in lean?)
+| α, β => (α ×× β) -- idealy parametric, because list size is static, but polara does not support that
+-- derivation function as parameter, tracks calls
 
 mutual
   @[reducible]
@@ -16,7 +15,7 @@ mutual
   | .flt => .lin
   | α ×× β     => α.dr' ×× β.dr'
   | .array n α => .array n α.dr'
-  | .ref _     => panic! "ref not supported in automatic differentiation"
+  | .list α => .list α.dr'
   | α ~> β     => Ty.copower α.dr β.dr' -- todo not α.dr'?
 
   @[reducible]
@@ -29,7 +28,7 @@ mutual
   | α ×× β     => α.dr ×× β.dr
   | .array n α => .array n α.dr
   | .lin       => .lin
-  | .ref _     => panic! "ref not supported in automatic differentiation"
+  | .list α => .list α.dr
 end
 
 
@@ -56,9 +55,9 @@ private def Const0.dr: Const0 α → Tm Γ α.dr
 | .litn n => tlitn n
 | .litf f => tlitf f
 | .liti i => tliti i
-| .litl l => tlitl l
+| .litlZ => tlitlZ
 | .litu => tlitu
-| mkRef => panic! "ref not supported in automatic differentiation"
+| .litlE => tlitlE
 
 private def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
 | .exp     => Tm.cst1 Const1.exp x
@@ -71,7 +70,7 @@ private def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
 | .suml    => Tm.cst1 Const1.suml x
 | .i2n     => Tm.cst1 Const1.i2n x
 | .n2f     => Tm.cst1 Const1.n2f x
-| refGet => panic! "ref not supported in automatic differentiation"
+| .arr2list => Tm.cst1 Const1.arr2list x
 
 private def ArithOp.dr [t: BiArraysC BiArith α β γ](op: ArithOp)
   (a: Tm Γ α.dr)(b: Tm Γ β.dr): Tm Γ γ.dr :=
@@ -114,9 +113,13 @@ private def Const2.dr (a: Tm Γ α.dr)(b: Tm Γ β.dr): Const2 α β γ → Tm �
 | .maxf => Max.max a b
 | .get  => a[[b]]
 | .tup  => (a,, b)
-| .refSet => panic! "refSet not supported in automatic differentiation"
-| .app  => (a @@ b).fst -- derivation no longer needed
-
+| .app  => (a @@ b).fst -- derivation not needed for primal value
+| .cons => a.cons b
+| .append => a.append b
+| .zipL => a.zipL b
+| .mapL => a.mapL (fun' x => (b@@x).fst)
+| .foldL => Tm.cst2 .foldL a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
+| .foldA => Tm.cst2 .foldA a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
 
 -----------------------------------------------------------------------------------------
 -- derivation rules
@@ -149,9 +152,9 @@ private def ArithOp.dr' [t: BiArraysC BiArith α β γ](op: ArithOp)
     | .flts =>
         match op with
         | .add => (y', y')                     -- (a + b)' = a' + b'
-        | .sub => (y', tlitl 0 - y')           -- (a - b)' = a' - b'
+        | .sub => (y', tlitlZ - y')           -- (a - b)' = a' - b'
         | .mul => (y' * b, y' * a)             -- (a * b)' = a' * b + a * b'
-        | .div => (y' / b, (tlitl 0) - y' * a / (b*b))     -- (a / b)' = (a' * b - a * b') / (b^2)
+        | .div => (y' / b, tlitlZ - y' * a / (b*b))     -- (a / b)' = (a' * b - a * b') / (b^2)
 private def linOpDr' [t: BiArraysC BiLin α β γ]: (Tm Γ α.dr' × Tm Γ β.dr') :=
   match t.t with
   | .array n t' => (@linOpDr' _ _ _ _ ⟨t'⟩).map (for'v _ => ·) (for'v _ => ·)
@@ -187,7 +190,7 @@ private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEn
        fun' y' => Tm.sum (a.snd@@ ()') (b.snd@@ ()'))
   | .lt         =>
       (a.fst <' b.fst,,
-       fun' y' => Tm.sum (a.snd@@ tlitl 0) (b.snd@@ tlitl 0))
+       fun' y' => Tm.sum (a.snd@@ tlitlZ) (b.snd@@ tlitlZ))
   | .maxf       =>
       (a.fst.maxf b.fst,,
        fun' y' =>
@@ -207,7 +210,6 @@ private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEn
   | .tup        =>
       ((a.fst,, b.fst),,
        fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
-  | .refSet     => panic! "refSet not supported in automatic differentiation"
   | .app => -- special case
       let' f := a;
       let' arg := b;
@@ -216,7 +218,19 @@ private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEn
         y.fst,,
         fun' y' => Tm.sum (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
       )
-
+  | .cons => panic! "df does not yet support cons"
+      -- (a.fst.cons b.fst,,
+      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+  | .append => panic! "df does not yet support append"
+      -- (a.fst.append b.fst,,
+      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+  | .zipL => panic! "df does not yet support zipL"
+      -- (a.fst.zipL b.fst,,
+      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd)
+      -- )
+  | .mapL => panic! "df does not yet support mapL"
+  | .foldL => panic! "df does not yet support foldL"
+  | .foldA => panic! "df does not yet support foldA"
 ----------------------------------------------------------------------------------------------
 
 private def VPar.drEnv (env: EnvDr): VPar α → VPar (α.drEnv env) := VPar.changeType

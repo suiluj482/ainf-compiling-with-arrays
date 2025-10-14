@@ -26,7 +26,7 @@ namespace TmTest
           some 3.14
         ⟩,
         leaf ⟨"liti", _,_,
-          tliti (2: Fin 6), id,
+          @tliti _ 6 2, id,
           some 2
         ⟩,
         -- cst1
@@ -37,7 +37,7 @@ namespace TmTest
         leaf ⟨"fst", _,_,    ((tlitf 4.2),, (tlitf 3.14)).fst, id, some 4.2⟩,
         leaf ⟨"snd", _,_,    ((tlitf 4.2),, (tlitf 3.14)).snd, id, some 3.14⟩,
         leaf ⟨"sum", _,_,    (for'v _:10 => tlitf 4.2).sumf, id, some 42⟩,
-        leaf ⟨"i2n", _,_,    (tliti (2: Fin 6)).i2n, id, some 2⟩,
+        leaf ⟨"i2n", _,_,    (@tliti _ 6 2).i2n, id, some 2⟩,
         leaf ⟨"n2f", _,_,    (tlitn 42).n2f, id, some 42⟩,
         -- cst2
         leaf ⟨"addn", _,_,  (tlitn 42) + (tlitn 2), id, some 44⟩,
@@ -52,11 +52,11 @@ namespace TmTest
         leaf ⟨"suba", _,_,  (for'v _:10 => tlitf 4.2) - (for'v _:10 => tlitf 2.0), id, some (Vector.replicate 10 2.2)⟩,
         leaf ⟨"mula", _,_,  (for'v _:10 => tlitf 4.2) * (for'v _:10 => tlitf 2.0), id, some (Vector.replicate 10 8.4)⟩,
         leaf ⟨"diva", _,_,  (for'v _:10 => tlitf 4.2) / (for'v _:10 => tlitf 2.0), id, some (Vector.replicate 10 2.1)⟩,
-        leaf ⟨"addi", _,_,  (tliti (2: Fin 8)).addi (tliti (3: Fin 4)), id, some ⟨5,by simp⟩⟩,
-        leaf ⟨"eqi",  _,_,  (tliti (2: Fin 3)).eqi (tliti (2: Fin 3)), id, some 1⟩,
+        leaf ⟨"addi", _,_,  (@tliti _ 8 7).addi (@tliti _ 4 3), id, some (10: Fin 11)⟩,
+        leaf ⟨"eqi",  _,_,  (@tliti _ 3 2).eqi (@tliti _ 3 2), id, some 1⟩,
         leaf ⟨"maxf", _,_,  (tlitf 42.0).maxf (tlitf 2.0), id, some 42⟩,
         leaf ⟨"lt", _,_,    (tlitf 42.0) <' (tlitf 2.0), id, some 0⟩,
-        leaf ⟨"get", _,_,   (for'v _:10 => tlitf 4.2)[[(tliti (2: Fin 11))]], id, some 4.2⟩,
+        leaf ⟨"get", _,_,   (for'v _:10 => tlitf 4.2)[[@tliti _ 10 2]], id, some 4.2⟩,
         leaf ⟨"tup", _,_,   ((tlitf 4.2),, (tlitn 42)), id, some (4.2, 42)⟩,
         leaf ⟨"app", _,_,   (fun'v _:nat => tlitf 4.2) @@ (tlitn 42), id, some (4.2)⟩,
         -- tm

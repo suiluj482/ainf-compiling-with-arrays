@@ -62,7 +62,6 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
 | linScale op => s!"{a} {op.toString} {b}"
 | addi => s!"{a} + {b}"
 | eqi => s!"{a} == {b}"
--- | fori => s!"foldi {a} {b}"
 | lt => s!"{a} < {b}"
 | maxf => s!"max {a} {b}"
 | tup  => s!"({a}, {b})"
@@ -72,8 +71,8 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
 | append => s!"{a} ++ {b}"
 | zipL => s!"{a}.zip {b}"
 | mapL => s!"{a}.map {b}"
-| aFoldL => s!"{a}.fold {b}"
-| aFoldA => s!"{a}.fold {b}"
+| foldL => s!"{a}.fold {b}"
+| foldA => s!"{a}.fold {b}"
 
 def Par.toString : Par α → String
   | mk x => "i" ++ x.repr

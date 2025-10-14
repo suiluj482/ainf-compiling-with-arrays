@@ -128,9 +128,10 @@ private def Const2.df (a: Tm Γ α.df)(b: Tm Γ β.df): Const2 α β γ → Tm �
 | .tup  => (a,, b)
 | .cons => a.cons b
 | .append => a.append b
-| .mapL => a.map (fun' x => (b@@x).fst)
-| .aFoldL => Tm.cst2 .aFoldL a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
-| .aFoldA => Tm.cst2 .aFoldA a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
+| .zipL => a.zipL b
+| .mapL => a.mapL (fun' x => (b@@x).fst)
+| .foldL => Tm.cst2 .foldL a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
+| .foldA => Tm.cst2 .foldA a ((fun' x => fun' y => ((b.fst@@x).fst@@y).fst),, b.snd)
 | .app  => (a @@ b).fst -- derivation no longer needed
 
 
@@ -194,7 +195,24 @@ private def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)
 | .app        => Tm.sum ((a @@ b).snd @@ b') (a' @@ b)
 | .cons       => a'.cons b'
 | .append     => a'.append b'
-| .mapL       => a'.map (fun' x => (b@@x).fst)
+| .zipL       => a'.zipL b'
+| .mapL       => (a.zipL a').mapL (fun' x =>
+      let a := x.fst;
+      let a' := x.snd;
+      Tm.sum ((b @@ a).snd @@ a') (b' @@ a)
+    )
+| .foldL => panic! "df does not yet support foldL"
+    -- let' f := b.fst; let' f' := b'.fst;
+    -- ((a.zipL a').foldL ((fun' x => fun' y =>
+    --     let' a := x.fst; let' a' := x.snd;
+    --     let' acc := y.fst; let' acc' := y.snd;
+    --     let' f'a := (f' @@ a)
+    --     f'a.snd @@ acc
+    --     -- Tm.sum ((f @@ a).snd @@ a') (f' @@ a)
+    --     sorry
+    --   ),, (b.snd,, b'.snd)
+    -- )).snd
+| .foldA => panic! "df does not yet support foldA"
 
 ----------------------------------------------------------------------------------------------
 

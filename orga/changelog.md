@@ -68,3 +68,9 @@
 - original examples as test cases
 - fix String.toFloat? for pythons exponent notation
 - fix aD, df, dr handling of outside or previous environments variables, incl tests for this
+13.10 - 20.10:
+- migrate to linZero literal
+- migrate to Pos to gurantee loops non empty
+- bug fixes
+- introducing lists for dr
+- remove unused refs

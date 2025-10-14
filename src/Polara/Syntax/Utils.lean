@@ -299,7 +299,7 @@ def Tm.sumArray (arr: Tm Γ (.array n α)): Tm Γ α :=
   | .flt => arr.sumf
   | .nat => panic! "Tm.sumArray doesn't support nat"
   | .idx _ => panic! "Tm.sumArray doesn't support idx"
-  | .list _ => arr.aFoldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
+  | .list _ => arr.foldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
 
 def Tm.linZero (α: Ty): Tm Γ α :=
   match α with
@@ -335,7 +335,7 @@ def Tm.sumArrayOfLins (arr: Tm Γ (.array n α)): Tm Γ α :=
   | .array _ _ => for' j => (for' i => arr[[i]][[j]]).sumArrayOfLins
   | _ ~> _ => fun' a => (for' i => arr[[i]] @@ a).sumArrayOfLins
   | .nat | .idx _ | .flt => panic! "sumArrayOfLins not supported for non linear types"
-  | .list _ => arr.aFoldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
+  | .list _ => arr.foldA (fun' x => fun' y => Tm.append x y) (Tm.zero _)
 
 def Tm.synBEq': {α: Ty} → Tm VPar α → Tm VPar α → VParM Bool
 | _, .err, .err => return true

@@ -52,7 +52,7 @@ def dense {Γ : Ty → Type} n m : Tm Γ (
   -- for i. sum j. x[j] * y[i+j]
 
 def conv {Γ : Ty → Type} n m : Tm Γ (
-  array n flt ~> array (n+m) flt ~> array m flt
+  array n flt ~> array (n.addMinOne m) flt ~> array m flt
 ) :=
   fun' x => fun' y =>
     for' i =>

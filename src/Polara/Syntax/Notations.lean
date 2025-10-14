@@ -56,10 +56,13 @@ namespace Tm
 
   def cons: Tm Γ α → Tm Γ (list α) → Tm Γ (list α) := Tm.cst2 Const2.cons
   def append: Tm Γ (list α) → Tm Γ (list α) → Tm Γ (list α) := Tm.cst2 Const2.append
-  def zip: Tm Γ (list α) → Tm Γ (list β) → Tm Γ (list (α××β)) := Tm.cst2 Const2.zipL
-  def map: Tm Γ (list α) → Tm Γ (α~>β) → Tm Γ (list β) := Tm.cst2 Const2.mapL
-  def aFoldL: Tm Γ (list α) → Tm Γ (α ~> α ~> α) → Tm Γ α → Tm Γ α := λ l f n => Tm.cst2 Const2.aFoldL l (f.tup n)
-  def aFoldA: Tm Γ (array n α) → Tm Γ (α ~> α ~> α) → Tm Γ α → Tm Γ α := λ l f n => Tm.cst2 Const2.aFoldA l (f.tup n)
+  def zipL: Tm Γ (list α) → Tm Γ (list β) → Tm Γ (list (α××β)) := Tm.cst2 Const2.zipL
+  def mapL: Tm Γ (list α) → Tm Γ (α~>β) → Tm Γ (list β) := Tm.cst2 Const2.mapL
+  def foldL: Tm Γ (list α) → Tm Γ (α ~> β ~> β) → Tm Γ β → Tm Γ β := λ l f n => Tm.cst2 Const2.foldL l (f.tup n)
+  def foldA: Tm Γ (array n α) → Tm Γ (α ~> β ~> β) → Tm Γ β → Tm Γ β := λ l f n => Tm.cst2 Const2.foldA l (f.tup n)
+  def foldL': Tm Γ (list α) → Tm Γ ((α ~> β ~> β)××β) → Tm Γ β := Tm.cst2 Const2.foldL
+  def foldA': Tm Γ (array n α) → Tm Γ ((α ~> β ~> β)××β) → Tm Γ β := Tm.cst2 Const2.foldA
+
 
   def π: Tm Γ flt := tlitf 3.14159265358979323846
 

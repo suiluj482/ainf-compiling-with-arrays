@@ -140,8 +140,8 @@ inductive Const2 : Ty → Ty → Ty → Type
 | append: Const2 (list α) (list α) (list α)
 | zipL: Const2 (list α) (list β) (list (α××β))
 | mapL: Const2 (list α) (α~>β) (list β)
-| aFoldL: Const2 (list α) ((α ~> α ~> α) ×× α) α -- fold list with assosiativ function
-| aFoldA: Const2  (array n α) ((α ~> α ~> α) ×× α) α -- fold array with associativ function
+| foldL: Const2 (list α) ((α ~> β ~> β) ×× β) β -- fold list with assosiativ function
+| foldA: Const2  (array n α) ((α ~> β ~> β) ×× β) β -- fold array with associativ function
 deriving BEq
 open Const2
 

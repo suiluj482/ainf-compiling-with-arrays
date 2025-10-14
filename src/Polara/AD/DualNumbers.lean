@@ -8,21 +8,6 @@ def Ty.aD: Ty → Ty :=
     |.flt => .flt ×× .lin
     | α => α
   )
--- | .lin => .lin -- todo
-
-
--- f: flt ×× lin ×× flt ×× lin ~> flt ×× lin
--- f(x, 0, y, 1): (z, f' x y)
-
--- #reduce Ty.nat.aD
--- #reduce Ty.flt.aD
--- #reduce Ty.flt ~> Ty.flt |>.aD
--- #reduce Ty.flt ~> Ty.flt ~> Ty.flt |>.aD
-
--- f : flt → flt
--- f' : flt → flt
--- [f] : flt × flt → fl × flt
--- [f] (x, dx) := (f x, dx * f' x)
 
 private def Const0.aD: Const0 α → Tm Γ α.aD
 | .litn n => tlitn n
@@ -110,9 +95,9 @@ private def Const2.aD (a: Tm Γ α.aD)(b: Tm Γ β.aD): Const2 α β γ → Tm �
 | .cons => a.cons b
 | .append => a.append b
 | .zipL => a.zipL b
-| .mapL => a.map b
-| .aFoldL => Tm.cst2 .aFoldL a b
-| .aFoldA => Tm.cst2 .aFoldA a b
+| .mapL => a.mapL b
+| .foldL => Tm.cst2 .foldL a b
+| .foldA => Tm.cst2 .foldA a b
 
 private def VPar.aD:  VPar α    → VPar α.aD := VPar.changeType
 private def VPar.iaD: VPar α.aD → VPar α    := VPar.changeType
@@ -124,7 +109,7 @@ private def Tm.liftIntoAD (t: Tm VPar α): Tm VPar α.aD :=
   | .flt => (t,, tlitlZ)
   | _ ×× _ => (t.fst.liftIntoAD,, t.snd.liftIntoAD)
   | .array _ _ => for' i => t[[i]].liftIntoAD
-  | .list _ => t.map (fun' x => x.liftIntoAD)
+  | .list _ => t.mapL (fun' x => x.liftIntoAD)
   | _ ~> _ => panic! "Can not lift a function into the scope of dual numbers"
 
 private def Tm.aD' (dv: DVars): Tm VPar α → Tm VPar α.aD

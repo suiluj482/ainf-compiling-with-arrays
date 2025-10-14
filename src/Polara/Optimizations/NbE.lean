@@ -221,17 +221,17 @@ private def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.d
 | @zipL _ _ => λ
   | .err, _ | _, .err => err
   | cst0 litlE, _ | _, cst0 litlE => tlitlE
-  | a, b => a.zip b
+  | a, b => a.zipL b
 | @mapL _ _ => λ
   | .err, _ => err
   | cst0 litlE, _ => tlitlE
-  | a, b => a.map (quote b)
-| @aFoldL _ => λ
+  | a, b => a.mapL (quote b)
+| @foldL _ _ => λ
   | .err, _ => splice .err
   | cst0 litlE, (_,n) => n
-  | l, (f, n) => splice (l.aFoldL (quote f) (quote n))
-| @aFoldA _ _ => λ
-  | arr, (f, n) => splice ((quote arr).aFoldA (quote f) (quote n))
+  | l, (f, n) => splice (l.foldL (quote f) (quote n))
+| @foldA _ _ _ => λ
+  | arr, (f, n) => splice ((quote arr).foldA (quote f) (quote n))
 
 -- term in dessen env sich bereich denotierte terme befinden, im prinzip interpreter
 private def Tm.de : Tm (Ty.de Γ) α → Ty.de Γ α
