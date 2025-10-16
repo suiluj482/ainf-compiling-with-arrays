@@ -64,6 +64,8 @@ namespace Tm
   def foldA': Tm Γ (array n α) → Tm Γ ((α ~> β ~> β)××β) → Tm Γ β := Tm.cst2 Const2.foldA
 
 
+  def listSingleton: Tm Γ α → Tm Γ (list α) := (cons · tlitlE)
+  def l: Tm Γ α → Tm Γ (list α) := (cons · tlitlE)
   def π: Tm Γ flt := tlitf 3.14159265358979323846
 
   def linScale: Tm Γ lin → Tm Γ flt → Tm Γ lin := Tm.cst2 (.linScale .mul)

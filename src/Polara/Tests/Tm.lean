@@ -65,6 +65,12 @@ namespace TmTest
         leaf ⟨"bld", _,_,   for'v _:10 => tlitf 4.2, id, some (Vector.replicate 10 4.2)⟩,
         leaf ⟨"iteT", _,_,  if' (tlitn 1) then (tlitf 4.2) else (tlitf 2.4), id, some 4.2⟩,
         leaf ⟨"iteF", _,_,  if' (tlitn 0) then (tlitf 4.2) else (tlitf 2.4), id, some 2.4⟩,
+        leaf ⟨"listEmpty", _,_,  ([]': Term flt.list), id, some []⟩,
+        leaf ⟨"listCons", _,_,  ((tlitf 0).cons []'), id, some [0]⟩,
+        leaf ⟨"listAppend", _,_,  ((tlitf 0).l ++ (tlitf 1).l), id, some [0,1]⟩,
+        leaf ⟨"listMap", _,_,  ((tlitf 0).l.mapL (fun' x => x+tlitf 1)), id, some [1]⟩,
+        leaf ⟨"listZip", _,_,  ((tlitf 0).l.zipL (tlitf 1).l), id, some [(0,1)]⟩,
+        leaf ⟨"listFold", _,_,  ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1)), id, some 3⟩,
       ],
       node "Simple" [
         leaf ⟨"vectorRange", _,_, (for' i:10 => i.i2n.n2f), id, some <| Vector.ofFn (λ i => i.val.toFloat)⟩,
@@ -416,7 +422,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 40.0;
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (42.0, (1.0, 1.0))
           ⟩,
           leaf ⟨"sub", _,_,
@@ -424,7 +430,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 44.0;
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (42.0, (1.0, -1.0))
           ⟩,
           leaf ⟨"mul", _,_,
@@ -432,7 +438,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 44.0;
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (88.0, (2.0, 44.0))
           ⟩,
           leaf ⟨"div", _,_,
@@ -440,7 +446,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 44.0;
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (22.0, (0.5, -11.0))
           ⟩,
           leaf ⟨"adda", _,_,
@@ -448,7 +454,7 @@ namespace TmTest
             (let't t, dx := ·@@ (for' i:10 => tlitf 40.0);
              let' y := (for' i:10 => tlitf 2.0);
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, (for' i:10 => tlitf 1.0)),, dy@@ (for' i:10 => tlitf 1.0)))),
+             (v,, (dx@@ (y,, (for' i:10 => tlitf 1.0)).l,, dy@@ (for' i:10 => tlitf 1.0)))),
             some ((Vector.replicate 10 42.0), (Vector.replicate 10 1.0, Vector.replicate 10 1.0))
           ⟩,
           leaf ⟨"maxf", _,_,
@@ -456,7 +462,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 40.0;
              let' y := tlitf 42.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (42.0, (0.0, 1.0))
           ⟩,
           -- higher order functions
@@ -465,7 +471,7 @@ namespace TmTest
             (let't t, dx := ·@@ tlitf 4.0;
              let' y := tlitf 2.0;
              let't v, dy := t@@ y;
-             (v,, (dx@@ (y,, tlitf 1.0),, dy@@ tlitf 1.0))),
+             (v,, (dx@@ (y,, tlitf 1.0).l,, dy@@ tlitf 1.0))),
             some (6.0, (1.0, 1.0))
           ⟩,
           leaf ⟨"curried2", _,_,
@@ -475,7 +481,7 @@ namespace TmTest
              let't t, dy := t@@ y;
              let' z := tlitf 100.0;
              let't v, dz := t@@ z;
-             (v,, (dx@@ (y,, (z,, tlitf 1.0)),, (dy@@ (y,, tlitf 1.0),, dz@@ tlitf 1.0)))),
+             (v,, (dx@@ (y,, (z,, tlitf 1.0).l).l,, (dy@@ (y,, tlitf 1.0).l,, dz@@ tlitf 1.0)))),
             some (6.0, (1.0, 1.0, 0.0))
           ⟩,
           leaf ⟨"higherorder", _,_,

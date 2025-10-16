@@ -21,6 +21,11 @@ def idx2int(a: int):
 def let(x, y):
     return y
 
+def fold(f, l, n):
+    res = n
+    for i in l:
+        res = f(i)(res)
+    return res
 
 #############################################################  
 ## Codegeneration to Python

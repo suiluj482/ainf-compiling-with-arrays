@@ -2,7 +2,7 @@ import Polara.Syntax.All
 
 @[reducible]
 def Ty.copower: Ty → Ty → Ty
-| α, β => (α ×× β) -- idealy parametric, because list size is static, but polara does not support that
+| α, β => list (α ×× β) -- idealy parametric, because list size is static, but polara does not support that
 -- derivation function as parameter, tracks calls
 
 mutual
@@ -16,7 +16,7 @@ mutual
   | α ×× β     => α.dr' ×× β.dr'
   | .array n α => .array n α.dr'
   | .list α => .list α.dr'
-  | α ~> β     => Ty.copower α.dr β.dr' -- todo not α.dr'?
+  | α ~> β     => Ty.copower α.dr β.dr'
 
   @[reducible]
   def Ty.dr: Ty → Ty
@@ -41,11 +41,6 @@ private def EnvDr.ty: EnvDr → Ty
 @[reducible]
 private def Ty.drEnv (env: EnvDr): Ty → Ty
 | α => (α.dr ×× (α.dr' ~> (EnvDr.ty env).dr')) -- α ~> env
-
--- open Ty
--- #eval flt ~> flt |>.dr
--- #eval flt ~> flt ~> flt |>.dr
-
 
 ------------------------------------------------------------------------------------------
 -- except Const2.app functions only changing type
@@ -171,63 +166,60 @@ private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEn
       ((Const2.arithOp op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := op.dr' a.fst b.fst y'
-        Tm.sum (a.snd@@ a') (b.snd@@ b'))
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
   | Const2.linOp op    =>
       ((Const2.linOp op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := @linOpDr' α β _ _ _
-        Tm.sum (a.snd@@ a') (b.snd@@ b'))
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
   | Const2.linScale op =>
       ((Const2.linScale op).dr a.fst b.fst,,
        fun' y' =>
         let (a',b') := @linScaleDr' α β _ _ _
-        Tm.sum (a.snd@@ a') (b.snd@@ b'))
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
   | .addi       =>
       (a.fst.addi b.fst,,
-       fun' y' => Tm.sum (a.snd@@ ()') (b.snd@@ ()'))
+       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
   | .eqi        =>
       (a.fst.eqi b.fst,,
-       fun' y' => Tm.sum (a.snd@@ ()') (b.snd@@ ()'))
+       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
   | .lt         =>
       (a.fst <' b.fst,,
-       fun' y' => Tm.sum (a.snd@@ tlitlZ) (b.snd@@ tlitlZ))
+       fun' y' => Tm.sumLins (a.snd@@ tlitlZ) (b.snd@@ tlitlZ))
   | .maxf       =>
       (a.fst.maxf b.fst,,
        fun' y' =>
-        -- if' a.fst <' b.fst
-        --   then Tm.sum (a.snd @@ (Tm.zero _)) (b.snd @@ y')
-        --   else Tm.sum (a.snd @@ y') (b.snd @@ (Tm.zero _))
         let' c := a.fst <' b.fst;
         let a' := if' c then Tm.zero _ else y'
         let b' := if' c then y' else Tm.zero _
-        Tm.sum (a.snd@@ a') (b.snd@@ b')
+        Tm.sumLins (a.snd@@ a') (b.snd@@ b')
       )
   | .get        =>
       (a.fst[[b.fst]],,
        fun' y' =>
         let a' := for' i => (if' i ==' b.fst then y' else Tm.zero _)
-        Tm.sum (a.snd@@ a') (b.snd@@ ()'))
+        Tm.sumLins (a.snd@@ a') (b.snd@@ ()'))
   | .tup        =>
       ((a.fst,, b.fst),,
-       fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+       fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
   | .app => -- special case
       let' f := a;
       let' arg := b;
       let' y := f.fst @@ arg.fst;
       (
         y.fst,,
-        fun' y' => Tm.sum (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y'))
+        fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y').listSingleton)
       )
-  | .cons => panic! "df does not yet support cons"
+  | .cons => panic! "df does not yet support cons" -- would require list.head and list.tail
       -- (a.fst.cons b.fst,,
-      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
-  | .append => panic! "df does not yet support append"
+      --   fun' y' => Tm.sumLins (a.snd@@ y'.head) (b.snd@@ y'.tail))
+  | .append => panic! "df does not support append" -- the derivation list cant be split on the right point
       -- (a.fst.append b.fst,,
-      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd))
-  | .zipL => panic! "df does not yet support zipL"
-      -- (a.fst.zipL b.fst,,
-      --   fun' y' => Tm.sum (a.snd@@ y'.fst) (b.snd@@ y'.snd)
-      -- )
+      --   fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+  | .zipL =>
+      (a.fst.zipL b.fst,,
+        fun' y' => Tm.sumLins (a.snd@@ (y'.mapL (fun' a => a.fst))) (b.snd@@ (y'.mapL (fun' a => a.snd)))
+      )
   | .mapL => panic! "df does not yet support mapL"
   | .foldL => panic! "df does not yet support foldL"
   | .foldA => panic! "df does not yet support foldA"
@@ -262,7 +254,7 @@ private def Tm.dr'(env: EnvDr)(ren: Ren): Tm VPar α → Tm VPar (α.drEnv env)
     (a origIdx).dr' env ((⟨_,origIdx⟩,env.length) :: ren);
   (
     for' idx => arr[[idx]].fst,,
-    fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArray
+    fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArrayOfLins
   )
 | .ite cond a b       => .ite cond (a.dr' env ren) (b.dr' env ren)
 | .var v (α:=α)       =>
@@ -302,15 +294,19 @@ private def Tm.dr'(env: EnvDr)(ren: Ren): Tm VPar α → Tm VPar (α.drEnv env)
           body.fst,,
           fun' y' => (body.snd @@ y').fst
         ),,
-      fun' copower => -- copower.fold λ copower => -- todo fold
-        let x  := copower.fst;
-        let y' := copower.snd;
+      fun' copower => copower.foldL (fun' call => fun' acc =>
+        let x  := call.fst;
+        let y' := call.snd;
         let body := f @@ x;
-        (body.snd @@ y').snd
+        Tm.sumLins (body.snd @@ y').snd acc
+      ) (Tm.zero _)
     )
 
 def Tm.dr (t: Tm VPar α): Tm VPar α.dr :=
   t.dr' [] [] |>.fst -- remove derivation of empty env
+
+
+
 
 -- open Ty
 

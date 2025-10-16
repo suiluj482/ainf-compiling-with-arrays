@@ -79,18 +79,21 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | _ ~> _ => ((), s)
   | .list α => do
       let s ← s.accept "["
-      let (v, s) ← List.ofStrm (","++s) (λ s => do
-        if s.startsWith "," then
-          let s := s.drop 1 |>.trim
-          let (a, s) ← α.parse' s
-          return (some a, s)
-        else if s.startsWith "]" then
-          let s := s.drop 1 |>.trim
-          return (none, s)
-        else
-          none
-      )
-      return (v, s)
+      match s.accept "]" with
+      | some s => return ([],s)
+      | none =>
+        let (v, s) ← List.ofStrm (","++s) (λ s => do
+          if s.startsWith "," then
+            let s := s.drop 1 |>.trim
+            let (a, s) ← α.parse' s
+            return (some a, s)
+          else if s.startsWith "]" then
+            let s := s.drop 1 |>.trim
+            return (none, s)
+          else
+            none
+        )
+        return (v, s)
 
 def Ty.parse (α: Ty)(s: String): Option α.val := do
   let s := if s.startsWith "ok: " then s.drop 4 else s

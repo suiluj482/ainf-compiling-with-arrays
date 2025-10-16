@@ -69,10 +69,10 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
 | get  => s!"{a}[{b}]"
 | cons => s!"{a} :: {b}"
 | append => s!"{a} ++ {b}"
-| zipL => s!"{a}.zip {b}"
-| mapL => s!"{a}.map {b}"
-| foldL => s!"{a}.fold {b}"
-| foldA => s!"{a}.fold {b}"
+| zipL => s!"({a}).zip {b}"
+| mapL => s!"({a}).map {b}"
+| foldL => s!"({a}).foldL {b}"
+| foldA => s!"({a}).foldA {b}"
 
 def Par.toString : Par α → String
   | mk x => "i" ++ x.repr

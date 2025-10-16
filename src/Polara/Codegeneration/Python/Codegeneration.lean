@@ -34,8 +34,8 @@ def Const2.tmgenPy (a: String) (b: String): Const2 α₁ α₂ α → String
 | append => s!"{a} + {b}"
 | zipL => s!"list(zip({a}, {b}))"
 | mapL => s!"list(map({b}, {a}))"
-| foldL => s!"reduce(lambda acc, x: {b}[0](x)(acc), {a}, {b}[1])"
-| foldA => s!"reduce(lambda acc, x: {b}[0](x)(acc), {a}, {b}[1])"
+| foldL => s!"fold({b}[0], {a}, {b}[1])"
+| foldA => s!"fold({b}[0], {a}, {b}[1])"
 
 def Tm.codegenPy' : Tm VPar α → VParM String
 | var i => return i.toString
@@ -51,7 +51,7 @@ def Tm.codegenPy' : Tm VPar α → VParM String
   return s!"[(lambda {v}: {←(f v).codegenPy'})({v}) for {v} in range(0,{n})]" -- python closure only captures vars not values
 | bnd e f => do
   let x := (←VParM.varVPar) _
-  return s!"let({x} := {←e.codegenPy'}, {←(f x).codegenPy'})"
+  return s!"let({x} := {←e.codegenPy'}, \n{←(f x).codegenPy'})"
 | ite cond a b =>
   return s!"({<- a.codegenPy'} if {<- cond.codegenPy'} else {<- b.codegenPy'})"
 

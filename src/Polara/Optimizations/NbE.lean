@@ -182,7 +182,8 @@ private def linScaleDe (op: MulOp) : BiLF α' β' γ' → Ty.de Γ α' → Ty.de
 private def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.de Γ γ
 | app => fun f e => f e
 | get => fun f n => f n
-| tup => fun a b => (a, b)
+| tup => λ
+  | a, b => (a, b)
 | lt => fun
   | .err, _
   | _, .err => err
@@ -217,6 +218,8 @@ private def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.d
 | @append _ => λ
   | .err, _ | _, .err => err
   | cst0 litlE, a | a, cst0 litlE => a
+  | cst2 .cons a (cst0 litlE), l => a.cons l
+  | cst2 .cons a (cst2 .cons b (cst0 litlE)), l => a.cons (b.cons l)
   | a, b => a.append b
 | @zipL _ _ => λ
   | .err, _ | _, .err => err
@@ -229,6 +232,7 @@ private def Const2.de : Const2 α β γ → Ty.de Γ α → Ty.de Γ β → Ty.d
 | @foldL _ _ => λ
   | .err, _ => splice .err
   | cst0 litlE, (_,n) => n
+  | cst2 cons e (cst0 litlE), (f,n) => f (splice e) n
   | l, (f, n) => splice (l.foldL (quote f) (quote n))
 | @foldA _ _ _ => λ
   | arr, (f, n) => splice ((quote arr).foldA (quote f) (quote n))

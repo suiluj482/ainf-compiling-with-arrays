@@ -96,16 +96,13 @@ end RefIn
 namespace AD
 
   def fp :=
-    (fun' g:(flt ~> flt) => (for' i:3 => (g @@ i.i2n.n2f)).sumf).toVPar
+    (fun' g:(flt ~> flt) => g@@ tlitf 0).toVPar
   #eval fp.getTy
 
   def fr :=
     (fun' x:flt => (fun' y:flt => x+y)).toVPar
   #eval fr.getTy
 
-  def f :=
-    (fun' g:(flt ~> flt) => fun' x => (g @@ x) * (g @@ x) + tlitf 10).toVPar
-  #eval f.getTy
 
   namespace DN
 
@@ -113,8 +110,6 @@ namespace AD
     #eval fp.aD.normVPar
     #eval fr.getTy.aD
     #eval fr.df.normVPar
-    #eval f.getTy.aD
-    #eval f.aD.normVPar
 
   end DN
 
@@ -124,6 +119,10 @@ namespace AD
     #eval fp.df.normVPar
     #eval fr.getTy.df
     #eval fr.df.normVPar
+
+    def f :=
+      (fun' g:(flt ~> flt) => fun' x => (g @@ x) * (g @@ x) + tlitf 10).toVPar
+    #eval f.getTy
     #eval f.getTy.df
     #eval f.df.normVPar
 
@@ -135,6 +134,8 @@ namespace AD
     #eval fp.dr.normVPar
     #eval fr.getTy.dr
     #eval fr.dr.normVPar
+    def f :=
+      (fun' g:(flt ~> flt) => fun' x => (g@@ (x+tlitf 1)) - (g@@x)).toVPar
     #eval f.getTy.dr
     #eval f.dr.normVPar
 
