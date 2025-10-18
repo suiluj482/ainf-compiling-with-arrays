@@ -1,3 +1,11 @@
+import Lean
+open System
+
+def readFile (filename : FilePath) : IO String := do
+  let handle ← IO.FS.Handle.mk filename IO.FS.Mode.read
+  let contents ← handle.readToEnd
+  return contents
+
 namespace String
   def addToLines (s: String)(pre: String): String := pre ++ s.replace "\n" s!"\n{pre}"
   def indent (s: String): String := addToLines s "  "
@@ -12,6 +20,8 @@ def List.toStringSep [ToString α](sep: String): List α → String
 namespace Print
 
   def foldLines: List String → String | l => l.foldl (s!"{·}\n{·}") "" |>.drop 1
+
+  def foldWithComma: List String → String | l => l.foldl (s!"{·},{·}") "" |>.drop 1
 
   def indentString (n: Nat): String :=
     match n with

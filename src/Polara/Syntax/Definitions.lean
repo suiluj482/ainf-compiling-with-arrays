@@ -254,6 +254,10 @@ def filterPars (l: List (Sigma VPar)): List (Sigma Par) :=
 def Bnd.var: Bnd → Sigma Var := (λ ⟨v,_,_⟩ => v)
 def Bnd.vars := filterVars ∘ Bnd.vpars
 def Bnd.pars := filterPars ∘ Bnd.vpars
+def Var.num: Var α → Nat | ⟨n⟩ => n
+def Par.num: Par α → Nat | ⟨n⟩ => n
+def VPar.num: VPar α → Nat
+| .v ⟨n⟩ | .p ⟨n⟩ => n
 
 -- HashMap
 -- + faster lookup

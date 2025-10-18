@@ -1,13 +1,9 @@
 import Polara.Codegeneration.IO.Config
 import Polara.Codegeneration.IO.Classes
+import Polara.Utils.All
 
 import Lean
 open System
-
-def readFile (filename : FilePath) : IO String := do
-  let handle ← IO.FS.Handle.mk filename IO.FS.Mode.read
-  let contents ← handle.readToEnd
-  return contents
 
 def copyInRuntime (code: String)
   (lang: String)[i: FileExt lang] : IO String := do

@@ -118,11 +118,11 @@ instance: ToString (Tm VPar α) := ⟨Tm.toString⟩
 def EnvPart.toString: EnvPart → String
   | .func α i      => s!"fun {i.toString}:{α.toString}"
   | .forc i (n:=n) => s!"for {i.toString}:{n}"
-  | .itec i true   => s!"if {i.toString}!=0"
-  | .itec i false  => s!"if {i.toString}==0"
+  | .itec i true   => s!"if {i.toString}"
+  | .itec i false  => s!"if! {i.toString}"
 instance : ToString EnvPart := ⟨EnvPart.toString⟩
 def Env.toString (env: Env): String :=
-  env.toStringSep ", "
+  env.reverse.foldl (s!"{·}{·}, ") ""
 instance: ToString Env := ⟨Env.toString⟩
 
 def Prim.toString: Prim α → String
@@ -131,15 +131,45 @@ def Prim.toString: Prim α → String
   | .cst1 k a => k.toString ++ " " ++ a.toString ++ ""
   | .cst2 k a b => k.toString ("" ++ a.toString ++ "") ("" ++ b.toString ++ "")
   | .var i => i.toString
-  | .abs (α:=γ) i e => s!"fun {i.toString}:{γ.toString}, " ++ (e.toString).replace "\n" "\n  "
-  | .bld (n:=n) i e => s!"for {i.toString}:{n}, {e.toString}"
+  | .abs (α:=γ) i e => s!"fun {i.toString}:{γ.toString} => {e.toString}"
+  | .bld (n:=n) i e => s!"for {i.toString}:{n} => {e.toString}"
   | .ite a b c => "if " ++ a.toString ++ " != 0 then " ++ b.toString ++ " else " ++ c.toString
 instance : ToString (Prim α) := ⟨Prim.toString⟩
 
 def Bnd.toString: Bnd → String
-| ⟨⟨α, var⟩, env, prim⟩ => s!"let {env} ({var} : {α} := {prim})"
+| ⟨⟨α, var⟩, env, prim⟩ => s!"let {env}{var} : {α} := {prim}"
 instance : ToString Bnd := ⟨Bnd.toString⟩
 
 def AINF.toString: AINF α → String
 | (bnds, ret) => s!"{bnds.map Bnd.toString |>.toStringSep "\n" |>.indent}\n{ret}"
 instance : ToString (AINF α) where toString x := x.toString
+
+private def String.esc: String → String | s => s.replace ">" "&gt;"
+private def EnvPart.toGraphviz: EnvPart → String
+  | .func α i      => htmlColorTag i.num s!"fun {i.toString}:{α.toString.esc}"
+  | .forc i (n:=n) => htmlColorTag i.num s!"for {i.toString}:{n}"
+  | .itec i true   => s!"if {i.toString}"
+  | .itec i false  => s!"if! {i.toString}"
+private def Env.toGraphviz (env: Env): String :=
+  env.reverse.map (·.toGraphviz) |>.foldl (s!"{·}{·}, ") ""
+private def Prim.toGraphviz: Prim α → String
+  | .err => "ERROR"
+  | .cst0 k => k.toString
+  | .cst1 k a => k.toString ++ " " ++ a.toString ++ ""
+  | .cst2 k a b => k.toString ("" ++ a.toString ++ "") ("" ++ b.toString ++ "")
+  | .var i => i.toString
+  | .abs (α:=γ) i e => (htmlColorTag i.num s!"fun {i.toString}:{γ.toString.esc} => ".esc) ++ e.toString
+  | .bld (n:=n) i e => (htmlColorTag i.num s!"for {i.toString}:{n} => ".esc) ++ e.toString
+  | .ite a b c => "if " ++ a.toString ++ " != 0 then " ++ b.toString ++ " else " ++ c.toString
+private def Bnd.toGraphviz: Bnd → String
+| ⟨⟨α, var⟩, env, prim⟩ => s!"let {env.toGraphviz}{var} : {α.toString.esc} := {prim.toGraphviz}"
+def AINF.toGraphviz: AINF α → String
+| (bnds, ret) =>
+    bnds.map (λ bnd =>
+        GraphvizNode.mk
+          (Bnd.var bnd).snd.toString
+          (bnd.vars.map (λ ⟨_,v⟩ => v.toString))
+          (bnd.toGraphviz)
+      )
+    |>.concat ⟨"x", [ret.toString], s!"return {ret.toString}"⟩
+    |> GraphvizNodes.toGraphviz

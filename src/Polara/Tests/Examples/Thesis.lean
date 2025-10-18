@@ -35,7 +35,7 @@ def cseBreakFun := (
   ).toVPar
 
 #eval cseBreakFun
-#eval cseBreakFun.toAINF
+#eval IO.print cseBreakFun.toAINF.toGraphviz
 #eval cseBreakFun.toAINF.cse
 #eval cseBreakFun.toAINF.cse.toTm.normVPar
 
