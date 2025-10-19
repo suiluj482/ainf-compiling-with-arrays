@@ -75,39 +75,42 @@ def Const2.toString (a: String) (b: String): Const2 α₁ α₂ α → String
 | foldA => s!"({a}).foldA {b}"
 
 def Par.toString : Par α → String
-  | mk x => "i" ++ x.repr
+| mk x => "i" ++ x.repr
 instance: ToString (Par α) := ⟨Par.toString⟩
 def Var.toString : Var α → String
-  | .mk x => "x" ++ x.repr
+| .mk x => "x" ++ x.repr
 instance: ToString (Var α) := ⟨Var.toString⟩
 def VPar.toString : VPar α → String
-  | .v x => x.toString
-  | .p i => i.toString
+| .v x => x.toString
+| .p i => i.toString
 instance: ToString (VPar α) := ⟨VPar.toString⟩
 
 -- toString print
 --  (next Var number, next Param number)
 def Tm.pp : Tm VPar α → ReaderM (Nat × Nat) String
-  | var i => return i.toString
-  | err => return "ERROR"
-  | cst0 k => return k.toString
-  | cst1 k a => return (k.toString ++ " " ++ (<- a.pp)).parens
-  | cst2 k b a => return (k.toString (<- b.pp) (<- a.pp)).parens
-  | abs f => do
-    let (i,j) <- read
-    let tmp: String := (f (.p (.mk j))).pp (i,j+1)
-    return s!"(fun i{j} =>{tmp.indent})"
-  | bld (n:=n) f => do
-    let (i,j) <- read
-    let tmp: String := (f (.p (.mk j))).pp (i,j+1)
-    return s!"for i{j}:{n} =>" ++ tmp.indent
-  | bnd e f => do
-    let (i,j) <- read
-    let xx := VPar.v (.mk i)
-    let tmp1: String := e.pp (i,j)
-    let tmp2: String := (f xx).pp (i+1,j)
-    return s!"(let {xx.toString} := {tmp1};\n{tmp2})"
-  | ite a b c => return s!"(if {<- a.pp} then {<- b.pp} else {<- c.pp})"
+| var i => return i.toString
+| err => return "ERROR"
+| cst0 k => return k.toString
+| cst1 k a => return (k.toString ++ " " ++ (<- a.pp)).parens
+| cst2 k b a => return (k.toString (<- b.pp) (<- a.pp)).parens
+| abs f => do
+  let (i,j) <- read
+  let tmp: String := (f (.p (.mk j))).pp (i,j+1)
+  return s!"(fun i{j} =>{tmp.indent})"
+| bld (n:=n) f => do
+  let (i,j) <- read
+  let tmp: String := (f (.p (.mk j))).pp (i,j+1)
+  return s!"for i{j}:{n} =>" ++ tmp.indent
+| bnd e f => do
+  let (i,j) <- read
+  let xx := VPar.v (.mk i)
+  let tmp1: String := e.pp (i,j)
+  let tmp2: String := (f xx).pp (i+1,j)
+  return s!"(let {xx.toString} := {tmp1};\n{tmp2})"
+| ite a b c => return s!"(if {<- a.pp} then {<- b.pp} else {<- c.pp})"
+-- | litA f => do
+--     let c := (←(List.ofFn f).mapM (·.pp)) |> Print.foldWithComma
+--     return s!"[{c}]"
 
 def Tm.toString (t: Tm VPar α): String := Tm.pp t (0,0)
 instance: ToString (Tm VPar α) := ⟨Tm.toString⟩

@@ -184,6 +184,7 @@ inductive Tm (Γ: Ty → Type): Ty → Type
 | ite : Tm Γ nat → Tm Γ β → Tm Γ β → Tm Γ β       -- if (·: nat neq 0) then · else ·
 | var : Γ α → Tm Γ α                              -- variable of type α
 | bnd : Tm Γ α → (Γ α → Tm Γ β) → Tm Γ β        -- bind tm to variable / let
+-- | litA {n: Pos}: (Fin n → Tm Γ α) → Tm Γ (array n α)
 open Tm
 
 abbrev Term: Ty → Type := Tm VPar

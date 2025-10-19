@@ -10,37 +10,36 @@ def loss {m: Pos} :=
   fun' y:flt[[m]] => fun' eY:flt[[m]] =>
     let' diff := (y - eY); diff * diff
     |>.toVPar
-def learnRate: Term flt := tlitf 0.05
-
--- #eval loss (m:=10) |>.normVPar
+def learnRate: Term flt := tlitf (0.001)
 
 def neuron {n: Pos} :=
   fun' x: flt[[n]] => fun' b: flt => fun' w: flt[[n]] =>
     (x * w).sumf + b |>.relu
 
--- #eval neuron (n:=10) |>.normVPar
-def exampleNeuron := @neuron 2
-  @@ (for' i:2 => tlitf 1)
-  @@ Tm.zero _
-  @@ Tm.zero _
-#eval run "Python" exampleNeuron "exampleNeuron"
+-- -- #eval neuron (n:=10) |>.normVPar
+-- def exampleNeuron := @neuron 2
+--   @@ (for' i:2 => tlitf 1)
+--   @@ Tm.zero _
+--   @@ Tm.zero _
+-- #eval run "Python" exampleNeuron "exampleNeuron"
 
-def neuronLearnStep {n: Pos} :=
-  (fun' x: flt[[n]] => fun' y:flt =>
-    fun' w: flt ×× flt[[n]] =>
-      let' t := (fun' w: flt ×× flt[[n]] =>
-          loss
-          @@ (for' i:1 => (@neuron n @@ x @@ w.fst @@ w.snd))
-          @@ (for' i:1 => y)
-        ).dr.le;
-      let't _, d := t @@ w;
-      (d @@ (for' i:1 => y))
-  ).normVPar
-def exampleNeuronLearnStep := @neuronLearnStep 2
-  @@ (for' i:2 => tlitf 1)
-  @@ (tlitf 1)
-  @@ Tm.one _
-#eval run "Python" exampleNeuronLearnStep "exampleNeuronLearnStep"
+-- def neuronLearnStep {n: Pos} :=
+--   (fun' x: flt[[n]] => fun' y:flt =>
+--     fun' w: flt ×× flt[[n]] =>
+--       let' t := (fun' w: flt ×× flt[[n]] =>
+--           loss
+--           @@ (for' i:1 => (@neuron n @@ x @@ w.fst @@ w.snd))
+--           @@ (for' i:1 => y)
+--         ).dr.le;
+--       let't _, d := t @@ w;
+--       let' d := (d @@ (for' i:1 => tlitf 1));
+--       (w.fst + learnRate*d.fst,, w.snd + for' i => learnRate*d.snd[[i]])
+--   ).normVPar
+-- def exampleNeuronLearnStep := @neuronLearnStep 2
+--   @@ (for' i:2 => tlitf 1)
+--   @@ (tlitf 1)
+--   @@ Tm.one _
+-- #eval run "Python" exampleNeuronLearnStep "exampleNeuronLearnStep"
 
 def layer {n m: Pos} :=
  fun' x: flt[[n]] => fun' w: flt[[m]] ×× flt[[m,n]] =>
@@ -65,7 +64,7 @@ def multilayerPerceptron {n k m: Pos} :=
       x
   ).normVPar
 
-#eval @multilayerPerceptron 10 5 1
+-- #eval @multilayerPerceptron 10 5 1
 
 def learnStep {n k m: Pos} :=
   (fun' x: flt[[n]] => fun' y: flt[[m]] =>
@@ -74,19 +73,20 @@ def learnStep {n k m: Pos} :=
         ws
         ((
           (fun' ws => loss @@ (multilayerPerceptron @@ x @@ ws) @@ y).dr.le @@ ws
-        ).snd @@ y)
+        ).snd @@ (for' i => tlitf 1))
         learnRate.neg
   ).normVPar
 
-#eval (@learnStep 5 2 1).normVPar
+-- #eval (@learnStep 5 2 1).normVPar
 
 def exampleOrLearnStep := (@learnStep 2 1 1)
-      @@ (for' x => tlitf 0)
-      @@ (for' y => tlitf 1)
-      @@ (Tm.zero _)
+      @@ (for' x => tlitf 1)
+      @@ (for' y => tlitf 4)
+      @@ ((for' i:1 => tlitf (0),, for' i:1 => #[tlitf (1), tlitf (1)].toTm 2),,
+          (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
       |>.normVPar
 
-#eval run "Python" exampleOrLearnStep "exampleOrTestLearnSTep"
+-- #eval run "Python" exampleOrLearnStep "exampleOrTestLearnSTep"
 
 def learn {n k m l: Pos} :=
   (fun' x: flt[[n]][[l]] => fun' y: flt[[m]][[l]] =>
@@ -96,42 +96,57 @@ def learn {n k m l: Pos} :=
         ws
   ).normVPar
 
-#eval (@learn 2 1 1 4) |>.normVPar
+-- #eval (@learn 2 1 1 4) |>.normVPar
 
-def exampleOr := (@learn 2 1 1 8)
+def exampleOr := (@learn 2 1 1 16)
       @@ (#[
-          #[tlitf 5, tlitf 5].toVector.toTm,
+          #[tlitf 1, tlitf 1].toVector.toTm,
           #[tlitf 1, tlitf 1].toVector.toTm,
           #[tlitf 5, tlitf 1].toVector.toTm,
-          #[tlitf 3, tlitf 5].toVector.toTm,
+          #[tlitf 1, tlitf 10].toVector.toTm,
           #[tlitf 5, tlitf 5].toVector.toTm,
           #[tlitf 1, tlitf 1].toVector.toTm,
+          #[tlitf 10, tlitf 1].toVector.toTm,
+          #[tlitf 10, tlitf 1].toVector.toTm,
+          #[tlitf 1, tlitf 1].toVector.toTm,
+          #[tlitf 1, tlitf 1].toVector.toTm,
           #[tlitf 5, tlitf 1].toVector.toTm,
-          #[tlitf 3, tlitf 5].toVector.toTm,
+          #[tlitf 1, tlitf 10].toVector.toTm,
+          #[tlitf 5, tlitf 5].toVector.toTm,
+          #[tlitf 1, tlitf 1].toVector.toTm,
+          #[tlitf 10, tlitf 1].toVector.toTm,
+          #[tlitf 10, tlitf 1].toVector.toTm,
         ].toVector.toTm)
       @@ (#[
-          #[tlitf 10].toVector.toTm,
+          #[tlitf 2].toVector.toTm,
           #[tlitf 2].toVector.toTm,
           #[tlitf 6].toVector.toTm,
-          #[tlitf 8].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
           #[tlitf 10].toVector.toTm,
           #[tlitf 2].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
+          #[tlitf 2].toVector.toTm,
+          #[tlitf 2].toVector.toTm,
           #[tlitf 6].toVector.toTm,
-          #[tlitf 8].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
+          #[tlitf 10].toVector.toTm,
+          #[tlitf 2].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
+          #[tlitf 11].toVector.toTm,
         ].toVector.toTm)
-      @@ Tm.one _
+      @@ ((for' i:1 => tlitf (0),, for' i:1 => #[tlitf (0.3), tlitf (1)].toTm 2),,
+          (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (3) ))
       |>.normVPar
 
-def exampleOrTest := multilayerPerceptron
-      @@ #[tlitf 100, tlitf 1].toVector.toTm
-      @@ exampleOr
-      -- @@ (((for' i:1 => tlitf 0),, (for' i:1 => for' j:2 => tlitf (1))),,
-      --     ((for' i:1 => tlitf 0),, (for' i:1 => for' j:1 => tlitf 1)))
-
-#eval exampleOr
+-- #eval exampleOr
 #eval run "Python" exampleOr "exampleOr"
-#eval exampleOrTest
+
+def exampleOrTest := multilayerPerceptron
+      @@ #[tlitf 5, tlitf 5].toTm 2
+      @@ exampleOr
+      -- @@ ((for' i:1 => tlitf (0),, for' i:1 => #[tlitf (1), tlitf (1)].toTm 2),,
+      --     (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
+
+-- #eval exampleOrTest
 #eval run "Python" exampleOrTest "exampleOrTest"
-
-
-#eval run "Python" ((for' i:10 => i.i2n.n2f).foldA (fun' i => fun' acc => i+acc) (tlitf 0)).normVPar "testFoldA"

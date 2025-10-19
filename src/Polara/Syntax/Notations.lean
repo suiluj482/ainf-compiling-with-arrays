@@ -140,6 +140,11 @@ def Vector.toTm' {n: Pos}(v: Vector (Tm Γ α) n)(i: Tm Γ (idx n))(j: Fin n): T
 def Vector.toTm {n: Pos}(v: Vector (Tm Γ α) n): Tm Γ α[[n]] :=
   for' i => toTm' v i 0
 
+def Array.toTm(a: Array (Tm Γ α))(n: Pos): Tm Γ α[[n]] :=
+  if h: a.size=n
+    then (h▸a.toVector).toTm
+    else panic! "Array.toTm wrong size"
+
 ------------------------------------------------------------------------------------------
 -- AINF
 ------------------------------------------------------------------------------------------
