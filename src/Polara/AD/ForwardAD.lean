@@ -4,28 +4,28 @@ import Polara.Optimizations.NbE
 
 mutual
   @[reducible]
-  private def Ty.df': Ty → Ty
-  | .unit      => .unit
-  | .nat       => .nat
-  | .flt       => .flt
-  | .idx n     => .idx n
-  | α ×× β     => α.df' ×× β.df'
-  | .array n α => .array n α.df'
-  | .lin       => .lin
-  | α ~> β     => α.df ~> β.df'
-  | .list α => .list α.df'
-
-  @[reducible]
   def Ty.df: Ty → Ty
   | .unit      => .unit
   | .nat       => .nat
   | .flt       => .flt
   | .idx n     => .idx n
-  | α ~> β     => α.df ~> (β.df ×× (Ty.linFun α.df' β.df'))
+  | α ~> β     => α.df ~> (β.df ×× (α.df' ~> β.df'))
   | α ×× β     => α.df ×× β.df
   | .array n α => .array n α.df
   | .lin       => .lin
   | .list α => .list α.df
+
+  @[reducible]
+  private def Ty.df': Ty → Ty
+  | .flt       => .lin
+  | .nat
+  | .idx _
+  | .lin
+  | .unit      => .unit
+  | α ×× β     => α.df' ×× β.df'
+  | .array n α => .array n α.df'
+  | α ~> β     => α.df ~> β.df'
+  | .list α => .list α.df'
 end
 
 @[reducible]
@@ -33,18 +33,18 @@ private def EnvDf := List (Sigma VPar)
 @[reducible]
 private def EnvDf.ty (α: Ty): EnvDf → Ty
 | [] => α
-| ⟨β,_⟩ :: env' => β.df'.linArg ~> (EnvDf.ty α env')
+| ⟨β,_⟩ :: env' => β.df' ~> (EnvDf.ty α env')
 
 @[reducible]
 private def Ty.dfEnv (env: EnvDf): Ty → Ty
-| α => (α.df ×× (env.ty α.df'.linRet))
+| α => (α.df ×× (env.ty α.df'))
 
-private def EnvDf.wrap (env: EnvDf)(a: ListMap VPar (Γ ·.df'.linArg) → Tm Γ α): Tm Γ (env.ty α) :=
+private def EnvDf.wrap (env: EnvDf)(a: ListMap VPar (Γ ·.df') → Tm Γ α): Tm Γ (env.ty α) :=
   match env with
   | [] => a []
   | ⟨β, x⟩ :: env' => fun'v v => (EnvDf.wrap env' (λ m => a (⟨β,x,v⟩  :: m)))
 
-private def EnvDf.unwrap (env: EnvDf)(m: ListMap VPar (VPar ·.df'.linArg))(a: Tm VPar (env.ty α)): Tm VPar α:=
+private def EnvDf.unwrap (env: EnvDf)(m: ListMap VPar (VPar ·.df'))(a: Tm VPar (env.ty α)): Tm VPar α:=
   match env with
   | [] => a
   | ⟨_, x⟩ :: env' => EnvDf.unwrap env' m.tail (a @@ (Tm.var (m.lookup x).get!))
@@ -139,13 +139,13 @@ private def Const2.df (a: Tm Γ α.df)(b: Tm Γ β.df): Const2 α β γ → Tm �
 -- derivation rules
 ----
 
-private def Const0.df': Const0 α → Tm Γ α.df'.linRet
+private def Const0.df': Const0 α → Tm Γ α.df'
 | .litn n | .liti i | .litlZ | .litu => ()'
 | .litf f => tlitlZ
 | .litlE => tlitlE
 
-private def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
-  Const1 α β → Tm Γ β.df'.linRet
+private def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'):
+  Const1 α β → Tm Γ β.df'
 | .exp     => x' * x.exp               -- (e^x)' = e^x
 | .sqrt    => x' / (tlitf 2 * x.sqrt)  -- (sqrt x)' = 1/(2*sqrt x)
 | .normCdf =>                          -- (normCdf x)' = (1/sqrt(2*pi)) * e^(-x^2/2) * dx
@@ -160,7 +160,7 @@ private def Const1.df' (x: Tm Γ α.df)(x': Tm Γ α.df'.linRet):
 | .arr2list => x'.arr2list
 
 private def ArithOp.df' [t: BiArraysC BiArith α β γ](op: ArithOp)
-  (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm Γ β.df'.linRet): Tm Γ γ.df'.linRet :=
+  (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df')(b': Tm Γ β.df'): Tm Γ γ.df' :=
    match t.t with
   | .array n t' =>
       have: BiArraysC BiArith _ _ _ := ⟨t'⟩
@@ -173,16 +173,16 @@ private def ArithOp.df' [t: BiArraysC BiArith α β γ](op: ArithOp)
         | .sub => a' - b'                     -- (a - b)' = a' - b'
         | .mul => b' * a + a' * b             -- (a * b)' = a' * b + a * b'
         | .div => (a' * b - b' * a) / (b * b) -- (a / b)' = (a' * b - a * b') / (b^2)
-private def linOpDf' [t: BiArraysC BiLin α β γ]: Tm Γ γ.df'.linRet :=
+private def linOpDf' [t: BiArraysC BiLin α β γ]: Tm Γ γ.df' :=
   match t.t with
   | .array n t' => for' i => @linOpDf' _ _ _ _ ⟨t'⟩
   | .base (.lins) => ()'
-private def linScaleDf' [t: BiArrayC BiLF α β γ]: Tm Γ γ.df'.linRet :=
+private def linScaleDf' [t: BiArrayC BiLF α β γ]: Tm Γ γ.df' :=
   match t.t with
   | .array n (.lf) => for' i => ()'
   | .base (.lf) => ()'
 
-private def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df'.linRet)(b': Tm Γ β.df'.linRet): Const2 α β γ → Tm Γ γ.df'.linRet
+private def Const2.df' (a: Tm Γ α.df)(b: Tm Γ β.df)(a': Tm Γ α.df')(b': Tm Γ β.df'): Const2 α β γ → Tm Γ γ.df'
 | arithOp op  => op.df' a b a' b'
 | linOp op    => @linOpDf' α β _ _ _
 | linScale op => @linScaleDf' α β _ _ _
@@ -263,7 +263,7 @@ private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
       match ren.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
       | some depth =>
           -- dbg_trace s!"{v} defined with depth {depth}"
-          let rec go (env): Term α.df × Term (env.ty α.df'.linRet) :=
+          let rec go (env): Term α.df × Term (env.ty α.df') :=
             if env.length ≤ depth
               then let t := Tm.var (v.dfEnv env); (t.fst, t.snd)
               else match env with

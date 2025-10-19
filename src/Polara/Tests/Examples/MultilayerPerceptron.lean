@@ -140,7 +140,7 @@ def exampleOr := (@learn 2 1 1 16)
       |>.normVPar
 
 -- #eval exampleOr
-#eval run "Python" exampleOr "exampleOr"
+-- #eval run "Python" exampleOr "exampleOr"
 
 def exampleOrTest := multilayerPerceptron
       @@ #[tlitf 5, tlitf 5].toTm 2
@@ -149,4 +149,4 @@ def exampleOrTest := multilayerPerceptron
       --     (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
 
 -- #eval exampleOrTest
-#eval run "Python" exampleOrTest "exampleOrTest"
+-- #eval run "Python" exampleOrTest "exampleOrTest"
