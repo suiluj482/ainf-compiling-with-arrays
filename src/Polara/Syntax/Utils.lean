@@ -271,6 +271,18 @@ def Tm.zero (α: Ty): Tm Γ α :=
   | .flt => tlitf 0
   | .list _ => tlitlE
 
+def Tm.one (α: Ty): Tm Γ α :=
+  match α with
+  | .lin => panic! "Tm.one: no lin one"
+  | _ ~> β => Tm.abs (λ _ => Tm.one β)
+  | α ×× β => Tm.cst2 Const2.tup (Tm.one α) (Tm.one β)
+  | .array _ α => Tm.bld (λ _ => Tm.one α)
+  | .unit => ()'
+  | .nat => tlitn 1
+  | .idx _ => panic! "Tm.one doesn't support idx"
+  | .flt => tlitf 1
+  | .list _ => tlitlE
+
 def Tm.sum (a b: Tm Γ α): Tm Γ α :=
   match α with
   | .lin => a + b

@@ -63,7 +63,6 @@ namespace Tm
   def foldL': Tm Γ (list α) → Tm Γ ((α ~> β ~> β)××β) → Tm Γ β := Tm.cst2 Const2.foldL
   def foldA': Tm Γ (array n α) → Tm Γ ((α ~> β ~> β)××β) → Tm Γ β := Tm.cst2 Const2.foldA
 
-
   def listSingleton: Tm Γ α → Tm Γ (list α) := (cons · tlitlE)
   def l: Tm Γ α → Tm Γ (list α) := (cons · tlitlE)
   def π: Tm Γ flt := tlitf 3.14159265358979323846
@@ -113,6 +112,7 @@ notation:max "[]'" => tlitlE
 
 notation a"<'"b => Tm.cst2 Const2.lt a b
 notation a"=='"b => Tm.cst2 Const2.eqi a b
+def Tm.neg: Tm Γ flt → Tm Γ flt := (tlitf 0 - ·)
 
 def Tm.inst (α: Ty): Tm Γ α :=
   match α with
@@ -125,6 +125,20 @@ def Tm.inst (α: Ty): Tm Γ α :=
   | .array _ α => Tm.bld (λ _ => Tm.inst α)
   | .unit => tlitu
   | .list _ => tlitlE
+
+@[default_instance] instance [BiArraysC BiArith α α α]:
+  Neg (Tm Γ α) := ⟨(Tm.inst α - ·)⟩
+
+def Vector.toTm' {n: Pos}(v: Vector (Tm Γ α) n)(i: Tm Γ (idx n))(j: Fin n): Tm Γ α :=
+  if h: j.toNat+1<n
+    then
+      if' i.eqi (tliti j)
+        then v[j]
+        else toTm' v i ⟨j+1, h⟩
+    else v[j]
+  termination_by n - j.toNat
+def Vector.toTm {n: Pos}(v: Vector (Tm Γ α) n): Tm Γ α[[n]] :=
+  for' i => toTm' v i 0
 
 ------------------------------------------------------------------------------------------
 -- AINF
