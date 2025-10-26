@@ -149,4 +149,4 @@ def exampleOrTest := multilayerPerceptron
       --     (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
 
 -- #eval exampleOrTest
--- #eval run "Python" exampleOrTest "exampleOrTest"
+#eval run "Python" exampleOrTest "exampleOrTest"

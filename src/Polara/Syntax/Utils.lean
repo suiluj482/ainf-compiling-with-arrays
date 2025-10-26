@@ -61,6 +61,12 @@ def Var.changeTypeF (f: Ty → Ty): Var α → Var (f α)
 def Par.changeTypeF (f: Ty → Ty): Par α → Par (f α)
 | (.mk n) => (.mk n)
 
+def VPar.toSigma: VPar α → Sigma VPar := (⟨_,·⟩)
+def Par.toSigma: Par α → Sigma Par := (⟨_,·⟩)
+def Var.toSigma: Var α → Sigma Var := (⟨_,·⟩)
+def VPar.eq: VPar α → VPar β → Bool := (·.toSigma == ·.toSigma)
+def Par.eq: Par α → Par β → Bool := (·.toSigma == ·.toSigma)
+def Var.eq: Var α → Var β → Bool := (·.toSigma == ·.toSigma)
 
 abbrev VParM (α: Type n) := StateM (ULift (Nat × Nat)) α
 def VParM.var : VParM ((β: Ty) → Var β) :=

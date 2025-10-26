@@ -14,3 +14,5 @@ def Option.orElseOption (a: Option α)(b: Option α): Option α :=
   match a with
   | none => b
   | some _ => a
+
+def Option.guardCond (b: Bool): Option Unit := Option.guard (λ _ => b) ()

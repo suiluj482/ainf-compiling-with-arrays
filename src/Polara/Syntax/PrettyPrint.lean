@@ -165,7 +165,8 @@ private def Prim.toGraphviz: Prim α → String
   | .bld (n:=n) i e => (htmlColorTag i.num s!"for {i.toString}:{n} => ".esc) ++ e.toString
   | .ite a b c => "if " ++ a.toString ++ " != 0 then " ++ b.toString ++ " else " ++ c.toString
 private def Bnd.toGraphviz: Bnd → String
-| ⟨⟨α, var⟩, env, prim⟩ => s!"let {env.toGraphviz}{var} : {α.toString.esc} := {prim.toGraphviz}"
+| ⟨⟨_, var⟩, env, prim⟩ => s!"let {env.toGraphviz}{var} := {prim.toGraphviz}"
+-- | ⟨⟨α, var⟩, env, prim⟩ => s!"let {env.toGraphviz}{var} : {α.toString.esc} := {prim.toGraphviz}"
 def AINF.toGraphviz: AINF α → String
 | (bnds, ret) =>
     bnds.map (λ bnd =>

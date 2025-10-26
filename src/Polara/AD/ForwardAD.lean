@@ -39,15 +39,17 @@ private def EnvDf.ty (α: Ty): EnvDf → Ty
 private def Ty.dfEnv (env: EnvDf): Ty → Ty
 | α => (α.df ×× (env.ty α.df'))
 
-private def EnvDf.wrap (env: EnvDf)(a: ListMap VPar (Γ ·.df') → Tm Γ α): Tm Γ (env.ty α) :=
+def EnvValues := ListMap VPar (VPar ·.df')
+private def EnvDf.wrap (env: EnvDf)(a: EnvValues → Tm VPar α): Tm VPar (env.ty α) :=
   match env with
   | [] => a []
   | ⟨β, x⟩ :: env' => fun'v v => (EnvDf.wrap env' (λ m => a (⟨β,x,v⟩  :: m)))
 
-private def EnvDf.unwrap (env: EnvDf)(m: ListMap VPar (VPar ·.df'))(a: Tm VPar (env.ty α)): Tm VPar α:=
+private def EnvDf.unwrap (env: EnvDf)(m: EnvValues)(a: Tm VPar (env.ty α)): Tm VPar α:=
   match env with
   | [] => a
   | ⟨_, x⟩ :: env' => EnvDf.unwrap env' m.tail (a @@ (Tm.var (m.lookup x).get!))
+
 
 private def EnvDf.unwrapLinZero (env: EnvDf)(a: Tm VPar (env.ty α)): Tm VPar α:=
   match env with
@@ -223,24 +225,24 @@ private def VPar.df: VPar α → VPar α.df := VPar.changeType
 private def VPar.idf: VPar α.df → VPar α := VPar.changeType
 
 -- Var -> Definitionstiefe in Bezug auf env
-private def Ren := List (Sigma VPar × Nat)
+private def DVars := List (Sigma VPar × Nat)
 
-private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
+private def Tm.df'(env: EnvDf)(dv: DVars): Tm VPar α → Tm VPar (α.dfEnv env)
 | .err => (.err,, env.wrap (λ _ => .err))
 | .cst0 const0        => (
       const0.df,,
       env.wrap (λ _ => const0.df')
     )
 | .cst1 const1 t      =>
-    let' t := t.df' env ren;
+    let' t := t.df' env dv;
     (
       const1.df t.fst,,
       env.wrap (λ e => const1.df' t.fst (env.unwrap e t.snd))
       -- fun' e => const1.df' t.fst (t.snd @@ e)
     )
 | .cst2 const2 a b    =>
-    let' a := a.df' env ren;
-    let' b := b.df' env ren;
+    let' a := a.df' env dv;
+    let' b := b.df' env dv;
     (
       const2.df a.fst b.fst,,
       env.wrap (λ e => const2.df' a.fst b.fst (env.unwrap e a.snd) (env.unwrap e b.snd))
@@ -249,18 +251,18 @@ private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
   let' arr := for'v idx =>
     let'v idx := (.var idx,, env.wrap (λ _ => ()'));
     let origIdx: VPar (.idx n) := idx.idfEnv env;
-    (a (origIdx)).df' env ((⟨_,origIdx⟩,env.length) :: ren);
+    (a (origIdx)).df' env ((⟨_,origIdx⟩,env.length) :: dv);
   (
     for' idx => arr[[idx]].fst,,
     env.wrap (λ e => for' idx => (env.unwrap e arr[[idx]].snd))
   )
-| .ite cond a b       => .ite cond (a.df' env ren) (b.df' env ren)
+| .ite cond a b       => .ite cond (a.df' env dv) (b.df' env dv)
 | .var v (α:=α)       =>
     if env.contains ⟨_, v⟩ then
       -- dbg_trace s!"{v} from env"
       (.var v.df,, env.wrap (λ e => .var (e.lookup v).get!)) -- in env, get df from env
     else
-      match ren.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
+      match dv.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
       | some depth =>
           -- dbg_trace s!"{v} defined with depth {depth}"
           let rec go (env): Term α.df × Term (env.ty α.df') :=
@@ -276,11 +278,11 @@ private def Tm.df'(env: EnvDf)(ren: Ren): Tm VPar α → Tm VPar (α.dfEnv env)
           then panic! "Tm.df' outside vpar contains function"
           else (Tm.var v.df,, env.wrap (λ _ => Tm.zero _))
 | .bnd t f            =>
-    let'v v := t.df' env ren;
+    let'v v := t.df' env dv;
     let origV := v.idfEnv env
-    (f origV).df' env ((⟨_,origV⟩,env.length) :: ren)
+    (f origV).df' env ((⟨_,origV⟩,env.length) :: dv)
 | .abs f              =>
-    let' f := fun'v x => (f x.idf).df' (⟨_,x.idf⟩ :: env) ren;
+    let' f := fun'v x => (f x.idf).df' (⟨_,x.idf⟩ :: env) dv;
     (
       fun' x =>
         let' body := f @@ x;

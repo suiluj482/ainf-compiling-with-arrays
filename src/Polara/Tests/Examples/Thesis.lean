@@ -61,6 +61,7 @@ def cseBreakFor2 := (
 #eval cseBreakFor2.toAINF.cse -- envs not compatible????
 #eval cseBreakFor2.toAINF.cse.toTm.normVPar
 
+
 -- Conclusion: Cse capabilities of CSE have more to do with accidental fusion than fission
 
 ---- Test referential integrity
@@ -103,6 +104,10 @@ namespace AD
     (fun' x:flt => (fun' y:flt => x+y)).toVPar
   #eval fr.getTy
 
+  def simple := (
+      let' a := tlitf 1;
+      fun' x => x + a
+    ).toVPar
 
   namespace DN
 
@@ -114,6 +119,8 @@ namespace AD
   end DN
 
   namespace DF
+
+    #eval simple.df
 
     #eval fp.getTy.df
     #eval fp.df.normVPar
@@ -142,3 +149,15 @@ namespace AD
   end DR
 
 end AD
+
+namespace Fusion
+
+  def ex := (
+    let' a1 := (for' i:5 => i.i2n + tlitn 1);
+    let' a2 := (for' i:5 => i.i2n + tlitn 2);
+    (a1,, a2)
+  ).toVPar
+
+  #eval IO.print ex.toAINF.toGraphviz
+
+end Fusion

@@ -1,10 +1,5 @@
 import Polara.Syntax.All
 
-@[reducible]
-def Ty.copower: Ty → Ty → Ty
-| α, β => list (α ×× β) -- idealy parametric, because list size is static, but polara does not support that
--- derivation function as parameter, tracks calls
-
 mutual
   @[reducible]
   def Ty.dr': Ty → Ty
@@ -16,7 +11,7 @@ mutual
   | α ×× β     => α.dr' ×× β.dr'
   | .array n α => .array n α.dr'
   | .list α => .list α.dr'
-  | α ~> β     => Ty.copower α.dr β.dr'
+  | α ~> β     => list (α.dr ×× β.dr')
 
   @[reducible]
   def Ty.dr: Ty → Ty
@@ -52,7 +47,7 @@ private def Const0.dr: Const0 α → Tm Γ α.dr
 | .liti i => tliti i
 | .litlZ => tlitlZ
 | .litu => tlitu
-| .litlE => tlitlE
+| .litlE => []'
 
 private def Const1.dr (x: Tm Γ α.dr): Const1 α β → Tm Γ β.dr
 | .exp     => Tm.cst1 Const1.exp x
@@ -159,70 +154,67 @@ private def linScaleDr' [t: BiArrayC BiLF α β γ]: (Tm Γ α.dr' × Tm Γ β.d
   | .array n (.lf) => (for'v _ => ()', for'v _ => Tm.zero _) -- todo check
   | .base (.lf) => (()', Tm.zero _)
 
-private def Const2.dr' (env: EnvDr)(const2: Const2 α β γ)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
-  : Tm VPar (γ.drEnv env) := -- (Tm Γ α.dr' × Tm Γ β.dr') :=
-  match const2 with
-  | Const2.arithOp op  =>
-      ((Const2.arithOp op).dr a.fst b.fst,,
-       fun' y' =>
-        let (a',b') := op.dr' a.fst b.fst y'
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
-  | Const2.linOp op    =>
-      ((Const2.linOp op).dr a.fst b.fst,,
-       fun' y' =>
-        let (a',b') := @linOpDr' α β _ _ _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
-  | Const2.linScale op =>
-      ((Const2.linScale op).dr a.fst b.fst,,
-       fun' y' =>
-        let (a',b') := @linScaleDr' α β _ _ _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
-  | .addi       =>
-      (a.fst.addi b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
-  | .eqi        =>
-      (a.fst.eqi b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
-  | .lt         =>
-      (a.fst <' b.fst,,
-       fun' y' => Tm.sumLins (a.snd@@ tlitlZ) (b.snd@@ tlitlZ))
-  | .maxf       =>
-      (a.fst.maxf b.fst,,
-       fun' y' =>
-        let' c := a.fst <' b.fst;
-        let a' := if' c then Tm.zero _ else y'
-        let b' := if' c then y' else Tm.zero _
-        Tm.sumLins (a.snd@@ a') (b.snd@@ b')
-      )
-  | .get        =>
-      (a.fst[[b.fst]],,
-       fun' y' =>
-        let a' := for' i => (if' i ==' b.fst then y' else Tm.zero _)
-        Tm.sumLins (a.snd@@ a') (b.snd@@ ()'))
-  | .tup        =>
-      ((a.fst,, b.fst),,
-       fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
-  | .app => -- special case
-      let' f := a;
-      let' arg := b;
-      let' y := f.fst @@ arg.fst;
-      (
-        y.fst,,
-        fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y').listSingleton)
-      )
-  | .cons => panic! "df does not yet support cons" -- would require list.head and list.tail
-      -- (a.fst.cons b.fst,,
-      --   fun' y' => Tm.sumLins (a.snd@@ y'.head) (b.snd@@ y'.tail))
-  | .append => panic! "df does not support append" -- the derivation list cant be split on the right point
-      -- (a.fst.append b.fst,,
-      --   fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
-  | .zipL =>
-      (a.fst.zipL b.fst,,
-        fun' y' => Tm.sumLins (a.snd@@ (y'.mapL (fun' a => a.fst))) (b.snd@@ (y'.mapL (fun' a => a.snd)))
-      )
-  | .mapL => panic! "df does not yet support mapL"
-  | .foldL => panic! "df does not yet support foldL"
-  | .foldA => panic! "df does not yet support foldA"
+private def Const2.dr' (env: EnvDr)(a: Tm VPar (α.drEnv env))(b: Tm VPar (β.drEnv env))
+: Const2 α β γ → Tm VPar (γ.drEnv env)
+| Const2.arithOp op  =>
+    ((Const2.arithOp op).dr a.fst b.fst,,
+      fun' y' =>
+      let (a',b') := op.dr' a.fst b.fst y'
+      Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+| Const2.linOp op    =>
+    ((Const2.linOp op).dr a.fst b.fst,,
+      fun' y' =>
+      let (a',b') := @linOpDr' α β _ _ _
+      Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+| Const2.linScale op =>
+    ((Const2.linScale op).dr a.fst b.fst,,
+      fun' y' =>
+      let (a',b') := @linScaleDr' α β _ _ _
+      Tm.sumLins (a.snd@@ a') (b.snd@@ b'))
+| .addi       =>
+    (a.fst.addi b.fst,,
+      fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+| .eqi        =>
+    (a.fst.eqi b.fst,,
+      fun' y' => Tm.sumLins (a.snd@@ ()') (b.snd@@ ()'))
+| .lt         =>
+    (a.fst <' b.fst,,
+      fun' y' => Tm.sumLins (a.snd@@ tlitlZ) (b.snd@@ tlitlZ))
+| .maxf       =>
+    (a.fst.maxf b.fst,,
+      fun' y' =>
+      let' c := a.fst <' b.fst;
+      let a' := if' c then Tm.zero _ else y'
+      let b' := if' c then y' else Tm.zero _
+      Tm.sumLins (a.snd@@ a') (b.snd@@ b')
+    )
+| .get        =>
+    (a.fst[[b.fst]],,
+      fun' y' =>
+      let a' := for' i => (if' i ==' b.fst then y' else Tm.zero _)
+      Tm.sumLins (a.snd@@ a') (b.snd@@ ()'))
+| .tup        =>
+    ((a.fst,, b.fst),,
+      fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+| .app => let f := a; let arg := b;
+    let' y := f.fst @@ arg.fst;
+    (
+      y.fst,,
+      fun' y' => Tm.sumLins (arg.snd @@ (y.snd @@ y')) (f.snd @@ (arg.fst,, y').listSingleton)
+    )
+| .cons => panic! "df does not yet support cons" -- would require list.head and list.tail
+    -- (a.fst.cons b.fst,,
+    --   fun' y' => Tm.sumLins (a.snd@@ y'.head) (b.snd@@ y'.tail))
+| .append => panic! "df does not support append" -- the derivation list cant be split on the right point
+    -- (a.fst.append b.fst,,
+    --   fun' y' => Tm.sumLins (a.snd@@ y'.fst) (b.snd@@ y'.snd))
+| .zipL =>
+    (a.fst.zipL b.fst,,
+      fun' y' => Tm.sumLins (a.snd@@ (y'.mapL (fun' a => a.fst))) (b.snd@@ (y'.mapL (fun' a => a.snd)))
+    )
+| .mapL => panic! "df does not yet support mapL"
+| .foldL => panic! "df does not yet support foldL"
+| .foldA => panic! "df does not yet support foldA"
 ----------------------------------------------------------------------------------------------
 
 private def VPar.drEnv (env: EnvDr): VPar α → VPar (α.drEnv env) := VPar.changeType
@@ -232,37 +224,37 @@ private def VPar.dr: VPar α → VPar α.dr := VPar.changeType
 private def VPar.idr: VPar α.dr → VPar α := VPar.changeType
 
 -- Var -> Definitionstiefe in Bezug auf env
-private def Ren := List (Sigma VPar × Nat)
+private def DVars := List (Sigma VPar × Nat)
 
-private def Tm.dr'(env: EnvDr)(ren: Ren): Tm VPar α → Tm VPar (α.drEnv env)
+private def Tm.dr'(env: EnvDr)(dv: DVars): Tm VPar α → Tm VPar (α.drEnv env)
 | .err => (.err,, fun' y' => .err)
 | .cst0 const0        => (
       const0.dr,,
       fun' y' => Tm.zero _
     )
 | .cst1 const1 t      =>
-    let' t := t.dr' env ren;
+    let' t := t.dr' env dv;
     (
       const1.dr t.fst,,
       fun' y' => t.snd @@ (const1.dr' t.fst y')
     )
-| .cst2 const2 a b => const2.dr' env (a.dr' env ren) (b.dr' env ren)
+| .cst2 const2 a b => const2.dr' env (a.dr' env dv) (b.dr' env dv)
 | .bld a (n:=n)       =>
   let' arr := for'v idx =>
     let'v idx := (.var idx,, fun' y' => Tm.zero _);
     let origIdx: VPar (.idx n) := idx.idrEnv env
-    (a origIdx).dr' env ((⟨_,origIdx⟩,env.length) :: ren);
+    (a origIdx).dr' env ((⟨_,origIdx⟩,env.length) :: dv);
   (
     for' idx => arr[[idx]].fst,,
     fun' y' => ( for' idx => (arr[[idx]].snd @@ y'[[idx]]) ).sumArrayOfLins
   )
-| .ite cond a b       => .ite cond (a.dr' env ren) (b.dr' env ren)
+| .ite cond a b       => .ite cond (a.dr' env dv) (b.dr' env dv)
 | .var v (α:=α)       =>
     let rec go (env': EnvDr)(f: Tm VPar env'.ty.dr' → Tm VPar (env.ty.dr')):
       Tm VPar (α.drEnv env) :=
         match env' with
         | [] =>
-          match ren.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
+          match dv.findSome? (λ (sv,n) => if sv == ⟨_,v⟩ then some n else none) with
           | some depth =>
             -- dbg_trace s!"{v} defined with depth {depth}"
             let rec go' (env): Term α.dr × (Term α.dr' → Term ((EnvDr.ty env).dr')) :=
@@ -282,11 +274,11 @@ private def Tm.dr'(env: EnvDr)(ren: Ren): Tm VPar α → Tm VPar (α.drEnv env)
             else go env'' (f (Tm.zero _,, ·)) else go env'' (f (Tm.zero _,, ·))
     go env id
 | .bnd t f            =>
-    let'v v := t.dr' env ren;
+    let'v v := t.dr' env dv;
     let origV := v.idrEnv env
-    (f origV).dr' env ((⟨_,origV⟩,env.length) :: ren)
-| .abs f (α:=α) (β:=β)            =>
-    let' f := fun'v x => (f x.idr).dr' (⟨_,x.idr⟩ :: env) ren;
+    (f origV).dr' env ((⟨_,origV⟩,env.length) :: dv)
+| .abs f =>
+    let' f := fun'v x => (f x.idr).dr' (⟨_,x.idr⟩ :: env) dv;
     (
       fun' x =>
         let' body := f @@ x;
