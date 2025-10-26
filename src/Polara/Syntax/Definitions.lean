@@ -148,16 +148,16 @@ open Const2
 -- Variable symbols: α is Polara Type of Variable
 inductive Var : Ty → Type
 | mk : Nat → Var α
-deriving DecidableEq, Inhabited
+deriving DecidableEq, Inhabited, Hashable
 -- Parameter symbols: argument overall functions, loop index
 inductive Par : Ty → Type
 | mk : Nat → Par α
-deriving DecidableEq, Inhabited
+deriving DecidableEq, Inhabited, Hashable
 -- Var or Par symbols
 inductive VPar α
 | v : Var α → VPar α
 | p : Par α → VPar α
-deriving DecidableEq, Inhabited
+deriving DecidableEq, Inhabited, Hashable
 
 def VPar.var?: VPar α → Option (Var α)
 | .v var => var
@@ -199,7 +199,7 @@ inductive EnvPart : Type -- envPart modeling control flow
 | func : (α:Ty) → Par α → EnvPart         -- function control flow
 | forc : (n:Pos) → Par (idx n) → EnvPart  -- for
 | itec : VPar nat → Bool → EnvPart        -- if then else
-deriving DecidableEq
+deriving DecidableEq, Hashable
 abbrev Env := List EnvPart
 
 -- primitive operations (could maybe be unified with Tm)

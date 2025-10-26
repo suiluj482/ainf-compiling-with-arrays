@@ -5,7 +5,15 @@ open Std
 def SBnd := ((β: Ty) × Var β × Prim β)
 
 abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × Env))
-abbrev UsedMap := HashMap (Sigma Var) (List Bnd)
+abbrev UsedMap := HashMap (Sigma Var × Env) (List SBnd)
+
+def Prim.getOpenedEnvs: Prim α → List (Sigma Var × EnvPart)
+| .abs i a => a.var?.map (⟨_,·⟩, .func _ i) |>.toList
+| .bld i a => a.var?.map (⟨_,·⟩, .forc _ i) |>.toList
+| .ite c a b =>
+    (a.var?.map (⟨_,·⟩, .itec c true)).toList
+    ++ (b.var?.map (⟨_,·⟩, .itec c false)).toList
+| _ => []
 
 def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMap)
 | [] => ([], .emptyWithCapacity 10)
@@ -13,13 +21,7 @@ def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMap)
     let ⟨v,env,prim⟩ := bnd
 
     -- mark uses with deeper envs
-    let openedEnvs: List (Sigma Var × EnvPart) := match v.fst, prim with
-      | _, .abs i a => a.var?.map (⟨_,·⟩, .func _ i) |>.toList
-      | _, .bld i a => a.var?.map (⟨_,·⟩, .forc _ i) |>.toList
-      | _, .ite c a b =>
-          (a.var?.map (⟨_,·⟩, .itec c true)).toList
-          ++ (b.var?.map (⟨_,·⟩, .itec c false)).toList
-      | _, _ => []
+    let openedEnvs := prim.getOpenedEnvs
     let usesMap := openedEnvs.foldl
       (λ usesMap (v', envPart) =>
         usesMap.alter v' (λ
@@ -31,48 +33,91 @@ def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMap)
 
     -- dbg_trace s!"{v.snd}: openedEnvs={openedEnvs} usesMap={usesMap.toList}"
 
-    match usesMap.get? v with
-    | none =>
-        -- dbg_trace s!"{v.snd}: no uses in usesMap={usesMap.toList}"
-        Bnds.getUsedMap' usesMap bnds |>.map
-          -- if env≠[], bnd is in usedMap -> not needed in resBnds
-          (λ resBnds => if env==[] then (⟨v.fst,v.snd,prim⟩ :: resBnds) else resBnds)
-          id
-    | some uses =>
+    let uses := usesMap.get? v |>.getD []
+    -- filter out uses with shallower envs
+    let uses := uses.filter (λ (_,env') => env==env')
 
-        -- filter out uses with shallower envs
-        let uses := uses.filter (λ (_,env') => env==env')
-        -- mark uses with same depth
+    -- mark uses with same depth
+    let usesMap := if uses≠[] then -- unnecessary, if no uses
         let neededVars := bnd.vars.removeAll (openedEnvs.map (·.fst))
-        let usesMap := neededVars.foldl
-          (λ usesMap v =>
-            usesMap.alter v (λ
-              | none => uses
-              | some uses' => uses'.addSets uses
-            )
+        neededVars.foldl
+        (λ usesMap v =>
+          usesMap.alter v (λ
+            | none => uses
+            | some uses' => uses'.addSets uses
           )
-          usesMap
+        )
+        usesMap
+      else usesMap
 
-        -- recursive call
-        let (resBnds, usedMap) := Bnds.getUsedMap' usesMap bnds
+    -- recursive call
+    let (resBnds, usedMap) := Bnds.getUsedMap' usesMap bnds
 
-        -- write uses into usedMap
-        let usedMap := uses.foldl
-          (λ usedMap (v,_) => usedMap.alter v (λ
-              | none => [bnd]
-              | some defs => defs.concat bnd
-            )
-          )
-          usedMap
+    -- write uses into usedMap
+    let usedMap := uses.foldl
+      (λ usedMap (v',_) => usedMap.alter (v',env) (λ
+          | none      => some <| [⟨v.fst,v.snd,prim⟩]
+          | some defs => some <| defs.concat ⟨v.fst,v.snd,prim⟩
+        )
+      )
+      usedMap
 
-        (resBnds, usedMap)
+    -- if env≠[], bnd allready in usedMap
+    let resBnds := if env==[] then (⟨v.fst,v.snd,prim⟩ :: resBnds) else resBnds
+
+    (resBnds, usedMap)
 def Bnds.getUsedMap (bnds: Bnds) := (Bnds.getUsedMap' (.emptyWithCapacity 10) bnds.reverse).map List.reverse id
 def AINF.getUsedMap (a: AINF α) := a.fst.getUsedMap
 
 
+abbrev Ren := DHashMap (Sigma VPar) (λ ⟨α,_⟩ => VPar α)
+def Ren.apply: Ren → VPar α → Term α
+| r, v => .var (r.get! ⟨_,v⟩)
 
+@[reducible]
+def Ty.envPart: EnvPart → Ty → Ty
+| .itec _ _ => id
+| .forc _ (n:=n) => Ty.array n
+| .func _ (α:=α) => Ty.arrow α
+
+abbrev UsedTermMap := DHashMap (Sigma Var × Env) (λ (⟨α,_⟩,_) => Term α)
+def assemble (bnds: List SBnd)(usedMap: UsedMap)(usedTermMap: UsedTermMap)(ren: Ren)(c: Ren → Term α): Term α :=
+  match bnds with
+  | [] => c ren
+  | bnd :: bnds =>
+      let ⟨α,v,prim⟩ := bnd
+
+      let primTm := match α, prim with
+        | _, .abs i a => .err
+        | _, .bld i a => .err
+        | _, .ite c a b => .err
+        | _, .err           => Tm.err
+        | _, .var v         => ren.apply v
+        | _, .cst0 c        => Tm.cst0 c
+        | _, .cst1 c v      => Tm.cst1 c (ren.apply v)
+        | _, .cst2 c v1 v2  => Tm.cst2 c (ren.apply v1) (ren.apply v2)
+
+      let'v v' := primTm;
+      let ren := ren.insert ⟨_,(.v v)⟩ v'
+      assemble
+        bnds usedMap usedTermMap ren c
+
+
+def AINF.fusion: AINF α → Term α
+| (bnds, ret) =>
+    let (bnds, usedMap) := Bnds.getUsedMap bnds
+    assemble
+      bnds
+      usedMap
+      (.emptyWithCapacity usedMap.size)
+      (.emptyWithCapacity bnds.length)
+      (λ r => r.apply (.v ret))
 
 open Ty
+
+#eval (tlitf 1).exp.toAINF.fusion
+#eval (tlitf 1 + tlitf 1 * tlitf 2).toAINF.fusion
+
 
 #eval (fun' x:Ty.flt => x).toAINF
 #eval (fun' x:Ty.flt => x).toAINF.getUsedMap.fst
@@ -82,6 +127,10 @@ open Ty
 #eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.getUsedMap.fst
 #eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.getUsedMap.snd.toList
 
+#eval (fun' x:flt => fun' y:flt => x+y).toAINF
+#eval (fun' x:flt => fun' y:flt => x+y).toAINF.getUsedMap.fst
+#eval (fun' x:flt => fun' y:flt => x+y).toAINF.getUsedMap.snd.toList
+
 #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF
 #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.fst
 #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.snd.toList
@@ -89,9 +138,27 @@ open Ty
 
 
 
+-- abbrev UsedTermMap := DHashMap (Sigma Var × Env) (λ (⟨α,_⟩,_) => Term α)
+-- def assemble (bnds: List SBnd)(t: Term α)(usedMap: UsedMap)(usedTermMap: UsedTermMap): Term α :=
 
 
 
+-- @[reducible]
+-- def Ty.envPart: EnvPart → Ty → Ty
+-- | .itec _ _ => id
+-- | .forc _ (n:=n) => Ty.array n
+-- | .func _ (α:=α) => Ty.arrow α
+-- abbrev EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
+
+-- def BndTree := Tree ((e: EnvPart) × e.EscapingVar) SBnd
+-- def BndLTree := List BndTree
+-- def AINFTree (α: Ty) := BndLTree × VPar α
+
+-- abbrev UsedTermMap := HashMap (Sigma Var × Env) (BndTree)
+-- def assemble (bnds: List SBnd)(t: Term α)(usedMap: UsedMap)(usedTermMap: UsedTermMap): BndLTree :=
+--   match bnds with
+--   | [] => []
+--   |
 
 
 
