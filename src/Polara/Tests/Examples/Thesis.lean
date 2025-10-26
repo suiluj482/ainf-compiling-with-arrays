@@ -183,4 +183,9 @@ end Fusion
 
 
 #eval ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1))
-  |>.toAINF.cleanEnv.fusion.normVPar
+  |>.toAINF.cleanEnv.fusion
+
+#eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv
+#eval IO.print <| (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.getUsedMap.snd.toList |>.map ToString.toString |> Print.foldLines
+#eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.fusion
+#eval (fun' x:flt => fun' y:flt => y + x) |>.toAINF.cleanEnv.fusion

@@ -4,8 +4,8 @@ open Std
 
 private abbrev SBnd := ((β: Ty) × Var β × Prim β)
 
-private abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × Env))
-private abbrev UsedMap := HashMap (Sigma Var × Env) (List SBnd)
+private abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × EnvPart))
+private abbrev UsedMap := HashMap (Sigma Var × EnvPart) (List SBnd)
 
 private def Prim.getOpenedEnvs: Prim α → List (Sigma Var × EnvPart)
 | .abs i a => a.var?.map (⟨_,·⟩, .func _ i) |>.toList
@@ -25,8 +25,8 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
     let usesMap := openedEnvs.foldl
       (λ usesMap (v', envPart) =>
         usesMap.alter v' (λ
-          | none => [(v,envPart :: env)]
-          | some uses' => (v,envPart :: env) :: uses'
+          | none => [(v,envPart)]
+          | some uses' => (v,envPart) :: uses'
         )
       )
       usesMap
@@ -35,11 +35,11 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
 
     let uses := usesMap.get? v |>.getD []
     -- filter out uses with shallower envs
-    let uses := uses.filter (λ (_,env') => env==env')
+    let uses := uses.filter (λ (_,envPart') => env.contains envPart')
 
     -- mark uses with same depth
     let usesMap := if uses≠[] then -- unnecessary, if no uses
-        let neededVars := bnd.vars.removeAll (openedEnvs.map (·.fst))
+        let neededVars := bnd.vars -- .removeAll (openedEnvs.map (·.fst))
         neededVars.foldl
         (λ usesMap v =>
           usesMap.alter v (λ
@@ -55,7 +55,7 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
 
     -- write uses into usedMap
     let usedMap := uses.foldl
-      (λ usedMap (v',_) => usedMap.alter (v',env) (λ
+      (λ usedMap (v',envPart') => usedMap.alter (v',envPart') (λ
           | none      => some <| [⟨v.fst,v.snd,prim⟩]
           | some defs => some <| defs.concat ⟨v.fst,v.snd,prim⟩
         )
@@ -67,14 +67,14 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
 
     (resBnds, usedMap)
 private def Bnds.getUsedMap (bnds: Bnds) := (Bnds.getUsedMap' (.emptyWithCapacity 10) bnds.reverse).map List.reverse id
-private def AINF.getUsedMap (a: AINF α) := a.fst.getUsedMap
+def AINF.getUsedMap (a: AINF α) := a.fst.getUsedMap
 
 
 private abbrev Ren := DHashMap (Sigma VPar) (λ ⟨α,_⟩ => VPar α)
 private def Ren.apply: Ren → VPar α → Term α
 | r, v => .var (match r.get? ⟨_,v⟩ with
   | some v => v
-  | none => panic! "Ren.apply no entry found"
+  | none => panic! s!"Ren.apply no entry for {v} found in {r.toList}"
   )
 
 -- @[reducible]
@@ -93,9 +93,9 @@ private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedT
       let primTm := match α, prim with
         | _, .abs i a =>
             fun'v i' =>
-              let env := (.func _ i) :: env
+              let envPart := (.func _ i)
               let ren: Ren := ren.insert ⟨_,(.p i)⟩ i'
-              match usedMap.get? (⟨_,v⟩, env) with
+              match usedMap.get? (⟨_,v⟩, envPart) with
               | none => Tm.var a
               | some bnds =>
                   assemble
@@ -103,9 +103,9 @@ private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedT
                     (λ ren => ren.apply a)
         | _, .bld i a =>
             for'v i' =>
-              let env := (.forc _ i) :: env
+              let envPart := (.forc _ i)
               let ren: Ren := ren.insert ⟨_,.p i⟩ i'
-              match usedMap.get? (⟨_,v⟩, env) with
+              match usedMap.get? (⟨_,v⟩, envPart) with
               | none => Tm.var a
               | some bnds =>
                   assemble
@@ -114,16 +114,16 @@ private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedT
         | _, .ite c a b =>
             if' ren.apply c
               then
-                let env := (.itec c true) :: env
-                match usedMap.get? (⟨_,v⟩, env) with
+                let envPart := (.itec c true)
+                match usedMap.get? (⟨_,v⟩, envPart) with
                 | none => Tm.var a
                 | some bnds =>
                     assemble
                       bnds env usedMap (.emptyWithCapacity 1) ren
                       (λ ren => ren.apply a)
               else
-                let env := (.itec c false) :: env
-                match usedMap.get? (⟨_,v⟩, env) with
+                let envPart := (.itec c false)
+                match usedMap.get? (⟨_,v⟩, envPart) with
                 | none => Tm.var b
                 | some bnds =>
                     assemble
