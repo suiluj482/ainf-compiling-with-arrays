@@ -63,7 +63,7 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
 | abs (α:=γ) (β:=β) f => do
   let (i,j) <- read
   let v := VPar.p (.mk j)
-  return s!"(return fun {v}:{γ.gen'} => do (({(f v).codegen' (i,j+1)}): {β.gen}))"
+  return s!"(return fun {v}:{γ.gen'} => do (({(f v).codegen' (i,j+1) |>.indent}): {β.gen}))"
 | bld (n:=n) (α:=β) f => do
   let (i,j) <- read
   let v := VPar.p (.mk j)
@@ -71,12 +71,12 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
 | bnd (α:=β) e f => do
   let (i,j) <- read
   let x := VPar.v (.mk i)
-  return s!"let {x}: {β.gen} := {e.codegen' (i,j)}; \n{(f x).codegen' (i+1,j)}"
+  return s!"\nlet {x}: {β.gen} := (do {e.codegen' (i,j)}); {(f x).codegen' (i+1,j) |>.ensureLineBreak}"
 | ite cond a b =>
-  return s!"(if ((←{← cond.codegen'}) != 0) \n{s!"then do {<- a.codegen'}".indent}\n{s!"else do {<- b.codegen'}".indent})"
+  return s!"(if ((←{← cond.codegen'}) != 0) \n{s!"then do {(<- a.codegen').indent}".indent}\n{s!"else do \n{(<- b.codegen').indent}".indent})"
 
 def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| match ((do\n{
-    (Tm.codegen' t (0,0)).indent.replace "←return" ""
+    (Tm.codegen' t (0,0)).indent |>.replace "←return" ""
   }\n): {α.gen}) with
 | some x => ToString.toString x
 | none => \"Error\"

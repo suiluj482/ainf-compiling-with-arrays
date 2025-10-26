@@ -74,3 +74,8 @@
 - bug fixes
 - introducing lists for dr
 - remove unused refs
+20.10 - 27.10:
+- multilayer perceptron
+- refactoring cse
+- fusion
+- fix lean codegen indentations and dos

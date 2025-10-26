@@ -31,15 +31,13 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
       )
       usesMap
 
-    -- dbg_trace s!"{v.snd}: openedEnvs={openedEnvs} usesMap={usesMap.toList}"
-
     let uses := usesMap.get? v |>.getD []
-    -- filter out uses with shallower envs
-    let uses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart' :: env'))
+    -- filter out uses no longer containing envPart
+    let uses := uses.filter (λ (_,(envPart',_)) => env.contains envPart')
 
     -- mark uses with same depth
     let usesMap := if uses≠[] then -- unnecessary, if no uses
-        let neededVars := bnd.vars--.removeAll (openedEnvs.map (·.fst))
+        let neededVars := bnd.vars
         neededVars.foldl
         (λ usesMap v =>
           usesMap.alter v (λ
@@ -53,6 +51,9 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
     -- recursive call
     let (resBnds, usedMap) := Bnds.getUsedMap' usesMap bnds
 
+    -- filter out uses of deeper envs
+    let uses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart'::env'))
+
     -- write uses into usedMap
     let usedMap := uses.foldl
       (λ usedMap (v',(envPart',_)) => usedMap.alter (v',envPart') (λ
@@ -62,7 +63,7 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
       )
       usedMap
 
-    -- if env≠[], bnd allready in usedMap
+    -- bnd allready in usedMap, if env≠[]
     let resBnds := if env==[] then (⟨v.fst,v.snd,prim⟩ :: resBnds) else resBnds
 
     (resBnds, usedMap)
@@ -77,14 +78,8 @@ private def Ren.apply: Ren → VPar α → Term α
   | none => panic! s!"Ren.apply no entry for {v} found in {r.toList}"
   )
 
--- @[reducible]
--- private def Ty.envPart: EnvPart → Ty → Ty
--- | .itec _ _ => id
--- | .forc _ (n:=n) => Ty.array n
--- | .func _ (α:=α) => Ty.arrow α
-
 private abbrev UsedTermMap := DHashMap (Sigma Var × Env) (λ (⟨α,_⟩,_) => Term α)
-private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedTermMap: UsedTermMap)(ren: Ren)(c: Ren → Term α): Term α :=
+private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Ren → Term α): Term α :=
   match bnds with
   | [] => c ren
   | bnd :: bnds =>
@@ -96,38 +91,38 @@ private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedT
               let envPart := (.func _ i)
               let ren: Ren := ren.insert ⟨_,(.p i)⟩ i'
               match usedMap.get? (⟨_,v⟩, envPart) with
-              | none => Tm.var a
+              | none => ren.apply a
               | some bnds =>
                   assemble
-                    bnds env usedMap (.emptyWithCapacity 1) ren
+                    bnds usedMap ren
                     (λ ren => ren.apply a)
         | _, .bld i a =>
             for'v i' =>
               let envPart := (.forc _ i)
               let ren: Ren := ren.insert ⟨_,.p i⟩ i'
               match usedMap.get? (⟨_,v⟩, envPart) with
-              | none => Tm.var a
+              | none => ren.apply a
               | some bnds =>
                   assemble
-                    bnds env usedMap (.emptyWithCapacity 1) ren
+                    bnds usedMap ren
                     (λ ren => ren.apply a)
         | _, .ite c a b =>
             if' ren.apply c
               then
                 let envPart := (.itec c true)
                 match usedMap.get? (⟨_,v⟩, envPart) with
-                | none => Tm.var a
+                | none => ren.apply a
                 | some bnds =>
                     assemble
-                      bnds env usedMap (.emptyWithCapacity 1) ren
+                      bnds usedMap ren
                       (λ ren => ren.apply a)
               else
                 let envPart := (.itec c false)
                 match usedMap.get? (⟨_,v⟩, envPart) with
-                | none => Tm.var b
+                | none => ren.apply b
                 | some bnds =>
                     assemble
-                      bnds env usedMap (.emptyWithCapacity 1) ren
+                      bnds usedMap ren
                       (λ ren => ren.apply b)
         | _, .err           => Tm.err
         | _, .var v         => ren.apply v
@@ -138,7 +133,7 @@ private partial def assemble (bnds: List SBnd)(env: Env)(usedMap: UsedMap)(usedT
       let'v v' := primTm;
       let ren := ren.insert ⟨_,(.v v)⟩ v'
       assemble
-        bnds env usedMap usedTermMap ren c
+        bnds usedMap ren c
 
 
 def AINF.fusion: AINF α → Term α
@@ -146,9 +141,7 @@ def AINF.fusion: AINF α → Term α
     let (bnds, usedMap) := Bnds.getUsedMap bnds
     assemble
       bnds
-      []
       usedMap
-      (.emptyWithCapacity usedMap.size)
       (.emptyWithCapacity bnds.length)
       (λ ren => ren.apply (.v ret))
 
@@ -175,3 +168,11 @@ def AINF.fusion: AINF α → Term α
 -- #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.fusion
 -- #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.fst
 -- #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.snd.toList
+
+
+
+-- @[reducible]
+-- private def Ty.envPart: EnvPart → Ty → Ty
+-- | .itec _ _ => id
+-- | .forc _ (n:=n) => Ty.array n
+-- | .func _ (α:=α) => Ty.arrow α

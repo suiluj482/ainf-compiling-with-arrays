@@ -166,18 +166,7 @@ namespace Fusion
   #eval (let' a:= tlitf 1; fun' x:flt => x+a).toAINF.fusion.normVPar
   #eval (for' i:5 => fun' x => if' x <' tlitf 0 then i.i2n.n2f + x else x).toAINF.fusion.normVPar
 
-  #eval (fun' x:Ty.flt => x).toAINF.fusion.normVPar
-
-  #eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.fusion.normVPar
-
-  #eval (fun' x:flt => fun' y:flt => x+y).toAINF.fusion.normVPar
-
-  #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.fusion.normVPar
-
-  #eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv
-  #eval IO.print <| (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.getUsedMap.snd.toList |>.map ToString.toString |> Print.foldLines
-  #eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.fusion
-  #eval (fun' x:flt => fun' y:flt => y + x) |>.toAINF.cleanEnv.fusion
+  #eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.fusion.normVPar
 
 
 end Fusion
