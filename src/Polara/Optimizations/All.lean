@@ -39,7 +39,7 @@ def pipelines: List (String × Pipeline) := [
     let _ ← writeTmpFile s!"{n}_vectorize.ainf" s.toString
     let s := s.dead
     let _ ← writeTmpFile s!"{n}_dead.ainf" s.toString
-    let s := s.toTm
+    let s := s.fusion
     let _ ← writeTmpFile s!"{n}_toTm.ainf" s.toString
     return s.normVPar
   ),

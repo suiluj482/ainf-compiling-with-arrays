@@ -65,7 +65,7 @@ private def Bnd.unify?: Bnd → Bnd → Option (Bnd × ((α: Ty) × Var α × Va
     if h: α=α' then do
       .guardCond (h▸prim == prim')
       let env ← env.unify? env'
-      return (⟨⟨_,v⟩,env,prim⟩, ⟨α,v,h▸v'⟩)
+      return (⟨⟨_,v⟩,env,prim⟩, ⟨α,h▸v',v⟩)
     else none
 
 private def Bnds.unify?' (optBnds: Bnds)(bnd': Bnd): Bnds → Option (Bnds × ((α: Ty) × Var α × Var α))

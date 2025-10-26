@@ -160,4 +160,27 @@ namespace Fusion
 
   #eval IO.print ex.toAINF.toGraphviz
 
+
+  #eval (tlitf 1).exp.toAINF.fusion.normVPar
+  #eval (tlitf 1 + tlitf 1 * tlitf 2).toAINF.fusion.normVPar
+  #eval (let' a:= tlitf 1; fun' x:flt => x+a).toAINF.fusion.normVPar
+  #eval (for' i:5 => fun' x => if' x <' tlitf 0 then i.i2n.n2f + x else x).toAINF.fusion.normVPar
+
+  #eval (fun' x:Ty.flt => x).toAINF.fusion.normVPar
+
+  #eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.fusion.normVPar
+
+  #eval (fun' x:flt => fun' y:flt => x+y).toAINF.fusion.normVPar
+
+  #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.fusion.normVPar
+
+
+
 end Fusion
+
+#eval ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1))
+  |>.toAINF.cleanEnv
+
+
+#eval ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1))
+  |>.toAINF.cleanEnv.fusion.normVPar
