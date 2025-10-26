@@ -106,7 +106,7 @@ def Tm.toAINF (e : Tm VPar α) : AINF α :=
 --         match (f α env prim) with
 --         | none => pure [bnd]
 --         | some (env', tm') => tm'.toAINFMEV env' v
---     ) |>.freshAINFVars a,
+--     ) |>.freshAINFVPars a,
 --     v
 --   )
 
@@ -116,6 +116,6 @@ def Tm.toAINF (e : Tm VPar α) : AINF α :=
 --       | ⟨⟨α,v⟩, env, prim⟩ =>
 --         let (env', tm') := (f α env prim)
 --         tm'.toAINFMEV env' (v.changeTypeF t)
---     ) |>.freshAINFVars a,
+--     ) |>.freshAINFVPars a,
 --     v.changeTypeF t
 --   )

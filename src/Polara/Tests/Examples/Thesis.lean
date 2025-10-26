@@ -9,13 +9,13 @@ open Ty
 def cseFun := (
     let' f1 := (fun' a => (tlitf 2 * a) + tlitf 10);
     let' f2 := (fun' a => (tlitf 2 * a) + tlitf 11);
-    fun' a => (f1 @@ a) + (f2 @@ a)
+    (f1,, f2)
   ).toVPar
 
 #eval cseFun
 #eval cseFun.toAINF
 #eval cseFun.toAINF.cse
-#eval cseFun.toAINF.cse.toTm.normVPar
+#eval cseFun.toAINF.cse.fusion
 
 def cseFor := (
     let' f1 := (for' i:5 => i.i2n + tlitn 10);

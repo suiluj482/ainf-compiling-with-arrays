@@ -15,9 +15,52 @@ private def Prim.getOpenedEnvs: Prim α → List (Sigma Var × EnvPart)
     ++ (b.var?.map (⟨_,·⟩, .itec c false)).toList
 | _ => []
 
-private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMap)
-| [] => ([], .emptyWithCapacity 10)
-| (bnd: Bnd) :: bnds =>
+private partial def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → VarM ((List SBnd) × UsedMap)
+| [] => return ([], .emptyWithCapacity 10)
+| (bnd: Bnd) :: bnds => do
+    let ⟨v,env,prim⟩ := bnd
+
+    let uses := usesMap.get? v |>.getD []
+    -- filter out uses no longer containing envPart
+    let uses := uses.filter (λ (_,(envPart',_)) => env.contains envPart')
+    -- filter out uses of deeper envs
+    let scopesUses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart'::env'))
+
+    -- break env through changing bnd and bnds, if used in different env exits
+    let ((bnd, bnds): Bnd × Bnds) ← (
+      if scopesUses.length > 1
+        then do
+          let envPart' := env.head!
+          let env' := env.tail
+          let x1 := ←VarM.var
+          let bnds := ((←match envPart' with
+            | .forc _ i => do
+                let x2 := ←VarM.var
+                return [
+                  ⟨v,env,Prim.cst2 .get (.v x2) (.p i)⟩,
+                  ⟨⟨_,x2⟩,env',Prim.bld i (.v x1)⟩,
+                ]
+            | .func _ i => do
+                let x2 := ←VarM.var
+                return [
+                  ⟨v,env,Prim.cst2 .app (.v x2) (.p i)⟩,
+                  ⟨⟨_,x2⟩,env',Prim.abs i (.v x1)⟩,
+                ]
+            | .itec c b => do
+                let e := ←VarM.var
+                let x2 := ←VarM.var
+                return [
+                  ⟨v,env,Prim.var (.v x2)⟩,
+                  ⟨⟨_,x2⟩,env',(if b
+                      then Prim.ite c (.v x1) (.v e)
+                      else Prim.ite c (.v e) (.v x1)
+                    )⟩,
+                  ⟨⟨_,e⟩,[],Prim.err⟩,
+                ]
+            ).concat ⟨⟨_,x1⟩,env,prim⟩) ++ bnds
+          return (bnds.head (by simp[bnds]), bnds.tail)
+        else return (bnd,bnds)
+      )
     let ⟨v,env,prim⟩ := bnd
 
     -- mark uses with deeper envs
@@ -30,10 +73,6 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
         )
       )
       usesMap
-
-    let uses := usesMap.get? v |>.getD []
-    -- filter out uses no longer containing envPart
-    let uses := uses.filter (λ (_,(envPart',_)) => env.contains envPart')
 
     -- mark uses with same depth
     let usesMap := if uses≠[] then -- unnecessary, if no uses
@@ -49,13 +88,10 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
       else usesMap
 
     -- recursive call
-    let (resBnds, usedMap) := Bnds.getUsedMap' usesMap bnds
-
-    -- filter out uses of deeper envs
-    let uses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart'::env'))
+    let (resBnds, usedMap) ← Bnds.getUsedMap' usesMap bnds
 
     -- write uses into usedMap
-    let usedMap := uses.foldl
+    let usedMap := scopesUses.foldl
       (λ usedMap (v',(envPart',_)) => usedMap.alter (v',envPart') (λ
           | none      => some <| [⟨v.fst,v.snd,prim⟩]
           | some defs => some <| defs.concat ⟨v.fst,v.snd,prim⟩
@@ -66,8 +102,9 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
     -- bnd allready in usedMap, if env≠[]
     let resBnds := if env==[] then (⟨v.fst,v.snd,prim⟩ :: resBnds) else resBnds
 
-    (resBnds, usedMap)
-private def Bnds.getUsedMap (bnds: Bnds) := (Bnds.getUsedMap' (.emptyWithCapacity 10) bnds.reverse).map List.reverse id
+    return (resBnds, usedMap)
+private def Bnds.getUsedMap (bnds: Bnds): (List SBnd) × UsedMap := bnds.freshBndsVars
+  (return (←Bnds.getUsedMap' (.emptyWithCapacity 10) bnds.reverse).map List.reverse id)
 def AINF.getUsedMap (a: AINF α) := a.fst.getUsedMap
 
 

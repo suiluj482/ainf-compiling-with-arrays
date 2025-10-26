@@ -96,7 +96,7 @@ def VParM.vpar : VParM ((β: Ty) → VPar β) :=
   )
 def VParM.rPar: VParM Unit :=
   modify fun ⟨(i,_)⟩ => ⟨(i,0)⟩
-def AINF.findFreshVars: AINF α → Nat × Nat
+def AINF.findFreshVPars: AINF α → Nat × Nat
 | (bnds, _) => bnds.foldl (λ (x, i) ⟨⟨_,⟨n⟩⟩, _, prim⟩ =>
     (
       x.max n,
@@ -106,10 +106,28 @@ def AINF.findFreshVars: AINF α → Nat × Nat
       | _ => i
     )
   ) (0, 0)
-def VParM.freshAINFVars (a: AINF α)(m: VParM β): β :=
-  m ⟨a.findFreshVars⟩ |>.fst
+def VParM.freshAINFVPars (a: AINF α)(m: VParM β): β :=
+  m ⟨a.findFreshVPars⟩ |>.fst
 def VParM.startZero (m: VParM β): β :=
   m ⟨(0,0)⟩ |>.fst
+--
+abbrev VarM (α: Type n) := StateM (ULift Nat) α
+def VarM.var : VarM ({β: Ty} → Var β) :=
+  modifyGet fun i => (
+    λ {_} => (.mk i.down),
+    ⟨i.down + 1⟩
+  )
+def Bnds.findFreshVars: Bnds → Nat
+| bnds => bnds.foldl (λ count ⟨⟨_,⟨n⟩⟩,_,_⟩ => count.max n) 0
+def AINF.findFreshVars: AINF α → Nat
+| (bnds, _) => bnds.findFreshVars
+def Bnds.freshBndsVars (bnds: Bnds)(m: VarM β): β :=
+  m ⟨bnds.findFreshVars⟩ |>.fst
+def VParM.freshAINFVars (a: AINF α)(m: VarM β): β :=
+  m ⟨a.findFreshVars⟩ |>.fst
+def VarM.startZero (m: VarM β): β :=
+  m ⟨0⟩ |>.fst
+
 
 ------
 def Tm.toVPar: Tm VPar α → Tm VPar α := id
@@ -176,7 +194,7 @@ def VPar.lookupEnv (a: AINF β) (v: VPar α): Option Env :=
 def AINF.mapBnds (f: Bnds → Bnds): AINF α → AINF α := Prod.map f id
 
 def AINF.flatMapMBnd (g: Ty → Ty)(f: Bnd → VParM Bnds)(a: AINF α): AINF (g α) := match a with
-| (bnds, v) => ((bnds.flatMapM f).freshAINFVars a, v.changeType)
+| (bnds, v) => ((bnds.flatMapM f).freshAINFVPars a, v.changeType)
 
 -- check if env defines parameter
 def EnvPart.definesPar (i: Par α): EnvPart → Bool
