@@ -32,6 +32,11 @@ namespace List
       then l
       else a :: l
 
+  def toSet [BEq α](l: List α): List α := l.foldl addToSet []
+
+  def addSets [BEq α]: List α → List α → List α
+  | a, b => b.foldl (λ acc ele => acc.addToSet ele) a
+
   def keepRight (l: List α)(n: Nat): List α :=
     l.drop (l.length-n)
 

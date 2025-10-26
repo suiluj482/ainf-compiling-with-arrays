@@ -62,7 +62,7 @@ private partial def Std.DHashMap.topologicalSort' [BEq α] [Hashable α]
     (λ key val => pred key val |>.filter m.contains |>.isEmpty)
   match startNodes.isEmpty, m'.isEmpty with
   | true, true => done
-  | true, false => panic! "error"
+  | true, false => panic! "topologicalSort error no dag"
   | _, _ => topologicalSort' pred m' (done ++ startNodes.toList)
 
 def Std.DHashMap.topologicalSort [BEq α] [Hashable α]

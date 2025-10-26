@@ -236,17 +236,19 @@ instance: BEq Bnd := ⟨λ ⟨⟨α,v⟩,e,p⟩ ⟨⟨α',v'⟩,e',p'⟩ =>
   ⟩
 
 def Prim.vars (p: Prim α): List (Sigma Var) :=
-  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩) |>.toSet
 def Prim.pars (p: Prim α): List (Sigma Par) :=
-  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩)
+  p.vpars.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.par?⟩) |>.toSet
 def EnvPar.vpar?: EnvPart → Option (Sigma VPar)
 | .itec cond _ => some ⟨_,cond⟩
 | .forc _ _ => none
 | .func _ _ => none
 def Env.vpars: Env → List (Sigma VPar)
-| env => env.filterMap EnvPar.vpar?
+| env => env.filterMap EnvPar.vpar? |>.toSet
+def Env.vars: Env → List (Sigma Var)
+| env => env.vpars.filterMap (λ ⟨_,v⟩ => return ⟨_,←v.var?⟩) |>.toSet
 def Bnd.vpars: Bnd → List (Sigma VPar)
-| ⟨⟨_,_⟩,env,prim⟩ => env.vpars.append prim.vpars
+| ⟨⟨_,_⟩,env,prim⟩ => env.vpars.addSets prim.vpars
 
 def filterVars (l: List (Sigma VPar)): List (Sigma Var) :=
   l.filterMap (λ ⟨_, v⟩ => return ⟨_, ←v.var?⟩)

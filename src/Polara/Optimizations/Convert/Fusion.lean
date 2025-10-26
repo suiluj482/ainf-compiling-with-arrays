@@ -1,50 +1,195 @@
 import Polara.Syntax.All
+import Polara.Optimizations.Convert.ToAinf
+open Std
+
+def SBnd := ((β: Ty) × Var β × Prim β)
+
+abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × Env))
+abbrev UsedMap := HashMap (Sigma Var) (List Bnd)
+
+def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMap)
+| [] => ([], .emptyWithCapacity 10)
+| (bnd: Bnd) :: bnds =>
+    let ⟨v,env,prim⟩ := bnd
+
+    -- mark uses with deeper envs
+    let openedEnvs: List (Sigma Var × EnvPart) := match v.fst, prim with
+      | _, .abs i a => a.var?.map (⟨_,·⟩, .func _ i) |>.toList
+      | _, .bld i a => a.var?.map (⟨_,·⟩, .forc _ i) |>.toList
+      | _, .ite c a b =>
+          (a.var?.map (⟨_,·⟩, .itec c true)).toList
+          ++ (b.var?.map (⟨_,·⟩, .itec c false)).toList
+      | _, _ => []
+    let usesMap := openedEnvs.foldl
+      (λ usesMap (v', envPart) =>
+        usesMap.alter v' (λ
+          | none => [(v,envPart :: env)]
+          | some uses' => (v,envPart :: env) :: uses'
+        )
+      )
+      usesMap
+
+    -- dbg_trace s!"{v.snd}: openedEnvs={openedEnvs} usesMap={usesMap.toList}"
+
+    match usesMap.get? v with
+    | none =>
+        -- dbg_trace s!"{v.snd}: no uses in usesMap={usesMap.toList}"
+        Bnds.getUsedMap' usesMap bnds |>.map
+          -- if env≠[], bnd is in usedMap -> not needed in resBnds
+          (λ resBnds => if env==[] then (⟨v.fst,v.snd,prim⟩ :: resBnds) else resBnds)
+          id
+    | some uses =>
+
+        -- filter out uses with shallower envs
+        let uses := uses.filter (λ (_,env') => env==env')
+        -- mark uses with same depth
+        let neededVars := bnd.vars.removeAll (openedEnvs.map (·.fst))
+        let usesMap := neededVars.foldl
+          (λ usesMap v =>
+            usesMap.alter v (λ
+              | none => uses
+              | some uses' => uses'.addSets uses
+            )
+          )
+          usesMap
+
+        -- recursive call
+        let (resBnds, usedMap) := Bnds.getUsedMap' usesMap bnds
+
+        -- write uses into usedMap
+        let usedMap := uses.foldl
+          (λ usedMap (v,_) => usedMap.alter v (λ
+              | none => [bnd]
+              | some defs => defs.concat bnd
+            )
+          )
+          usedMap
+
+        (resBnds, usedMap)
+def Bnds.getUsedMap (bnds: Bnds) := (Bnds.getUsedMap' (.emptyWithCapacity 10) bnds.reverse).map List.reverse id
+def AINF.getUsedMap (a: AINF α) := a.fst.getUsedMap
+
+
+
+
+open Ty
+
+#eval (fun' x:Ty.flt => x).toAINF
+#eval (fun' x:Ty.flt => x).toAINF.getUsedMap.fst
+#eval (fun' x:Ty.flt => x).toAINF.getUsedMap.snd.toList
+
+#eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF
+#eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.getUsedMap.fst
+#eval ((fun' x:Ty.flt => x+x) @@ tlitf 1).toAINF.getUsedMap.snd.toList
+
+#eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF
+#eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.fst
+#eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.getUsedMap.snd.toList
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- def SBnd := ((β: Ty) × Var β × Prim β)
+
+-- @[reducible]
+-- def Ty.envPart: EnvPart → Ty → Ty
+-- | .itec _ _ => id
+-- | .forc _ (n:=n) => Ty.array n
+-- | .func _ (α:=α) => Ty.arrow α
+
+-- abbrev EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
+
+-- def BndTree := List (Tree ((e: EnvPart) × e.EscapingVar) SBnd)
+-- def AINFTree (α: Ty) := BndTree × VPar α
+
+-- def fuse (bnds: BndsH)(env: Env)(var: Var α)(done: BndTree): Term α :=
+--   let (placeable, rest) := bnds.partition
+--     (λ v (env, prim) =>
+--       let reqVars := env.vars ++ prim.vars
+--       reqVars.filter bnds.contains |>.isEmpty
+--     )
+--   match startNodes.isEmpty, m'.isEmpty with
+--   | true, true => done
+--   | true, false => panic! "topologicalSort error no dag"
+--   | _, _ =>
+--     sorry
+
+
+--   sorry
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- import Polara.Optimizations.Convert.ToTm
 
 ------
-def SBnd := ((β: Ty) × Var β × Prim β)
+-- def SBnd := ((β: Ty) × Var β × Prim β)
 
-@[reducible]
-def Ty.envPart: EnvPart → Ty → Ty
-| .itec _ _ => id
-| .forc _ (n:=n) => Ty.array n
-| .func _ (α:=α) => Ty.arrow α
+-- @[reducible]
+-- def Ty.envPart: EnvPart → Ty → Ty
+-- | .itec _ _ => id
+-- | .forc _ (n:=n) => Ty.array n
+-- | .func _ (α:=α) => Ty.arrow α
 
-abbrev EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
+-- abbrev EnvPart.EscapingVar (e: EnvPart) := (α: Ty) × VPar (α.envPart e) × VPar α
 
-def BndTree := List (Tree ((e: EnvPart) × List e.EscapingVar) SBnd)
-def AINFTree (α: Ty) := BndTree × VPar α
+-- def BndTree := List (Tree ((e: EnvPart) × List e.EscapingVar) SBnd)
+-- def AINFTree (α: Ty) := BndTree × VPar α
 
-partial def BndTree.toString: BndTree → String
-| bndTree => bndTree.map (λ node =>
-    match node with
-    | Tree.leaf ⟨_,v,prim⟩ => s!"let {v} := {prim}\n"
-    | Tree.node ⟨envPart, escVars⟩ tree' =>
-        let (tVars, sVars) := escVars
-          |>.map (λ (⟨_,y,x⟩: envPart.EscapingVar) => (s!"{y}",s!"{x}"))
-          |>.unzip
-        let treeS := BndTree.toString tree' |>.indent
-        s!"let {tVars} := {envPart}\n{treeS}{sVars}"
-  ) |> Print.foldLines
+-- partial def BndTree.toString: BndTree → String
+-- | bndTree => bndTree.map (λ node =>
+--     match node with
+--     | Tree.leaf ⟨_,v,prim⟩ => s!"let {v} := {prim}\n"
+--     | Tree.node ⟨envPart, escVars⟩ tree' =>
+--         let (tVars, sVars) := escVars
+--           |>.map (λ (⟨_,y,x⟩: envPart.EscapingVar) => (s!"{y}",s!"{x}"))
+--           |>.unzip
+--         let treeS := BndTree.toString tree' |>.indent
+--         s!"let {tVars} := {envPart}\n{treeS}{sVars}"
+--   ) |> Print.foldLines
 
-def AINFTree.toString: AINFTree α → String
-| (tree, v) => s!"{tree.toString}{v}"
-instance: ToString (AINFTree α) := ⟨AINFTree.toString⟩
+-- def AINFTree.toString: AINFTree α → String
+-- | (tree, v) => s!"{tree.toString}{v}"
+-- instance: ToString (AINFTree α) := ⟨AINFTree.toString⟩
 
-open Std
-abbrev Ren := ListMap VPar VPar
-def Ren.apply: Ren → VPar α → Term α
-| r, v => Tm.var (r.lookup! v)
+-- open Std
+-- abbrev Ren := ListMap VPar VPar
+-- def Ren.apply: Ren → VPar α → Term α
+-- | r, v => Tm.var (r.lookup! v)
 
-def Prim.toTm (ren: Ren): Prim α → Term α
-| err           => Tm.err
-| var v         => ren.apply v
-| cst0 c        => Tm.cst0 c
-| cst1 c v      => Tm.cst1 c (ren.apply v)
-| cst2 c v1 v2  => Tm.cst2 c (ren.apply v1) (ren.apply v2)
-| ite cond a b  => Tm.ite (ren.apply cond) (ren.apply a) (ren.apply b)
-| abs _ _
-| bld _ _ => panic! "Fusion Prim.toTm"
+-- def Prim.toTm (ren: Ren): Prim α → Term α
+-- | err           => Tm.err
+-- | var v         => ren.apply v
+-- | cst0 c        => Tm.cst0 c
+-- | cst1 c v      => Tm.cst1 c (ren.apply v)
+-- | cst2 c v1 v2  => Tm.cst2 c (ren.apply v1) (ren.apply v2)
+-- | ite cond a b  => Tm.ite (ren.apply cond) (ren.apply a) (ren.apply b)
+-- | abs _ _
+-- | bld _ _ => panic! "Fusion Prim.toTm"
 
 
 -- def BndTree.toTm (e: Env)(r: Ren): BndTree → (Term α → Term α × Ren)
