@@ -200,6 +200,7 @@ inductive EnvPart : Type -- envPart modeling control flow
 | forc : (n:Pos) → Par (idx n) → EnvPart  -- for
 | itec : VPar nat → Bool → EnvPart        -- if then else
 deriving DecidableEq, Hashable
+instance: Inhabited EnvPart := ⟨.itec (.v (.mk 404)) true⟩
 abbrev Env := List EnvPart
 
 -- primitive operations (could maybe be unified with Tm)

@@ -4,7 +4,7 @@ open Std
 
 private abbrev SBnd := ((β: Ty) × Var β × Prim β)
 
-private abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × EnvPart))
+private abbrev UsesMap := HashMap (Sigma Var) (List (Sigma Var × (EnvPart × Env)))
 private abbrev UsedMap := HashMap (Sigma Var × EnvPart) (List SBnd)
 
 private def Prim.getOpenedEnvs: Prim α → List (Sigma Var × EnvPart)
@@ -25,8 +25,8 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
     let usesMap := openedEnvs.foldl
       (λ usesMap (v', envPart) =>
         usesMap.alter v' (λ
-          | none => [(v,envPart)]
-          | some uses' => (v,envPart) :: uses'
+          | none => [(v,envPart, env)]
+          | some uses' => (v,envPart, env) :: uses'
         )
       )
       usesMap
@@ -35,11 +35,11 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
 
     let uses := usesMap.get? v |>.getD []
     -- filter out uses with shallower envs
-    let uses := uses.filter (λ (_,envPart') => env.contains envPart')
+    let uses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart' :: env'))
 
     -- mark uses with same depth
     let usesMap := if uses≠[] then -- unnecessary, if no uses
-        let neededVars := bnd.vars -- .removeAll (openedEnvs.map (·.fst))
+        let neededVars := bnd.vars--.removeAll (openedEnvs.map (·.fst))
         neededVars.foldl
         (λ usesMap v =>
           usesMap.alter v (λ
@@ -55,7 +55,7 @@ private def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → ((List SBnd) × UsedMa
 
     -- write uses into usedMap
     let usedMap := uses.foldl
-      (λ usedMap (v',envPart') => usedMap.alter (v',envPart') (λ
+      (λ usedMap (v',(envPart',_)) => usedMap.alter (v',envPart') (λ
           | none      => some <| [⟨v.fst,v.snd,prim⟩]
           | some defs => some <| defs.concat ⟨v.fst,v.snd,prim⟩
         )

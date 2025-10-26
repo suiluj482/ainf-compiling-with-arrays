@@ -174,18 +174,23 @@ namespace Fusion
 
   #eval (if' tlitn 0 then tlitf 1 else tlitf 2).toAINF.fusion.normVPar
 
+  #eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv
+  #eval IO.print <| (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.getUsedMap.snd.toList |>.map ToString.toString |> Print.foldLines
+  #eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.fusion
+  #eval (fun' x:flt => fun' y:flt => y + x) |>.toAINF.cleanEnv.fusion
 
 
 end Fusion
 
-#eval ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1))
-  |>.toAINF.cleanEnv
+-- ((⟨(Float ~> Float), x3⟩, fun i1:Float), [⟨Float, (x0, i0)⟩, ⟨Float, (x1, i1)⟩, ⟨Float, (x2, x0 + x1)⟩])
+-- ((⟨(Float ~> (Float ~> Float)), x4⟩, fun i0:Float), [⟨(Float ~> Float), (x3, fun i1:Float => x2)⟩])
 
+-- ((⟨(Float ~> Float), x3⟩, fun i1:Float), [⟨Float, (x0, i0)⟩, ⟨Float, (x1, i1)⟩, ⟨Float, (x2, x0 + x1)⟩])
+-- ((⟨(Float ~> (Float ~> Float)), x4⟩, fun i0:Float), [⟨(Float ~> Float), (x3, fun i1:Float => x2)⟩])
 
-#eval ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1))
-  |>.toAINF.cleanEnv.fusion
-
-#eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv
-#eval IO.print <| (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.getUsedMap.snd.toList |>.map ToString.toString |> Print.foldLines
-#eval (fun' x => fun' y => x+y) |>.toAINF.cleanEnv.fusion
-#eval (fun' x:flt => fun' y:flt => y + x) |>.toAINF.cleanEnv.fusion
+-- (let x0 := (fun i0 =>  (let x0 := (fun i1 =>  (let x0 := i0;
+--     (let x1 := i1;
+--     (let x2 := (x0 + x1);
+--     x2))));
+--   x0));
+-- x0)

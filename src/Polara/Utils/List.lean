@@ -22,6 +22,9 @@ def Vector.splitListPrefix [BEq α](ls: Vector (List α) n): List α × Vector (
 
 namespace List
 
+  def isSubsetOf [BEq α]: List α → List α → Bool
+  | a, b => a.all (b.contains ·)
+
   def eq [BEq α]: List α → Bool
   | [] => true
   | _ :: [] => true
