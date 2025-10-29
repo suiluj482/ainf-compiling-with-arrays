@@ -51,7 +51,7 @@ def Tm.codegenPy' : Tm VPar α → VParM String
   return s!"[(lambda {v}: {←(f v).codegenPy'})({v}) for {v} in range(0,{n})]" -- python closure only captures vars not values
 | bnd e f => do
   let x := (←VParM.varVPar) _
-  return s!"let({x} := {←e.codegenPy'}, \n{←(f x).codegenPy'})"
+  return s!"(lambda {x}={←e.codegenPy'}: \n{←(f x).codegenPy'})()"
 | ite cond a b =>
   return s!"({<- a.codegenPy'} if {<- cond.codegenPy'} else {<- b.codegenPy'})"
 

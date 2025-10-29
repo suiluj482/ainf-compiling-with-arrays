@@ -22,6 +22,8 @@ private def String.accept (s: String)(pre: String): Option String :=
   if s.startsWith pre then
     (s.drop pre.length).trim
   else none
+private def String.acceptOneOf (s: String)(pres: List String): Option String :=
+  pres.findSome? (s.accept ·)
 
 private def String.firstVal(s: String)(f: String → Option α): Option (α × String) :=
   let p := s.find ([' ', ',', ']', ')'].contains ·)
@@ -61,11 +63,11 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | .unit => if s.startsWith "()" then some ((), s.drop 2) else none
   | .idx _ => s.firstVal (·.toFin?)
   | α ×× β => do
-      let s ← s.accept "("
+      let s ← s.acceptOneOf ["(", "["]
       let (a, s) ← α.parse' s
       let s ← s.accept ","
       let (b, s) ← β.parse' s
-      let s ← s.accept ")"
+      let s ← s.acceptOneOf [")", "]"]
       return ((a, b), s)
   | .array n α => do
       let s ← s.accept "["

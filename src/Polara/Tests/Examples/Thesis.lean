@@ -172,15 +172,22 @@ namespace Fusion
 
 end Fusion
 
--- ((⟨(Float ~> Float), x3⟩, fun i1:Float), [⟨Float, (x0, i0)⟩, ⟨Float, (x1, i1)⟩, ⟨Float, (x2, x0 + x1)⟩])
--- ((⟨(Float ~> (Float ~> Float)), x4⟩, fun i0:Float), [⟨(Float ~> Float), (x3, fun i1:Float => x2)⟩])
+namespace python
 
--- ((⟨(Float ~> Float), x3⟩, fun i1:Float), [⟨Float, (x0, i0)⟩, ⟨Float, (x1, i1)⟩, ⟨Float, (x2, x0 + x1)⟩])
--- ((⟨(Float ~> (Float ~> Float)), x4⟩, fun i0:Float), [⟨(Float ~> Float), (x3, fun i1:Float => x2)⟩])
+  def test := (
+      let' f := (fun' x:flt => let' a := x; (fun' y:unit => a));
+      let' a := f @@ tlitf 0;
+      let' b := f @@ tlitf 1;
+      (b @@ ()',, a @@ ()')
+    ).toVPar
 
--- (let x0 := (fun i0 =>  (let x0 := (fun i1 =>  (let x0 := i0;
---     (let x1 := i1;
---     (let x2 := (x0 + x1);
---     x2))));
---   x0));
--- x0)
+  #eval IO.print test.codegenPy
+  #eval run "Python" test "python/test"
+
+  def test2 := (
+      for' i:5 => i
+    ).toVPar
+
+  #eval run "Python" test2 "python/test2"
+
+end python

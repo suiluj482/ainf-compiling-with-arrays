@@ -79,6 +79,8 @@ def VParM.par : VParM ((β: Ty) → Par β) :=
     λ _ => (.mk i.down.snd),
     ⟨i.down.map id (·+1)⟩
   )
+def VParM.nextParNum : VParM Nat :=
+  λ i => (i.down.snd, i)
 def VParM.varVPar : VParM ((β: Ty) → VPar β) :=
   modifyGet fun i => (
     λ _ => (.v (.mk i.down.fst)),

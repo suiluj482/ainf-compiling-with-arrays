@@ -1,4 +1,5 @@
 import Polara.Codegeneration.Utils
+import Polara.Optimizations.NbE
 
 
 def Ty.gen': Ty → String
@@ -83,4 +84,4 @@ def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.pri
 "
 
 instance genLean: Codegen "Lean" :=
-  ⟨Tm.codegen⟩
+  ⟨Tm.codegen ∘ Tm.normVPar⟩

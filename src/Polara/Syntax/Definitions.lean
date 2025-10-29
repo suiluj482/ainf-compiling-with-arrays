@@ -1,6 +1,8 @@
 import Polara.Utils.All
 import Std
 
+open Std
+
 -- Type
 inductive Ty
 | nat : Ty                  -- natural number
@@ -190,6 +192,20 @@ open Tm
 abbrev Term: Ty → Type := Tm VPar
 
 instance : Inhabited (Tm Γ α) := ⟨Tm.err⟩
+
+
+def Tm.pars: Tm VPar α → ReaderM Nat (HashSet (Sigma Par))
+| .err
+| .cst0 _
+| .var (.v _)=> return .emptyWithCapacity
+| .var (.p p) => return (HashSet.emptyWithCapacity).insert ⟨_,p⟩
+| .cst1 _ a => a.pars
+| .cst2 _ a b => return (←a.pars).insertMany (←b.pars)
+| .ite _ a b => return (←a.pars).insertMany (←b.pars)
+-- var, so it stays out of set, changing counter is not necessary
+| .abs f => do (f (.v (.mk (←read)))).pars
+| .bld f => do (f (.v (.mk (←read)))).pars
+| .bnd t f => return (←t.pars).insertMany (←(f (.v (.mk (←read)))).pars)
 
 ------------------------------------------------------------------------------------------
 -- AINF

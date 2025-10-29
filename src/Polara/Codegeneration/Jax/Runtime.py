@@ -9,9 +9,6 @@ def normCdf(d):
 def idx2int(a): 
     return a
 
-def let(x, y):
-    return y
-
 def to_py(x):
     if isinstance(x, jnp.ndarray):
         return x.tolist()

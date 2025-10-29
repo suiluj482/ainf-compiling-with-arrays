@@ -15,10 +15,43 @@ private def Prim.getOpenedEnvs: Prim α → List (Sigma Var × EnvPart)
     ++ (b.var?.map (⟨_,·⟩, .itec c false)).toList
 | _ => []
 
+private def splitEnv (bnd: Bnd)(bnds: Bnds): VarM (Bnd × Bnds) := do
+  let ⟨v,env,prim⟩ := bnd
+
+  let envPart' := env.head!
+  let env' := env.tail
+  let x1 := ←VarM.var
+  let bnds := ((←match envPart' with
+    | .forc _ i => do
+        let x2 := ←VarM.var
+        return [
+          ⟨v,env,Prim.cst2 .get (.v x2) (.p i)⟩,
+          ⟨⟨_,x2⟩,env',Prim.bld i (.v x1)⟩,
+        ]
+    | .func _ i => do
+        let x2 := ←VarM.var
+        return [
+          ⟨v,env,Prim.cst2 .app (.v x2) (.p i)⟩,
+          ⟨⟨_,x2⟩,env',Prim.abs i (.v x1)⟩,
+        ]
+    | .itec c b => do
+        let e := ←VarM.var
+        let x2 := ←VarM.var
+        return [
+          ⟨v,env,Prim.var (.v x2)⟩,
+          ⟨⟨_,x2⟩,env',(if b
+              then Prim.ite c (.v x1) (.v e)
+              else Prim.ite c (.v e) (.v x1)
+            )⟩,
+          ⟨⟨_,e⟩,[],Prim.err⟩,
+        ]
+    ).concat ⟨⟨_,x1⟩,env,prim⟩) ++ bnds
+  return (bnds.head (by simp[bnds]), bnds.tail)
+
 private partial def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → VarM ((List SBnd) × UsedMap)
 | [] => return ([], .emptyWithCapacity 10)
 | (bnd: Bnd) :: bnds => do
-    let ⟨v,env,prim⟩ := bnd
+    let ⟨v,env,_⟩ := bnd
 
     let uses := usesMap.get? v |>.getD []
     -- filter out uses no longer containing envPart
@@ -27,40 +60,7 @@ private partial def Bnds.getUsedMap' (usesMap: UsesMap): Bnds → VarM ((List SB
     let scopesUses := uses.filter (λ (_,(envPart', env')) => env.isSubsetOf (envPart'::env'))
 
     -- break env through changing bnd and bnds, if used in different env exits
-    let ((bnd, bnds): Bnd × Bnds) ← (
-      if scopesUses.length > 1
-        then do
-          let envPart' := env.head!
-          let env' := env.tail
-          let x1 := ←VarM.var
-          let bnds := ((←match envPart' with
-            | .forc _ i => do
-                let x2 := ←VarM.var
-                return [
-                  ⟨v,env,Prim.cst2 .get (.v x2) (.p i)⟩,
-                  ⟨⟨_,x2⟩,env',Prim.bld i (.v x1)⟩,
-                ]
-            | .func _ i => do
-                let x2 := ←VarM.var
-                return [
-                  ⟨v,env,Prim.cst2 .app (.v x2) (.p i)⟩,
-                  ⟨⟨_,x2⟩,env',Prim.abs i (.v x1)⟩,
-                ]
-            | .itec c b => do
-                let e := ←VarM.var
-                let x2 := ←VarM.var
-                return [
-                  ⟨v,env,Prim.var (.v x2)⟩,
-                  ⟨⟨_,x2⟩,env',(if b
-                      then Prim.ite c (.v x1) (.v e)
-                      else Prim.ite c (.v e) (.v x1)
-                    )⟩,
-                  ⟨⟨_,e⟩,[],Prim.err⟩,
-                ]
-            ).concat ⟨⟨_,x1⟩,env,prim⟩) ++ bnds
-          return (bnds.head (by simp[bnds]), bnds.tail)
-        else return (bnd,bnds)
-      )
+    let (bnd, bnds) ← (if scopesUses.length > 1 then splitEnv bnd bnds else return (bnd,bnds))
     let ⟨v,env,prim⟩ := bnd
 
     -- mark uses with deeper envs

@@ -18,9 +18,6 @@ def normCdf (d: float):
 def idx2int(a: int): 
     return a
 
-def let(x, y):
-    return y
-
 def fold(f, l, n):
     res = n
     for i in l:
