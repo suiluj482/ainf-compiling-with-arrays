@@ -42,7 +42,7 @@ def cseBreakFun := (
 def cseBreakFor := (
     let' f1 := (for' i:5 => i.i2n + tlitn 10);
     let' f2 := (for'v _:1 => for' i:5 => i.i2n + tlitn 11);
-    fun' i => (f1[[i]]) + (f2[[tliti 0]][[i]])
+    (f1,,f2)
   ).toVPar
 
 #eval cseBreakFor
@@ -158,7 +158,8 @@ namespace Fusion
     (a1,, a2)
   ).toVPar
 
-  #eval IO.print ex.toAINF.toGraphviz
+  #eval IO.print ex.toAINF.cleanEnv.toGraphviz
+  #eval IO.print ex.toAINF.cleanEnv.cse.toGraphviz
 
 
   #eval (tlitf 1).exp.toAINF.fusion.normVPar

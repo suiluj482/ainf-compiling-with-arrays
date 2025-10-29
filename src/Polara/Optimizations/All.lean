@@ -30,7 +30,7 @@ def pipelines: List (String × Pipeline) := [
   (
     "ainfOptimize",
     λ n t => do
-    let s := t.toAINF
+    let s := t.normVPar.toAINF
     let s := s.cleanEnv
     let _ ← writeTmpFile s!"{n}_cleanEnv.ainf" s.toString
     let s := s.cse

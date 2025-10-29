@@ -115,10 +115,9 @@ private def Ren.apply: Ren → VPar α → Term α
   | none => panic! s!"Ren.apply no entry for {v} found in {r.toList}"
   )
 
-private abbrev UsedTermMap := DHashMap (Sigma Var × Env) (λ (⟨α,_⟩,_) => Term α)
-private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Ren → Term α): Term α :=
+private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(retVar: VPar α): Term α :=
   match bnds with
-  | [] => c ren
+  | [] => ren.apply retVar
   | bnd :: bnds =>
       let ⟨α,v,prim⟩ := bnd
 
@@ -131,8 +130,7 @@ private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Re
               | none => ren.apply a
               | some bnds =>
                   assemble
-                    bnds usedMap ren
-                    (λ ren => ren.apply a)
+                    bnds usedMap ren a
         | _, .bld i a =>
             for'v i' =>
               let envPart := (.forc _ i)
@@ -141,8 +139,7 @@ private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Re
               | none => ren.apply a
               | some bnds =>
                   assemble
-                    bnds usedMap ren
-                    (λ ren => ren.apply a)
+                    bnds usedMap ren a
         | _, .ite c a b =>
             if' ren.apply c
               then
@@ -151,16 +148,14 @@ private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Re
                 | none => ren.apply a
                 | some bnds =>
                     assemble
-                      bnds usedMap ren
-                      (λ ren => ren.apply a)
+                      bnds usedMap ren a
               else
                 let envPart := (.itec c false)
                 match usedMap.get? (⟨_,v⟩, envPart) with
                 | none => ren.apply b
                 | some bnds =>
                     assemble
-                      bnds usedMap ren
-                      (λ ren => ren.apply b)
+                      bnds usedMap ren b
         | _, .err           => Tm.err
         | _, .var v         => ren.apply v
         | _, .cst0 c        => Tm.cst0 c
@@ -170,7 +165,7 @@ private partial def assemble (bnds: List SBnd)(usedMap: UsedMap)(ren: Ren)(c: Re
       let'v v' := primTm;
       let ren := ren.insert ⟨_,(.v v)⟩ v'
       assemble
-        bnds usedMap ren c
+        bnds usedMap ren retVar
 
 
 def AINF.fusion: AINF α → Term α
@@ -180,7 +175,7 @@ def AINF.fusion: AINF α → Term α
       bnds
       usedMap
       (.emptyWithCapacity bnds.length)
-      (λ ren => ren.apply (.v ret))
+      (.v ret)
 
 
 -- open Ty
