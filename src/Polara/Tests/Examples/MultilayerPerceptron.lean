@@ -95,7 +95,7 @@ namespace MultilayerPerceptron
         (for' i:l => i).foldA
           (fun' i => fun' ws => learnStep @@ x[[i]] @@ y[[i]] @@ ws)
           ws
-    )--.normVPar
+    ).normVPar
 
   -- #eval (@learn 2 1 1 4) |>.normVPar
 
