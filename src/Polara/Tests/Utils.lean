@@ -17,7 +17,7 @@ namespace TmTest
   def run (limit: BenchRes)(fullName: String)(tc: TmTestCase): IO Result := do
     let ⟨name, α, β, tm, f, expected⟩ := tc
     let fullName := s!"{fullName}/{name}"
-    let _ ← writeTmpFile s!"_.polara" tm.toString
+    let _ ← writeTmpFile s!"{fullName}/_.polara" tm.toString
 
     -- run for pipelines and langs
     let res: List ((Tree String String) × (Tree String (String × String × β.val?))) ←
