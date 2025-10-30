@@ -85,7 +85,7 @@ namespace MultilayerPerceptron
             ).dr.le @@ ws;
             d @@ (for' i => tlitf 1)
           )
-    ).normVPar
+    )--.normVPar
 
   -- #eval (@learnStep 5 2 1).normVPar
 

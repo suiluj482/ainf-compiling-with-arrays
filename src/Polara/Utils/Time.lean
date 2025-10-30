@@ -18,9 +18,9 @@ def benchmarkIOF (a: α)(f: α → IO β): IO (β × Float) := do
   let stop ← IO.monoMsNow
   return (res, (stop - start).toSec)
 
-abbrev BenchRes := Nat × Float -- iterations, time
+abbrev BenchRes := Nat × Float -- iterations, time in sec
 def BenchRes.mk: BenchRes := (0,0)
-def BenchRes.bench: BenchRes := (100, 1*60)
+def BenchRes.bench: BenchRes := (100, 10)
 def BenchRes.test: BenchRes := (1, 0)
 def BenchRes.it: BenchRes → Nat := Prod.fst
 def BenchRes.time: BenchRes → Float := Prod.snd
