@@ -35,11 +35,13 @@ namespace TmTest
           )
 
         return (
-          Tree.node name (
-            (if pipeMeta.isEmpty then [] else
-             [(Tree.node "pipelineSteps" pipeMeta).jsonArrayInline,])
-          ++ [
-           (Tree.node "runners" (runRes.map
+          Tree.node name ( [
+            (Tree.node "pipelineSteps" ((
+              Tree.node "_" [
+                Tree.leaf s!"\"time\": {0}", Tree.leaf s!"\"size\": {tm.size}", Tree.leaf s!"\"ops\": {tm.numOps}", Tree.leaf s!"\"controlFlow\": {tm.numControlFlow}",
+              ]).flatJsonInline
+              :: pipeMeta)).jsonArrayInline,
+            (Tree.node "runners" (runRes.map
               (λ (name, _mes, _val, benchRes) =>
                 Tree.leaf s!"\"{name}\": {"{"} \"avTime\": {benchRes.avTime}, \"time\": {benchRes.time}, \"iterations\": {benchRes.it} {"}"}"
               )
