@@ -10,7 +10,7 @@ instance leanBld: BuildCode "Lean" where
 instance leanExe: ExeCode "Lean" where
   exe (path) := exeCom {
       cmd := "timeout"
-      args := #["10", s!"lean --run {path.toString}"] -- timeout after 10s
+      args := #["10", "lean", "--run", path.toString] -- timeout after 10s
     }
 
 
@@ -23,7 +23,7 @@ instance pythonBld: BuildCode "Python" where
 instance pythonExe: ExeCode "Python" where
   exe (path) := exeCom {
     cmd := "timeout"
-    args := #["10", s!"python3 {path.toString}"]
+    args := #["10", "python3", path.toString]
   }
 
 --- jax ---
