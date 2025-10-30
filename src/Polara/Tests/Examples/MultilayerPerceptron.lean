@@ -7,13 +7,15 @@ def Tm.relu (x: Term flt): Term flt := x.maxf (tlitf 0)
 
 namespace MultilayerPerceptron
 
-  def loss {m: Pos} (y eY: Term flt[[m]]) :=
-    let' diff := (y - eY); diff * diff
-
+  def loss {m: Pos} :=
+    fun' y:flt[[m]] => fun' eY:flt[[m]] =>
+      let' diff := (y - eY); diff * diff
+    |>.toVPar
   def learnRate: Term flt := tlitf (0.001)
 
-  def neuron {n: Pos} (x: Term flt[[n]])(b: Term flt)(w: Term flt[[n]]) :=
-    (x * w).sumf + b |>.relu
+  def neuron {n: Pos} :=
+    fun' x: flt[[n]] => fun' b: flt => fun' w: flt[[n]] =>
+      (x * w).sumf + b |>.relu
 
   -- -- #eval neuron (n:=10) |>.normVPar
   -- def exampleNeuron := @neuron 2
@@ -40,8 +42,10 @@ namespace MultilayerPerceptron
   --   @@ Tm.one _
   -- #eval run "Python" exampleNeuronLearnStep "exampleNeuronLearnStep"
 
-  def layer {n m: Pos} (x: Term flt[[n]])(w: Term (flt[[m]] ×× flt[[m,n]])) :=
-    for' i => (neuron x w.fst[[i]] w.snd[[i]])
+  def layer {n m: Pos} :=
+    let' neuron := neuron;
+    fun' x: flt[[n]] => fun' w: flt[[m]] ×× flt[[m,n]] =>
+      for' i => (neuron @@ x @@ w.fst[[i]] @@ w.snd[[i]])
 
   -- #eval (@layer 10 5) |>.normVPar
 
@@ -55,14 +59,17 @@ namespace MultilayerPerceptron
       for' i => for' j => a.snd.snd[[i]][[j]] + w*b.snd.snd[[i]][[j]]))
 
   def multilayerPerceptron {n k m: Pos} :=
-    (fun' x:flt[[n]] =>
-      fun' ws: Weights n k m =>
-        let x := layer x ws.fst;
-        let x := layer x ws.snd;
-        x
-    )--.normVPar
+    (
+      let' layer1 := layer;
+      let' layer2 := layer;
+      fun' x:flt[[n]] =>
+        fun' ws: Weights n k m =>
+          let' x := layer1 @@ x @@ ws.fst;
+          let' x := layer2 @@ x @@ ws.snd;
+          x
+    ).normVPar
 
-  -- #eval (@multilayerPerceptron 10 5 1)
+  -- #eval @multilayerPerceptron 10 5 1
 
   def learnStep {n k m: Pos} :=
     (fun' x: flt[[n]] => fun' y: flt[[m]] =>
@@ -70,10 +77,15 @@ namespace MultilayerPerceptron
         Weights.weightedSum
           ws
           learnRate.neg
-          ((
-            (fun' ws => loss (multilayerPerceptron @@ x @@ ws) y).dr.le @@ ws
-          ).snd @@ (for' i => tlitf 1))
-    )--.normVPar
+          (
+            let't _,d := (
+              let' multilayerPerceptron := multilayerPerceptron;
+              let' loss := loss;
+              fun' ws => loss @@ (multilayerPerceptron @@ x @@ ws) @@ y
+            ).dr.le @@ ws;
+            d @@ (for' i => tlitf 1)
+          )
+    ).normVPar
 
   -- #eval (@learnStep 5 2 1).normVPar
 
