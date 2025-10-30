@@ -11,23 +11,26 @@ import Polara.Codegeneration.All
 
 open PipelineM
 
-abbrev TmPipeline (α: Ty) := PipelineM String String (Term α) (Term α)
+abbrev TreeS := Tree String String
+abbrev TmPipeline (α: Ty) := PipelineM String TreeS (Term α) (Term α)
 
-private def metaT (name: String)(fullName: String)(t: Term α)(time: Float): IO String := do
+private def metaT (name: String)(fullName: String)(t: Term α)(time: Float): IO TreeS := do
   let _ ← writeTmpFile s!"{fullName}/{name}.polara" t.toString
-  return s!"{name}: {"{"}
-time: {time}
-size: {t.size}
-ops: {t.numOps}, controlFlow: {t.numControlFlow}
-{"}"}"
+  return (Tree.node name [
+    Tree.leaf s!"\"time\": {time}",
+    Tree.leaf s!"\"size\": {t.size}",
+    Tree.leaf s!"\"ops\": {t.numOps}",
+    Tree.leaf s!"\"controlFlow\": {t.numControlFlow}",
+  ]).flatJsonInline
 
-private def metaA (name: String)(fullName: String)(t: AINF α)(time: Float): IO String := do
+private def metaA (name: String)(fullName: String)(t: AINF α)(time: Float): IO TreeS := do
   let _ ← writeTmpFile s!"{fullName}/{name}.ainf" t.toString
-  return s!"{name}: {"{"}
-time: {time}
-size: {t.size}
-ops: {t.numOps}, controlFlow: {t.numControlFlow}
-{"}"}"
+  return (Tree.node name [
+    Tree.leaf s!"\"time\": {time}",
+    Tree.leaf s!"\"size\": {t.size}",
+    Tree.leaf s!"\"ops\": {t.numOps}",
+    Tree.leaf s!"\"controlFlow\": {t.numControlFlow}",
+  ]).flatJsonInline
 
 def pipelines (α: Ty): List (String × (TmPipeline α)) := [
   ("noOptimization", .nil),

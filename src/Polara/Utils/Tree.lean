@@ -19,7 +19,56 @@ namespace Tree
 
 def pretty [ToString α][ToString β]: Tree α β → String
   | leaf v => toString v
-  | node k ts => toString k ++ ": (\n" ++ (ts.map pretty |>.foldr (s!"{·}\n{·}") "").indent.dropRight 2 ++ ")"
+  | node k ts => toString k ++ ": {\n" ++ (ts.map pretty |>.foldr (s!"{·}\n{·}") "").indent.dropRight 2 ++ "}"
+
+def json' [ToString α][ToString β]: Tree α β → String
+  | leaf v => toString v
+  | node k ts => "\"" ++ toString k ++ "\": {\n" ++ (ts.map json' |>.foldr (s!"{·},\n{·}") "").indent.dropRight 4 ++ "  \n}"
+
+def json [ToString α][ToString β]: Tree α β → String
+| t => "{\n" ++ (json' t).indent ++ "\n}"
+
+def jsonInlineObject [ToString α][ToString β]: Tree α β → String
+| leaf v => toString v
+| node k ts => "\"" ++ toString k ++ "\": {" ++
+      (ts.map jsonInlineObject |>.foldr (s!"{·}, {·}") "").dropRight 2
+    ++ "}"
+
+def flatJsonInline: Tree String String → Tree String String
+| t => Tree.leaf t.jsonInlineObject
+
+def jsonArray' [ToString α][ToString β]: Tree α β → String
+  | leaf v => toString v
+  | node k ts => "\"" ++ toString k ++ "\": [\n" ++ (ts.map json |>.foldr (s!"{·},\n{·}") "").indent.dropRight 4 ++ "  \n]"
+
+def jsonArray: Tree String String → Tree String String
+| t => Tree.leaf t.jsonArray'
+
+def jsonArrayInline' [ToString α][ToString β]: Tree α β → String
+  | leaf v => toString v
+  | node k ts => "\"" ++ toString k ++ "\": [\n" ++ (ts.map jsonInlineObject |>.foldr (s!"{·},\n{"{"}{·}{"}"}") "").indent.dropRight 4 ++ "  \n]"
+
+def jsonArrayInline: Tree String String → Tree String String
+| t => Tree.leaf t.jsonArray'
+
+
+-- #eval IO.print (Tree.node "root" [
+--       Tree.node "a" [
+--         Tree.leaf (1, "ok"),
+--         Tree.leaf (2, "ok"),
+--         Tree.node "aa" [
+--           Tree.leaf (3, "ok"),
+--           Tree.leaf (4, "ok"),
+--         ]
+--       ],
+--       Tree.node "b" [
+--         Tree.leaf (5, "ok"),
+--         Tree.leaf (6, "ok"),
+--       ],
+--       Tree.leaf (7, "ok")
+--     ] |>.json)
+
+-- #eval IO.print (Tree.node "test" [Tree.leaf "root"] |>.json)
 
 def depth: Tree α β → Nat
   | leaf _ => 1

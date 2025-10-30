@@ -19,26 +19,39 @@ namespace TmTest
     let fullName := s!"{fullName}/{name}"
 
     -- run for pipelines and langs
-    let res: List (Tree String (String × String × β.val? × BenchRes)) ←
+    let res: List ((Tree String String) × (Tree String (String × String × β.val?))) ←
       (pipelines α).mapM (λ (name, pipeline) => do
         let fullName := s!"{fullName}/{name}"
         let _ ← writeTmpFile s!"{fullName}.polara" tm.toString
 
-        let (optimizedTm, pipeMeta) ← pipeline.runMeta fullName tm
+        let pipeRes ← PipelineM.runMeta fullName tm pipeline
+        let optimizedTm := pipeRes.fst; let pipeMeta := pipeRes.snd
         let fullTm: Tm VPar _ := f optimizedTm
 
-        let res ← (runners limit).mapM (λ ((name, run): String × Run) => do
-            let fullName := s!"{name}_{fullName}"
+        let runRes ← (runners limit).mapM (λ ((name, run): String × Run) => do
+            let fullName := s!"{fullName}_{name}"
             let (mes, val, benchRes) ← run fullTm fullName
-            return Tree.leaf (name, mes, val, benchRes)
+            return (name, mes, val, benchRes)
           )
 
-        return Tree.node s!"{name}({pipeMeta})" res
+        return (
+          Tree.node name ([
+            (Tree.node "pipelineSteps" pipeMeta).jsonArrayInline,
+            (Tree.node "runners" (runRes.map
+              (λ (name, _mes, _val, benchRes) =>
+                Tree.leaf s!"\"{name}\": {"{"} \"avTime\": {benchRes.avTime}, \"time\": {benchRes.time}, \"iterations\": {benchRes.it} {"}"}"
+              )
+            )).jsonArrayInline,
+          ]),
+          Tree.node name (runRes.map (λ (name, mes, val, _) => Tree.leaf (name, mes, val)))
+        )
       )
-    let tree := Tree.node name res
+    let (resInfo, resVals) := res.unzip
+    let resTree := Tree.node name resInfo
 
     -- check vals
-    let (flat, errors) := tree.flatten.seperateWith (λ (names, (name, mes, val, _)) =>
+    let treeVals := Tree.node name resVals
+    let (flat, errors) := treeVals.flatten.seperateWith (λ (names, (name, mes, val)) =>
         let name := names.cons name |>.foldl (s!"{·}_{·}") ""
         match val with
         | some val => .inl (name, val, mes)
@@ -59,8 +72,7 @@ namespace TmTest
         )
 
     -- printable erg
-    let tree' := tree.map id (λ (n,_,_,t) => s!"{n}|{t}")
-    let text := tree'.prettyTable
+    let text := resTree.json'
 
     if errors.isEmpty then
       return (text, true)
@@ -73,7 +85,7 @@ namespace TmTest
       | node name _ => name
       | leaf ⟨name,_⟩ => name)
     let res ← TestCaseTree.pretty ⟨_, t, run limit⟩
-    let _ ← writeTmpFile s!"{name}/result.txt" res
+    let _ ← writeTmpFile s!"{name}/result.json" res
     IO.println res
 
 end TmTest

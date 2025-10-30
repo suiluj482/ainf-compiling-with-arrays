@@ -24,6 +24,7 @@ def BenchRes.bench: BenchRes := (100, 1*60)
 def BenchRes.test: BenchRes := (1, 0)
 def BenchRes.it: BenchRes → Nat := Prod.fst
 def BenchRes.time: BenchRes → Float := Prod.snd
+def BenchRes.avTime: BenchRes → Float | (i,t) => t / i.toFloat
 def BenchRes.add: BenchRes → Float → BenchRes
 | (it, time), t => (it+1, time+t)
 def BenchRes.lt: BenchRes → BenchRes → Bool
