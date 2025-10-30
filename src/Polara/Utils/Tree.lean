@@ -46,10 +46,10 @@ def jsonArray: Tree String String → Tree String String
 
 def jsonArrayInline' [ToString α][ToString β]: Tree α β → String
   | leaf v => toString v
-  | node k ts => "\"" ++ toString k ++ "\": [\n" ++ (ts.map jsonInlineObject |>.foldr (s!"{·},\n{"{"}{·}{"}"}") "").indent.dropRight 4 ++ "  \n]"
+  | node k ts => "\"" ++ toString k ++ "\": [\n" ++ (ts.map jsonInlineObject |>.foldr (s!"{"{"}{·}{"}"},\n{·}") "").indent.dropRight 4 ++ "  \n]"
 
 def jsonArrayInline: Tree String String → Tree String String
-| t => Tree.leaf t.jsonArray'
+| t => Tree.leaf t.jsonArrayInline'
 
 
 -- #eval IO.print (Tree.node "root" [
@@ -68,7 +68,7 @@ def jsonArrayInline: Tree String String → Tree String String
 --       Tree.leaf (7, "ok")
 --     ] |>.json)
 
--- #eval IO.print (Tree.node "test" [Tree.leaf "root"] |>.json)
+-- #eval IO.print (Tree.node "test" [Tree.leaf "root", Tree.leaf "root"] |>.jsonArrayInline')
 
 def depth: Tree α β → Nat
   | leaf _ => 1

@@ -40,7 +40,7 @@ namespace PipelineM
   | nil => return (a, [])
   | cons toMeta f p' => do
       let (b, meta) ← (p'.runMeta i a)
-      let (c, t) ← benchmark b f
+      let (c, t) ← benchmarkIOF b (return f ·)
       let s ← toMeta i c t
       return (c, meta.concat s)
 

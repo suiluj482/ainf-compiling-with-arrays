@@ -17,12 +17,12 @@ namespace TmTest
   def run (limit: BenchRes)(fullName: String)(tc: TmTestCase): IO Result := do
     let ⟨name, α, β, tm, f, expected⟩ := tc
     let fullName := s!"{fullName}/{name}"
+    let _ ← writeTmpFile s!"_.polara" tm.toString
 
     -- run for pipelines and langs
     let res: List ((Tree String String) × (Tree String (String × String × β.val?))) ←
       (pipelines α).mapM (λ (name, pipeline) => do
         let fullName := s!"{fullName}/{name}"
-        let _ ← writeTmpFile s!"{fullName}.polara" tm.toString
 
         let pipeRes ← PipelineM.runMeta fullName tm pipeline
         let optimizedTm := pipeRes.fst; let pipeMeta := pipeRes.snd
@@ -35,9 +35,11 @@ namespace TmTest
           )
 
         return (
-          Tree.node name ([
-            (Tree.node "pipelineSteps" pipeMeta).jsonArrayInline,
-            (Tree.node "runners" (runRes.map
+          Tree.node name (
+            (if pipeMeta.isEmpty then [] else
+             [(Tree.node "pipelineSteps" pipeMeta).jsonArrayInline,])
+          ++ [
+           (Tree.node "runners" (runRes.map
               (λ (name, _mes, _val, benchRes) =>
                 Tree.leaf s!"\"{name}\": {"{"} \"avTime\": {benchRes.avTime}, \"time\": {benchRes.time}, \"iterations\": {benchRes.it} {"}"}"
               )

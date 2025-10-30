@@ -43,7 +43,7 @@ def benchmarkIOM (u: IO α)(limit := BenchRes.test)
 : IO (α × BenchRes) :=
   benchmarkIOMult' .mk limit u
 
------Tests----
+-- ---Tests----
 -- def fib (n: Nat): Nat :=
 --   if n ≤ 1 then n else fib (n-1) + fib (n-2)
 
