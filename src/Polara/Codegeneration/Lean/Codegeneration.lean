@@ -74,7 +74,7 @@ def Tm.codegen': Tm VPar α → ReaderM (Nat × Nat) String
   let x := VPar.v (.mk i)
   return s!"\nlet {x}: {β.gen} := (do {e.codegen' (i,j)}); {(f x).codegen' (i+1,j) |>.ensureLineBreak}"
 | ite cond a b =>
-  return s!"(if ((←{← cond.codegen'}) != 0) \n{s!"then do {(<- a.codegen').indent}".indent}\n{s!"else do \n{(<- b.codegen').indent}".indent})"
+  return s!"(if ((←{← cond.codegen'}) != 0) {s!"then (do {(<- a.codegen').indent}".indent}){s!"else (do {(<- b.codegen').indent}".indent}))"
 
 def Tm.codegen (t: Tm VPar α): String := s!"def main (_: List String) := IO.println <| match ((do\n{
     (Tm.codegen' t (0,0)).indent |>.replace "←return" ""

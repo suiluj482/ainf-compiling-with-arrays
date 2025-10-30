@@ -7,21 +7,18 @@ import Polara.Codegeneration.IO.All
 ---
 
 def run (lang)[c: Codegen lang][ext: FileExt lang][b: BuildCode lang][e: ExeCode lang]
-  {α: Ty}(term: Tm VPar α)(name: String) := do
+  (limit:= BenchRes.test){α: Ty}(term: Tm VPar α)(name: String) := do
       let code := c.gen term
       let file  ← writeCodeFile code lang s!"{name}"
       let _     ← b.bld file
-      let (out, time) ← benchmarkIO (e.exe file)
+      let (out, res) ← benchmarkIOM (e.exe file) limit
       let val  := α.parse out
-      return (out, val, time)
+      return (out, val, res)
 
-abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → IO (String × α.val? × Float)
+abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → IO (String × α.val? × BenchRes)
 
-
-abbrev BenchRes := Nat × Float -- iterations, time
-
-def runners: List (String × Run) := [
-    ("Lean", run "Lean"),
-    ("Python", run "Python"),
-    -- ("Jax", run "Jax")
+def runners (limit := BenchRes.test): List (String × Run) := [
+    ("Lean", run "Lean" limit),
+    ("Python", run "Python" limit),
+    -- ("Jax", run "Jax" limit)
   ]

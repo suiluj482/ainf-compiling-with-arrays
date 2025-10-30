@@ -9,38 +9,42 @@ import Polara.Optimizations.Analyse.All
 ---
 import Polara.Codegeneration.All
 
-abbrev Pipeline := {α: Ty} → String → Tm VPar α → IO (Tm VPar α)
+open PipelineM
 
-def pipelines: List (String × Pipeline) := [
-  (
-    "noOptimization",
-    λ _ t => return t
+abbrev TmPipeline (α: Ty) := PipelineM String String (Term α) (Term α)
+
+private def metaT (name: String)(fullName: String)(t: Term α)(time: Float): IO String := do
+  let _ ← writeTmpFile s!"{fullName}/{name}.polara" t.toString
+  return s!"{name}: {"{"}
+time: {time}
+size: {t.size}
+ops: {t.numOps}, controlFlow: {t.numControlFlow}
+{"}"}"
+
+private def metaA (name: String)(fullName: String)(t: AINF α)(time: Float): IO String := do
+  let _ ← writeTmpFile s!"{fullName}/{name}.ainf" t.toString
+  return s!"{name}: {"{"}
+time: {time}
+size: {t.size}
+ops: {t.numOps}, controlFlow: {t.numControlFlow}
+{"}"}"
+
+def pipelines (α: Ty): List (String × (TmPipeline α)) := [
+  ("noOptimization", .nil),
+  ("norm", nil
+    |>.cons (metaT "norm") Tm.normVPar
   ),
-  (
-    "norm",
-    λ _ t => return t.normVPar
+  ("ainf", nil
+    |>.cons (metaA "noOp_toAINF") Tm.toAINF
+    |>.cons (metaT "noOp_fusion") AINF.fusion
   ),
-  (
-    "ainf",
-    λ n t => do
-      let ainf := t.toAINF
-      let _ ← writeTmpFile s!"{n}.ainf" ainf.toString
-      return ainf.fusion
-  ),
-  (
-    "ainfOptimize",
-    λ n t => do
-    let s := t.normVPar.toAINF
-    let s := s.cleanEnv
-    let _ ← writeTmpFile s!"{n}_cleanEnv.ainf" s.toString
-    let s := s.cse
-    let _ ← writeTmpFile s!"{n}_cse.ainf" s.toString
-    let s := s.vectorize
-    let _ ← writeTmpFile s!"{n}_vectorize.ainf" s.toString
-    let s := s.dead
-    let _ ← writeTmpFile s!"{n}_dead.ainf" s.toString
-    let s := s.fusion
-    let _ ← writeTmpFile s!"{n}_fused.ainf" s.toString
-    return s
-  ),
+  ("ainfOptimize", nil
+    |>.cons (metaT "norm") Tm.normVPar
+    |>.cons (metaA "toAINF") Tm.toAINF
+    |>.cons (metaA "cleanEnv") AINF.cleanEnv
+    |>.cons (metaA "cse") AINF.cse
+    |>.cons (metaA "vectorize") AINF.vectorize
+    |>.cons (metaA "dead") AINF.dead
+    |>.cons (metaT "fusion") AINF.fusion
+  )
 ]

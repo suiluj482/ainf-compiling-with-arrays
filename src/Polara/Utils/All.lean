@@ -12,4 +12,5 @@ import Polara.Utils.Tests
 import Polara.Utils.Time
 import Polara.Utils.Pos
 import Polara.Utils.Rendering
+import Polara.Utils.Pipeline
 

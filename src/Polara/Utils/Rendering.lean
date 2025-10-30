@@ -14,7 +14,7 @@ def color (n: Nat) := modArrayAccess colors (by simp[colors]) n
 def htmlColorTag (n:Nat): String → String :=
   (s!"<font color=\"{color n}\">{·}</font>")
 
-#eval htmlColorTag 0 "a"
+-- #eval htmlColorTag 0 "a"
 
 def DListMap.toGraphviz (m: DListMap α β)(keys: ((γ:α)× β γ) → List α)(keyToString: α → String)(valueToString: ((γ:α)× β γ) → String): String :=
   let content := (m.map (λ ⟨k, v⟩ =>

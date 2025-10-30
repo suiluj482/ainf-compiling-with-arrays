@@ -409,3 +409,64 @@ def Tm.synBEq': {α: Ty} → Tm VPar α → Tm VPar α → VParM Bool
 
 def Tm.synBEq: {α: Ty} → Tm VPar α → Tm VPar α → Bool
 | _, a, b => (VParM.startZero (a.synBEq' b))
+
+--
+def Tm.size: Tm VPar α → Nat
+| .err => 1
+| .cst0 _ => 1
+| .cst1 _ a => 1 + a.size
+| .cst2 _ a b => 1 + a.size + b.size
+| .abs f => 1 + (f (.p (.mk 0))).size
+| .bld f => 1 + (f (.p (.mk 0))).size
+| .ite cond a b => 1 + cond.size + a.size + b.size
+| .var _ => 1
+| .bnd t f => 1 + t.size + (f (.v (.mk 0))).size
+
+def Tm.numOps: Tm VPar α → Nat
+| .err => 0
+| .cst0 _ => 0
+| .cst1 _ a => 1 + a.numOps
+| .cst2 _ a b => 1 + a.numOps + b.numOps
+| .abs f => (f (.p (.mk 0))).numOps
+| .bld f => (f (.p (.mk 0))).numOps
+| .ite cond a b => cond.numOps + a.numOps + b.numOps
+| .var _ => 0
+| .bnd t f => 0 + t.numOps + (f (.v (.mk 0))).numOps
+
+def Tm.numControlFlow: Tm VPar α → Nat
+| .err => 0
+| .cst0 _ => 0
+| .cst1 _ a => a.numControlFlow
+| .cst2 _ a b => a.numControlFlow + b.numControlFlow
+| .abs f => 1+ (f (.p (.mk 0))).numControlFlow
+| .bld f => 1+ (f (.p (.mk 0))).numControlFlow
+| .ite cond a b => 1+ cond.numControlFlow + a.numControlFlow + b.numControlFlow
+| .var _ => 0
+| .bnd t f => 0 + t.numControlFlow + (f (.v (.mk 0))).numControlFlow
+
+def AINF.numOps: AINF α → Nat
+| (bnds, _) => bnds.map (λ
+    ⟨⟨α,_⟩, _, prim⟩ => match α, prim with
+    | _, .err
+    | _, .var _
+    | _, .ite _ _ _
+    | _, .abs _ _
+    | _, .bld _ _
+    | _, .cst0 _ => 0
+    | _, .cst1 _ _
+    | _, .cst2 _ _ _ => 1
+  ) |>.sum
+def AINF.numControlFlow: AINF α → Nat
+| (bnds, _) => bnds.map (λ
+    ⟨⟨α,_⟩, _, prim⟩ => match α, prim with
+    | _, .err
+    | _, .var _
+    | _, .cst0 _
+    | _, .cst1 _ _
+    | _, .cst2 _ _ _
+      => 0
+    | _, .ite _ _ _
+    | _, .abs _ _
+    | _, .bld _ _
+      => 1
+  ) |>.sum

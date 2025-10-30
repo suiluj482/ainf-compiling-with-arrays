@@ -1,11 +1,12 @@
 import Polara.AD.All
 import Polara.Codegeneration.All
 
--- https://en.wikipedia.org/wiki/Multilayer_perceptron
-
 open Ty
 
 def Tm.relu (x: Term flt): Term flt := x.maxf (tlitf 0)
+
+namespace MultilayerPerceptron
+
 def loss {m: Pos} :=
   fun' y:flt[[m]] => fun' eY:flt[[m]] =>
     let' diff := (y - eY); diff * diff
@@ -149,4 +150,6 @@ def exampleOrTest := (multilayerPerceptron
       --     (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
 
 -- #eval exampleOrTest
-#eval run "Python" (exampleOrTest.normVPar) "multilayerPerceptron/exampleOrTest"
+-- #eval run "Python" BenchRes.test (exampleOrTest.normVPar) "multilayerPerceptron/exampleOrTest"
+
+end MultilayerPerceptron
