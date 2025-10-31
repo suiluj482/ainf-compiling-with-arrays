@@ -61,7 +61,7 @@ namespace TmTest
         leaf ⟨"listMap", _,_,  ((tlitf 0).l.mapL (fun' x => x+tlitf 1)), id, some [1]⟩,
         leaf ⟨"listZip", _,_,  ((tlitf 0).l.zipL (tlitf 1).l), id, some [(0,1)]⟩,
         leaf ⟨"listFold", _,_,  ((tlitf 2).l.foldL (fun' x => fun' acc => x+acc) (tlitf 1)), id, some 3⟩,
-        leaf ⟨"higherOrder", _,_, (fun' x => fun' y => x+y), (·@@ tlitf 1 @@ tlitf 2), some 3⟩,
+        leaf ⟨"curried", _,_, (fun' x => fun' y => x+y), (·@@ tlitf 1 @@ tlitf 2), some 3⟩,
       ],
       node "Simple" [
         leaf ⟨"vectorRange", _,_, (for' i:10 => i.i2n.n2f), id, some <| Vector.ofFn (λ i => i.val.toFloat)⟩,

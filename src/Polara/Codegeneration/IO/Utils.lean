@@ -27,6 +27,7 @@ def writeCodeFile (code: String)
 
 def exeCom (args: IO.Process.SpawnArgs): IO String := do
   let output ← IO.Process.output args
-  return if output.exitCode == 0
-    then output.stdout
-    else s!"(stdout{output.stdout}\nstderr{output.stderr})"
+  return match output.exitCode with
+   | 0 => output.stdout
+   | 124 => "timeout after 10s"
+   | _ => s!"(stdout{output.stdout}\nstderr{output.stderr})"

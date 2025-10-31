@@ -51,7 +51,6 @@ namespace TmTest
         )
       )
     let (resInfo, resVals) := res.unzip
-    let resTree := Tree.node name resInfo
 
     -- check vals
     let treeVals := Tree.node name resVals
@@ -76,12 +75,12 @@ namespace TmTest
         )
 
     -- printable erg
+    let errTree := if errors.isEmpty then [] else
+      [Tree.leaf ("\"errors\": ["++ (errors.foldr (s!"\"{·}\"\n{·}") "").indent.dropRight 2 ++"]")]
+    let resTree := Tree.node name (resInfo ++ errTree)
     let text := resTree.json2'
 
-    if errors.isEmpty then
-      return (text, true)
-    else
-      return (s!"{Print.foldLines errors}\n{text}", false)
+    return (text, errors.isEmpty)
 
 
   def print (t: TmTree)(limit := BenchRes.test): IO Unit := do

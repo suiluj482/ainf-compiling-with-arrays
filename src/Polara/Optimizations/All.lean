@@ -38,8 +38,13 @@ def pipelines (α: Ty): List (String × (TmPipeline α)) := [
     |>.cons (metaT "norm") Tm.normVPar
   ),
   ("ainf", nil
-    |>.cons (metaA "noOp_toAINF") Tm.toAINF
-    |>.cons (metaT "noOp_fusion") AINF.fusion
+    |>.cons (metaA "toAINF") Tm.toAINF
+    |>.cons (metaT "fusion") AINF.fusion
+  ),
+  ("ainfNormNoFusion", nil
+    |>.cons (metaT "norm") Tm.normVPar
+    |>.cons (metaA "toAINF") Tm.toAINF
+    |>.cons (metaT "toTm") AINF.toTm
   ),
   ("ainfNorm", nil
     |>.cons (metaT "norm") Tm.normVPar

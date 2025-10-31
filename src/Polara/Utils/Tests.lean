@@ -46,7 +46,7 @@ def TestCaseTree.pretty (tree: TestCaseTree): IO String :=
     (λ (name, score) => s!"{name}{if score.perfect then "" else " "++score.pretty}")
     (λ (mes, ok) => if ok
       then mes
-      else s!"{prettyOk ok}:\n{mes.indent}")
+      else s!"\"{prettyOk ok}\":{"{"}\n{mes.indent}\n{"}"}")
   |>.json2
 
 -- def TestCaseTree.pretty (tree: TestCaseTree): IO String :=
