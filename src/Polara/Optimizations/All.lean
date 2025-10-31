@@ -42,8 +42,9 @@ def pipelines (α: Ty): List (String × (TmPipeline α)) := [
     |>.cons (metaT "noOp_fusion") AINF.fusion
   ),
   ("ainfNorm", nil
-    |>.cons (metaA "noOp_toAINF") Tm.toAINF
-    |>.cons (metaT "noOp_fusion") AINF.fusion
+    |>.cons (metaT "norm") Tm.normVPar
+    |>.cons (metaA "toAINF") Tm.toAINF
+    |>.cons (metaT "fusion") AINF.fusion
   ),
   ("ainfOptimize", nil
     |>.cons (metaT "norm") Tm.normVPar

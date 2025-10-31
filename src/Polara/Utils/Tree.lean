@@ -28,6 +28,14 @@ def json' [ToString α][ToString β]: Tree α β → String
 def json [ToString α][ToString β]: Tree α β → String
 | t => "{\n" ++ (json' t).indent ++ "\n}"
 
+def json2' [ToString α][ToString β]: Tree α β → String
+  | leaf v => "{\n" ++ (toString v).indent ++ "\n}"
+  | node k ts => "\"" ++ toString k ++ "\": [\n" ++ ((ts.map json2' |>.foldr (s!"{·},\n{·}") "").indent.dropRight 4) ++ "\n]"
+
+def json2 [ToString α][ToString β]: Tree α β → String
+  | leaf v => "{\n" ++ (toString v).indent ++ "\n}"
+  | node k ts => "{\n  \"" ++ toString k ++ "\": [\n" ++ ((ts.map json2 |>.foldr (s!"{·},\n{·}") "").indent.dropRight 4).indent ++ "\n  ]\n}"
+
 def jsonInlineObject [ToString α][ToString β]: Tree α β → String
 | leaf v => toString v
 | node k ts => "\"" ++ toString k ++ "\": {" ++
@@ -66,7 +74,7 @@ def jsonArrayInline: Tree String String → Tree String String
 --         Tree.leaf (6, "ok"),
 --       ],
 --       Tree.leaf (7, "ok")
---     ] |>.json)
+--     ] |>.json2)
 
 -- #eval IO.print (Tree.node "test" [Tree.leaf "root", Tree.leaf "root"] |>.jsonArrayInline')
 

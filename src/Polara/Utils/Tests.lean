@@ -47,7 +47,7 @@ def TestCaseTree.pretty (tree: TestCaseTree): IO String :=
     (λ (mes, ok) => if ok
       then mes
       else s!"{prettyOk ok}:\n{mes.indent}")
-  |>.json
+  |>.json2
 
 -- def TestCaseTree.pretty (tree: TestCaseTree): IO String :=
 --   return (← tree.run).map

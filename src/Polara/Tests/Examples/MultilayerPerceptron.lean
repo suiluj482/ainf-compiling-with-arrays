@@ -67,7 +67,7 @@ namespace MultilayerPerceptron
           let' x := layer1 @@ x @@ ws.fst;
           let' x := layer2 @@ x @@ ws.snd;
           x
-    ).normVPar
+    )
 
   -- #eval @multilayerPerceptron 10 5 1
 
@@ -79,7 +79,7 @@ namespace MultilayerPerceptron
           learnRate.neg
           (
             let't _,d := (
-              let' multilayerPerceptron := multilayerPerceptron;
+              let' multilayerPerceptron := multilayerPerceptron.normVPar;
               let' loss := loss;
               fun' ws => loss @@ (multilayerPerceptron @@ x @@ ws) @@ y
             ).dr.le @@ ws;

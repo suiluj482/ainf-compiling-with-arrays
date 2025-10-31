@@ -35,7 +35,7 @@ namespace TmTest
           )
 
         return (
-          Tree.node name ( [
+          Tree.leaf (Tree.node name ( [
             (Tree.node "pipelineSteps" ((
               Tree.node "_" [
                 Tree.leaf s!"\"time\": {0}", Tree.leaf s!"\"size\": {tm.size}", Tree.leaf s!"\"ops\": {tm.numOps}", Tree.leaf s!"\"controlFlow\": {tm.numControlFlow}",
@@ -46,7 +46,7 @@ namespace TmTest
                 Tree.leaf s!"\"{name}\": {"{"} \"avTime\": {benchRes.avTime}, \"time\": {benchRes.time}, \"iterations\": {benchRes.it} {"}"}"
               )
             )).jsonArrayInline,
-          ]),
+          ])).json',
           Tree.node name (runRes.map (λ (name, mes, val, _) => Tree.leaf (name, mes, val)))
         )
       )
@@ -76,7 +76,7 @@ namespace TmTest
         )
 
     -- printable erg
-    let text := resTree.json'
+    let text := resTree.json2'
 
     if errors.isEmpty then
       return (text, true)
