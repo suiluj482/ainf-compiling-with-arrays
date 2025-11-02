@@ -20,5 +20,5 @@ abbrev Run := {α: Ty} → (term: Tm VPar α) → (name: String) → IO (String 
 def runners (limit := BenchRes.test): List (String × Run) := [
     ("Lean", run "Lean" limit),
     ("Python", run "Python" limit),
-    -- ("Jax", run "Jax" limit)
+    ("Jax", run "Jax" limit)
   ]

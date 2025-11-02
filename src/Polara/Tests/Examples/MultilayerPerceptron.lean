@@ -146,11 +146,11 @@ namespace MultilayerPerceptron
             #[tlitf 11].toVector.toTm,
           ].toVector.toTm)
         @@ ((for' i:1 => tlitf (0),, for' i:1 => #[tlitf (0.3), tlitf (1)].toTm 2),,
-            (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (3) ))
+            (for' i:1 => tlitf (0),, for' i:1 => for' j:1 => tlitf (1) ))
         |>.normVPar
 
   -- #eval exampleOr
-  -- #eval run "Python" exampleOr "exampleOr"
+  -- #eval run "Python" BenchRes.test exampleOr "exampleOr"
 
   def exampleOrTest := (multilayerPerceptron
         @@ #[tlitf 2, tlitf 3].toTm 2

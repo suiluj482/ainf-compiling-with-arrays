@@ -60,7 +60,8 @@ def Ty.parse' (α: Ty)(s: String): Option (α.val × String) :=
   | .nat => s.firstVal toNat'?
   | .flt => s.firstVal (·.toFloat?)
   | .lin => s.firstVal (·.toFloat?)
-  | .unit => if s.startsWith "()" then some ((), s.drop 2) else none
+  | .unit => if s.startsWith "()" then some ((), s.drop 2)
+    else if s.startsWith "[]" then some ((), s.drop 2)  else none
   | .idx _ => s.firstVal (·.toFin?)
   | α ×× β => do
       let s ← s.acceptOneOf ["(", "["]

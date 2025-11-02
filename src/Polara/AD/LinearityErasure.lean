@@ -3,8 +3,7 @@ import Polara.Syntax.All
 -- linearity erasure
 -- linErase
 @[reducible]
-def Ty.le: Ty → Ty :=
-  Ty.transform (λ
+def Ty.le: Ty → Ty := Ty.transform (λ
   | .lin => .flt
   | α => α)
 def Const0.le: Const0 α → Const0 α.le

@@ -29,6 +29,13 @@ def Ty.contains (t: Ty)(f: Ty → Bool): Bool :=
   | .array _ α => f t ∨ α.contains f
   | α ~> β => f t ∨ α.contains f ∨ β.contains f
 
+def Ty.containsFunc (t: Ty): Bool :=
+  t.contains (λ | _~>_ => true | _ => false)
+def Ty.containsTup (t: Ty): Bool :=
+  t.contains (λ | _××_ => true | _ => false)
+def Ty.containsHetTup (t: Ty): Bool :=
+  t.contains (λ | α××β => α != β | _ => false)
+
 theorem Ty.contains_product_a (α: Ty)(β: Ty)(f: Ty → Bool):
   Ty.contains (α ×× β) f = false → Ty.contains α f = false := by simp[Ty.contains]; exact λ _ a _ => a
 theorem Ty.contains_product_b (α: Ty)(β: Ty)(f: Ty → Bool):

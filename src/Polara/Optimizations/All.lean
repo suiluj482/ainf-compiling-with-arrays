@@ -51,6 +51,14 @@ def pipelines (α: Ty): List (String × (TmPipeline α)) := [
     |>.cons (metaA "toAINF") Tm.toAINF
     |>.cons (metaT "fusion") AINF.fusion
   ),
+  ("ainfOptimizeNoVect", nil
+    |>.cons (metaT "norm") Tm.normVPar
+    |>.cons (metaA "toAINF") Tm.toAINF
+    |>.cons (metaA "cleanEnv") AINF.cleanEnv
+    |>.cons (metaA "cse") AINF.cse
+    |>.cons (metaA "dead") AINF.dead
+    |>.cons (metaT "fusion") AINF.fusion
+  ),
   ("ainfOptimize", nil
     |>.cons (metaT "norm") Tm.normVPar
     |>.cons (metaA "toAINF") Tm.toAINF
