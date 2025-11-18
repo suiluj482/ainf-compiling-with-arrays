@@ -9,7 +9,7 @@ For executing generated code:
 - JAX https://docs.jax.dev/en/latest/installation.html#installation
 
 ## Structure
-Throughout the folder All.lean files are used to import everything from a folder. They are auto generated with a small helper script https://github.com/suiluj482/leanHelpers.
+Throughout the folder All.lean files are used to import everything from a folder. Their imports are auto generated with a small helper script https://github.com/suiluj482/leanHelpers.
 
 There are 6 main folders:
 - Utils contains general utilities not directly tied to the domain of this work
