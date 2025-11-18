@@ -3,6 +3,7 @@ This repository contains the source code for my bachelor thesis with the title: 
 
 ## Requirements
 - Lean https://lean-lang.org/download/
+
 For executing generated code:
 - Python
 - JAX https://docs.jax.dev/en/latest/installation.html#installation
